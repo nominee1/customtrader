@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { 
   Card, 
   Row, 
@@ -24,42 +24,12 @@ import {
   EditOutlined,
   LockOutlined
 } from '@ant-design/icons';
-import { DerivAPI } from '@deriv/deriv-api';
+import { useUser } from '../context/AuthContext'; 
 
 const { Title, Text } = Typography;
 
 const UserProfile = () => {
-  const [userData, setUserData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const api = new DerivAPI({ app_id: 'YOUR_VALID_APP_ID' }); // Replace with your valid app ID
-        const account = await api.account();
-        
-        // Fetch multiple user data points in parallel
-        const [accountInfo, settings, limits] = await Promise.all([
-          account.getAccountInfo(),
-          account.getSettings(),
-          account.getLimits()
-        ]);
-
-        setUserData({
-          ...accountInfo,
-          ...settings,
-          ...limits
-        });
-      } catch (err) {
-        setError(err.message || 'Failed to fetch user data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUserData();
-  }, []);
+  const { user, loading, error } = useUser(); 
 
   const renderDetailItem = (icon, title, value, extra = null) => (
     <List.Item>
@@ -86,12 +56,12 @@ const UserProfile = () => {
         <Col xs={24} md={8}>
           <Card>
             <Space direction="vertical" align="center" style={{ width: '100%' }}>
-              <Avatar size={128} icon={<UserOutlined />} src={userData?.profile_image} />
+              <Avatar size={128} icon={<UserOutlined />} src={user?.profile_image} />
               <Title level={4} style={{ marginTop: 16 }}>
-                {userData?.name || 'Deriv User'}
+                {user?.fullname || 'Deriv User'}
               </Title>
               <Tag icon={<VerifiedOutlined />} color="green">
-                {userData?.account_type.toUpperCase()}
+                {user?.account_type?.toUpperCase() || 'Standard'}
               </Tag>
               <Button type="primary" icon={<EditOutlined />} style={{ marginTop: 16 }}>
                 Edit Profile
@@ -104,17 +74,17 @@ const UserProfile = () => {
               {renderDetailItem(
                 <SafetyOutlined />,
                 'Verification',
-                userData?.status.join(', ') || 'Not verified',
-                <Tag color={userData?.status.includes('verified') ? 'green' : 'orange'}>
-                  {userData?.status.includes('verified') ? 'Verified' : 'Pending'}
+                user?.status?.join(', ') || 'Not verified',
+                <Tag color={user?.status?.includes('verified') ? 'green' : 'orange'}>
+                  {user?.status?.includes('verified') ? 'Verified' : 'Pending'}
                 </Tag>
               )}
               {renderDetailItem(
                 <LockOutlined />,
                 '2FA',
-                userData?.two_factor_authentication ? 'Enabled' : 'Disabled',
+                user?.two_factor_authentication ? 'Enabled' : 'Disabled',
                 <Button type="link" size="small">
-                  {userData?.two_factor_authentication ? 'Disable' : 'Enable'}
+                  {user?.two_factor_authentication ? 'Disable' : 'Enable'}
                 </Button>
               )}
             </List>
@@ -128,22 +98,22 @@ const UserProfile = () => {
               {renderDetailItem(
                 <MailOutlined />, 
                 'Email', 
-                userData?.email
+                user?.email
               )}
               {renderDetailItem(
                 <GlobalOutlined />, 
                 'Country', 
-                userData?.country
+                user?.country
               )}
               {renderDetailItem(
                 <UserOutlined />, 
                 'Account ID', 
-                userData?.loginid
+                user?.loginid
               )}
               {renderDetailItem(
                 <DollarOutlined />, 
                 'Currency', 
-                userData?.currency
+                user?.currency
               )}
             </List>
           </Card>
@@ -153,7 +123,7 @@ const UserProfile = () => {
               <Col xs={24} sm={12}>
                 <Statistic
                   title="Account Balance"
-                  value={userData?.balance}
+                  value={user?.balance}
                   precision={2}
                   prefix={<DollarOutlined />}
                 />
@@ -161,7 +131,7 @@ const UserProfile = () => {
               <Col xs={24} sm={12}>
                 <Statistic
                   title="Trading Limit"
-                  value={userData?.daily_transfers?.max}
+                  value={user?.daily_transfers?.max || 0}
                   precision={2}
                   prefix={<DollarOutlined />}
                 />
@@ -169,7 +139,7 @@ const UserProfile = () => {
             </Row>
             <Divider />
             <Text type="secondary">
-              Last login: {new Date(userData?.last_login).toLocaleString()}
+              Last login: {user?.last_login ? new Date(user?.last_login).toLocaleString() : 'N/A'}
             </Text>
           </Card>
         </Col>

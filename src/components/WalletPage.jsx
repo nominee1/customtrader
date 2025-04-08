@@ -1,33 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Button, Typography, Table, Spin, message } from 'antd';
 import { DollarCircleOutlined, PlusOutlined, MinusOutlined } from '@ant-design/icons';
-import { getAccountBalance, getTransactionHistory } from '../api/derivApi'; 
+import { getTransactionHistory } from '../api/derivApi'; 
+import { useUser } from '../context/AuthContext'; 
 
 const { Title, Text } = Typography;
 
 const WalletPage = () => {
-    const [balance, setBalance] = useState(null);
+    const { user } = useUser(); 
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // Fetch wallet data on component mount
+    // Fetch transaction history on component mount
     useEffect(() => {
-        const fetchWalletData = async () => {
+        const fetchTransactionHistory = async () => {
             try {
                 setLoading(true);
-                const accountBalance = await getAccountBalance();
                 const transactionHistory = await getTransactionHistory();
-                setBalance(accountBalance);
                 setTransactions(transactionHistory);
             } catch (error) {
-                message.error('Failed to load wallet data. Please try again.');
-                console.error('Error fetching wallet data:', error);
+                message.error('Failed to load transaction history. Please try again.');
+                console.error('Error fetching transaction history:', error);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchWalletData();
+        fetchTransactionHistory();
     }, []);
     
 
@@ -63,10 +62,10 @@ const WalletPage = () => {
                     <Card style={{ textAlign: 'center', borderRadius: 8 }}>
                         <DollarCircleOutlined style={{ fontSize: 48, color: '#1890ff' }} />
                         <Title level={3} style={{ marginTop: 16 }}>Account Balance</Title>
-                        {loading ? (
-                            <Spin />
+                        {user?.balance !== undefined ? (
+                            <Title level={2}>{`$${user.balance}`}</Title>
                         ) : (
-                            <Title level={2}>{balance ? `$${balance}` : 'N/A'}</Title>
+                            <Spin />
                         )}
                     </Card>
                 </Col>

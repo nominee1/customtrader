@@ -28,6 +28,7 @@ import {
   recentTransactions,
   marketData
 } from './data/DashboardData';
+import { useUser } from '../../context/AuthContext';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -36,6 +37,7 @@ const { RangePicker } = DatePicker;
 
 const DashboardMainContent = () => {
   const [activeTab, setActiveTab] = useState('portfolio');
+  const { user } = useUser();
 
   const renderChange = (value) => {
     const isPositive = value >= 0;
@@ -52,14 +54,14 @@ const DashboardMainContent = () => {
       <Content style={{ margin: '24px 16px', padding: 24, background: '#fff' }}>
           <Row gutter={[24, 24]}>
             <Col span={24}>
-              <Title level={3}>Dashboard</Title>
+              <Title level={3}>Welcome {user?.fullname|| "User"}</Title>
             </Col>
             {/* Stats Cards */}
             <Col xs={24} sm={12} md={6}>
               <Card>
                 <Statistic
                   title="Account Balance"
-                  value={112893}
+                  value={user?.balance}
                   precision={2}
                   prefix={<DollarOutlined />}
                 />
