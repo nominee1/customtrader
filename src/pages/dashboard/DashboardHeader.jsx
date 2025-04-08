@@ -4,11 +4,14 @@ import {
   BellOutlined,
   UserOutlined,
 } from '@ant-design/icons';
+import { useUser } from '../../context/AuthContext';
 
 const { Header } = Layout;
 const { Text } = Typography;
 
 const DashboardHeader = () => {
+  const { user, loading } = useUser();
+
   const userMenuItems = [
     {
       key: 'profile',
@@ -30,6 +33,9 @@ const DashboardHeader = () => {
       danger: true
     }
   ];
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <Header style={{ 
@@ -46,13 +52,11 @@ const DashboardHeader = () => {
         </Space>
       </div>
       <Space size="large" style={{ marginRight: 24 }}>
-        <Badge count={5} size="small">
-          <Button type="text" icon={<BellOutlined />} size="large" />
-        </Badge>
+        <Text strong>Bal. {user?.currency} {user?.balance || "Bal"}</Text>
         <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
           <Space style={{ cursor: 'pointer', padding: '0 16px' }}>
             <Avatar icon={<UserOutlined />} />
-            <Text strong>John Doe</Text>
+            <Text strong>{user?.fullname || "User"}</Text>
           </Space>
         </Dropdown>
       </Space>

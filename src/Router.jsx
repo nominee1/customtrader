@@ -7,6 +7,7 @@ import TraderPage from './pages/trader/TraderPage';
 import WalletPage from './components/WalletPage';
 import UserProfile from './components/UserProfile';
 import SettingsPage from './components/SettingPage';
+import { UserProvider } from './context/AuthContext';
 
 function AppRoutes() {
   return (
@@ -14,13 +15,20 @@ function AppRoutes() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/dashboard" element={<Dashboard />}>
-            <Route index element={<MainSection />} />
-            <Route path="home" element={<MainSection />} />
-            <Route path="trading" element={<TraderPage />} />
-            <Route path="wallet" element={<WalletPage />} />
-            <Route path="account" element={<UserProfile />} />
-            <Route path="settings" element={<SettingsPage />} />
+        <Route 
+          path="/dashboard" 
+          element={
+            <UserProvider>
+              <Dashboard />
+            </UserProvider>
+          }
+        >
+          <Route index element={<MainSection />} />
+          <Route path="home" element={<MainSection />} />
+          <Route path="trading" element={<TraderPage />} />
+          <Route path="wallet" element={<WalletPage />} />
+          <Route path="account" element={<UserProfile />} />
+          <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Routes>
     </Router>
