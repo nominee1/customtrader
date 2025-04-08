@@ -17,6 +17,7 @@ import OverUnderTrader from './over_under/OverUnderContract';
 import EvenOddTrader from './even_odd/EvenOddContract';
 import RiseFallTrader from './rise_fall/RiseFallContract';
 import VolatilityComparisonChart from '../../components/TickDataGraph';
+import MatchesDiffersTrader from './matches_differs/MatchesDifferContract';
 
 const { Title, Text } = Typography;
 
@@ -41,8 +42,8 @@ const TraderPage = () => {
         },
         {
           icon: <LineChartOutlined />,
-          title: 'Market Analysis',
-          component: null // No contract for Market Analysis
+          title: 'Matches/Differs',
+          component: <MatchesDiffersTrader />
         }
     ], []);
 
