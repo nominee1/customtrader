@@ -1,244 +1,197 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
-  Card, 
-  Form, 
-  InputNumber, 
-  Select, 
   Button, 
+  Card, 
   Radio, 
-  Statistic,
-  Divider,
-  Alert,
-  Spin,
+  InputNumber, 
+  Row, 
+  Col, 
+  Space, 
   Typography,
-  Space
+  Select
 } from 'antd';
 import { 
-  ArrowUpOutlined, 
+  CloseCircleOutlined, 
+  CheckCircleOutlined,
+  ArrowUpOutlined,
   ArrowDownOutlined,
-  LineChartOutlined,
   DollarOutlined,
-  LoadingOutlined,
-  RiseOutlined, 
+  LineChartOutlined,
+  RiseOutlined
 } from '@ant-design/icons';
-import { DerivAPI } from '@deriv/deriv-api';
 
-const { Option } = Select;
 const { Title, Text } = Typography;
+const { Option } = Select;
 
-const RiseFallTrader = () => {
-  const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
-  const [contractResult, setContractResult] = useState(null);
-  const [balance, setBalance] = useState(0);
-  const [api, setApi] = useState(null);
-  const [connection, setConnection] = useState(null);
+const RiseFallTrader = ({ api, onPurchase }) => {
+  const [durationType, setDurationType] = useState('ticks'); // 'ticks' or 'minutes'
+  const [duration, setDuration] = useState(1);
+  const [minutes, setMinutes] = useState(1);
+  const [basis, setBasis] = useState('stake');
+  const [price, setPrice] = useState(10);
+  const [isSubmitting, setIsSubmitting] = useState(false);  
 
-  // Initialize Deriv API connection
-  useEffect(() => {
-    const initializeAPI = async () => {
-      const derivAPI = new DerivAPI({ app_id: 'YOUR_VALID_APP_ID' });
-      const connection = await derivAPI.connection.connect();
-      setApi(derivAPI);
-      setConnection(connection);
-      
-      // Get balance
-      const account = await derivAPI.account();
-      const { balance } = await account.getAccountInfo();
-      setBalance(balance);
-    };
-
-    initializeAPI();
-
-    return () => {
-      if (connection) connection.close();
-    };
-  }, [connection]);
-
-  const onFinish = async (values) => {
-    setLoading(true);
-    setContractResult(null);
-
-    try {
-      const { symbol, direction, amount, duration } = values;
-      
-      // Send buy request
-      const buy = await api.buy({
-        proposal: 1,
-        amount: amount.toString(),
-        basis: 'stake',
-        contract_type: direction === 'rise' ? 'CALL' : 'PUT',
+  const handleSubmit = (contractType) => {
+    setIsSubmitting(true);
+    
+    const contractData = {
+      buy: 1,
+      price: price,
+      parameters: {
+        amount: price, 
+        basis: basis,
+        contract_type: contractType === 'rise' ? 'CALL' : 'PUT',
         currency: 'USD',
-        duration: duration.toString(),
-        duration_unit: 't',
-        symbol
-      });
+        duration: durationType === 'ticks' ? duration : minutes,
+        duration_unit: durationType === 'ticks' ? 't' : 'm',
+        symbol: 'R_100' // You might want to make this configurable too
+      }
+    };
 
-      // Subscribe to updates
-      buy.onUpdate((update) => {
-        if (update.proposal) {
-          console.log('Proposal:', update.proposal);
-        }
-
-        if (update.contract_id) {
-          setContractResult({
-            contractId: update.contract_id,
-            status: 'open',
-            buyPrice: update.buy_price
-          });
-        }
-
-        if (update.status === 'sold') {
-          setContractResult(prev => ({
-            ...prev,
-            status: 'closed',
-            profit: update.profit,
-            payout: update.payout,
-            sellPrice: update.sell_price
-          }));
-          setBalance(prev => prev + parseFloat(update.profit || 0));
-        }
-      });
-
-      await buy.send();
-
-    } catch (error) {
-      console.error('Trade error:', error);
-      Alert.error(error.message || 'Failed to place trade');
-    } finally {
-      setLoading(false);
+    console.log('Sending contract:', contractData);
+    if (api) {
+      api.send(contractData)
+        .then(response => {
+          onPurchase && onPurchase(response);
+        })
+        .catch(error => {
+          console.error('Contract error:', error);
+        })
+        .finally(() => {
+          setIsSubmitting(false);
+        });
+    } else {
+      // For demo purposes
+      setTimeout(() => {
+        onPurchase && onPurchase({ 
+          contract_id: Math.random().toString(36).substring(7),
+          ...contractData 
+        });
+        setIsSubmitting(false);
+      }, 1000);
     }
   };
-
+  
   return (
     <Card 
       title={
         <Space>
-          <RiseOutlined  />
-          <Title level={4} style={{ margin: 0 }}>Rise/Fall </Title>
+          <RiseOutlined />
+          <Title level={4} style={{ margin: 0 }}>Rise/Fall</Title>
         </Space>
       }
       style={{ maxWidth: 500, margin: '0 auto' }}
     >
-      <Form
-        form={form}
-        layout="vertical"
-        initialValues={{
-          symbol: 'R_100',
-          direction: 'rise',
-          amount: 10,
-          duration: 5
-        }}
-        onFinish={onFinish}
-      >
-        <Form.Item label="Account Balance" style={{ marginBottom: 24 }}>
-          <Statistic 
-            prefix={<DollarOutlined />} 
-            value={balance.toFixed(2)} 
-            precision={2} 
+      {/* Duration Type Selection */}
+      <div style={{ marginBottom: 16 }}>
+        <Text strong style={{ display: 'block', marginBottom: 8 }}>Duration Type:</Text>
+        <Radio.Group 
+          value={durationType} 
+          onChange={(e) => setDurationType(e.target.value)}
+          buttonStyle="solid"
+        >
+          <Radio.Button value="ticks">Ticks</Radio.Button>
+          <Radio.Button value="minutes">Minutes</Radio.Button>
+        </Radio.Group>
+      </div>
+
+      {/* Duration Input - Ticks or Minutes based on selection */}
+      {durationType === 'ticks' ? (
+        <div style={{ marginBottom: 24 }}>
+          <Text strong style={{ display: 'block', marginBottom: 8 }}>Duration (Ticks):</Text>
+          <Row justify="space-between" style={{ padding: '0 20px' }}>
+            {[...Array(10)].map((_, i) => {
+              const tick = i + 1;
+              const isActive = tick <= duration;
+              const IconComponent = isActive ? CheckCircleOutlined : CloseCircleOutlined;
+              
+              return (
+                <Col key={tick}>
+                  <IconComponent
+                    style={{ 
+                      fontSize: 24,
+                      color: isActive ? '#1890ff' : '#d9d9d9',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => setDuration(tick)}
+                    title={`${tick} tick${tick > 1 ? 's' : ''}`}
+                  />
+                </Col>
+              );
+            })}
+          </Row>
+          <Text type="secondary" style={{ display: 'block', textAlign: 'center', marginTop: 8 }}>
+            Selected: {duration} tick{duration > 1 ? 's' : ''}
+          </Text>
+        </div>
+      ) : (
+        <div style={{ marginBottom: 24 }}>
+          <Text strong style={{ display: 'block', marginBottom: 8 }}>Duration (Minutes):</Text>
+          <InputNumber
+            min={1}
+            max={60}
+            value={minutes}
+            onChange={setMinutes}
+            style={{ width: '100%' }}
+            addonAfter="minutes"
           />
-        </Form.Item>
-
-        <Form.Item 
-          name="symbol" 
-          label="Select Index"
-          rules={[{ required: true }]}
-        >
-          <Select>
-            <Option value="R_10">Volatility 10 Index (R_10)</Option>
-            <Option value="R_100">Volatility 100 Index (R_100)</Option>
-          </Select>
-        </Form.Item>
-
-        <Form.Item 
-          name="direction" 
-          label="Contract Direction"
-          rules={[{ required: true }]}
-        >
-          <Radio.Group>
-            <Radio.Button value="rise" style={{ color: '#52c41a' }}>
-              <ArrowUpOutlined /> Rise
-            </Radio.Button>
-            <Radio.Button value="fall" style={{ color: '#f5222d' }}>
-              <ArrowDownOutlined /> Fall
-            </Radio.Button>
-          </Radio.Group>
-        </Form.Item>
-
-        <Form.Item 
-          name="amount" 
-          label="Amount (USD)"
-          rules={[
-            { required: true },
-            { type: 'number', min: 1, max: balance }
-          ]}
-        >
-          <InputNumber 
-            min={1} 
-            max={balance} 
-            style={{ width: '100%' }} 
-            prefix="$" 
-          />
-        </Form.Item>
-
-        <Form.Item 
-          name="duration" 
-          label="Duration (ticks)"
-          rules={[
-            { required: true },
-            { type: 'number', min: 5, max: 100 }
-          ]}
-        >
-          <InputNumber min={5} max={100} style={{ width: '100%' }} />
-        </Form.Item>
-
-        <Form.Item>
-          <Button 
-            type="primary" 
-            htmlType="submit" 
-            block 
-            size="large"
-            loading={loading}
-            icon={<LineChartOutlined />}
-          >
-            Place Contract
-          </Button>
-        </Form.Item>
-      </Form>
-
-      {contractResult && (
-        <div style={{ marginTop: 24 }}>
-          <Divider>Contract Result</Divider>
-          <Card size="small">
-            {contractResult.status === 'open' ? (
-              <Spin indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />} />
-            ) : (
-              <>
-                <Statistic 
-                  title="Result" 
-                  value={contractResult.profit >= 0 ? 'Won' : 'Lost'} 
-                  valueStyle={{ 
-                    color: contractResult.profit >= 0 ? '#52c41a' : '#f5222d' 
-                  }}
-                />
-                <Statistic 
-                  title="Profit/Loss" 
-                  value={contractResult.profit} 
-                  precision={2} 
-                  prefix="$" 
-                />
-                <Statistic 
-                  title="Payout" 
-                  value={contractResult.payout} 
-                  precision={2} 
-                  prefix="$" 
-                />
-              </>
-            )}
-            <Text type="secondary">Contract ID: {contractResult.contractId}</Text>
-          </Card>
         </div>
       )}
+
+      {/* Basis Selection */}
+      <div style={{ marginBottom: 24 }}>
+        <Text strong style={{ display: 'block', marginBottom: 8 }}>Basis:</Text>
+        <Radio.Group value={basis} onChange={(e) => setBasis(e.target.value)}>
+          <Radio value="stake">
+            <DollarOutlined style={{ marginRight: 8 }} />
+            Stake
+          </Radio>
+          <Radio value="payout">
+            <LineChartOutlined style={{ marginRight: 8 }} />
+            Payout
+          </Radio>
+        </Radio.Group>
+      </div>
+
+      {/* Price Input */}
+      <div style={{ marginBottom: 32 }}>
+        <Text strong style={{ display: 'block', marginBottom: 8 }}>Amount (USD):</Text>
+        <InputNumber
+          min={1}
+          max={10000}
+          value={price}
+          onChange={setPrice}
+          style={{ width: '100%' }}
+          prefix={<DollarOutlined />}
+        />
+      </div>
+
+      {/* Action Buttons */}
+
+      <Space size="large" style={{ width: '100%', justifyContent: 'center' }}>
+        <Button
+          type="primary"
+          icon={<ArrowUpOutlined />} 
+          size="large"
+          style={{ width: 120, background: '#722ed1', borderColor: '#722ed1' }}
+          onClick={() => handleSubmit('rise')}
+          loading={isSubmitting}
+          disabled={isSubmitting}
+        >
+          Rise (CALL)
+        </Button>
+        <Button
+          type="primary"
+          icon={<ArrowDownOutlined />} 
+          size="large"
+          style={{ width: 120 }}
+          onClick={() => handleSubmit('fall')}
+          loading={isSubmitting}
+          disabled={isSubmitting}
+        >
+          Fall (PUT)
+        </Button>
+      </Space>
     </Card>
   );
 };
