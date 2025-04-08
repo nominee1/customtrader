@@ -1,140 +1,74 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
-  Card, 
-  Form, 
-  InputNumber, 
-  Select, 
   Button, 
+  Card, 
   Radio, 
-  Statistic,
-  Divider,
-  Alert,
-  Spin,
+  InputNumber, 
+  Row, 
+  Col, 
+  Space, 
   Typography,
-  Badge,
-  Slider,
-  Row,
-  Col,
-  Space
+  Select,
+  Badge
 } from 'antd';
 import { 
-  ArrowUpOutlined, 
+  CloseCircleOutlined, 
+  CheckCircleOutlined,
+  ArrowUpOutlined,
   ArrowDownOutlined,
   DollarOutlined,
-  LoadingOutlined,
-  CheckOutlined,
-  CloseOutlined,
-  LineChartOutlined
+  LineChartOutlined,
+  NumberOutlined
 } from '@ant-design/icons';
-import { DerivAPI } from '@deriv/deriv-api';
 
 const { Option } = Select;
 const { Title, Text } = Typography;
 
-const OverUnderTrader = () => {
-  const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
-  const [contractResult, setContractResult] = useState(null);
-  const [balance, setBalance] = useState(0);
-  const [api, setApi] = useState(null);
-  const [currentSpot, setCurrentSpot] = useState(null);
-  const [barrier, setBarrier] = useState(0.5);
-  const [history, setHistory] = useState([]);
+const OverUnderTrader = ({ api, onPurchase }) => {
+  const [duration, setDuration] = useState(1);
+  const [selectedDigit, setSelectedDigit] = useState(5); // Default to middle digit
+  const [basis, setBasis] = useState('stake');
+  const [price, setPrice] = useState(10);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Initialize API
-  useEffect(() => {
-    const initializeAPI = async () => {
-      const derivAPI = new DerivAPI({ app_id: '12345' });
-      await derivAPI.connection.connect();
-      setApi(derivAPI);
-      
-      // Get balance
-      const account = await derivAPI.account();
-      const { balance } = await account.getAccountInfo();
-      setBalance(balance);
-      
-      // Subscribe to spot prices
-      const subscription = derivAPI.subscribe({ ticks: 'R_100' });
-      subscription.onUpdate((update) => {
-        if (update.tick) {
-          setCurrentSpot(update.tick.quote);
-        }
-      });
-    };
-
-    initializeAPI();
-
-    return () => {
-      if (api) api.connection.close();
-    };
-  }, [api]);
-
-  const onFinish = async (values) => {
-    setLoading(true);
-    setContractResult(null);
-
-    try {
-      const { symbol, direction, amount, duration } = values;
-      
-      // Calculate barrier offset
-      const barrierOffset = direction === 'over' ? barrier : -barrier;
-      
-      // Send buy request
-      const buy = await api.buy({
-        proposal: 1,
-        amount: amount.toString(),
-        basis: 'stake',
-        contract_type: direction === 'over' ? 'CALL' : 'PUT',
+  const handleSubmit = (contractType) => {
+    setIsSubmitting(true);
+    
+    const contractData = {
+      buy: 1,
+      price: price,
+      parameters: {
+        amount: price,
+        basis: basis,
+        contract_type: contractType === 'over' ? 'DIGITOVER' : 'DIGITUNDER',
         currency: 'USD',
-        duration: duration.toString(),
+        duration: duration,
         duration_unit: 't',
-        symbol,
-        barrier: currentSpot + barrierOffset
-      });
+        symbol: 'R_100',
+        barrier: selectedDigit.toString() // Important: Add the selected digit as barrier
+      }
+    };
 
-      // Subscribe to updates
-      buy.onUpdate((update) => {
-        if (update.proposal) {
-          console.log('Proposal:', update.proposal);
-        }
-
-        if (update.contract_id) {
-          setContractResult({
-            contractId: update.contract_id,
-            status: 'open',
-            buyPrice: update.buy_price,
-            direction,
-            symbol,
-            barrier: currentSpot + barrierOffset,
-            spotAtPurchase: currentSpot
-          });
-        }
-
-        if (update.status === 'sold') {
-          const result = {
-            ...contractResult,
-            status: 'closed',
-            profit: update.profit,
-            payout: update.payout,
-            sellPrice: update.sell_price,
-            spotAtExpiry: update.sell_spot,
-            isWin: (direction === 'over' && update.sell_spot > (currentSpot + barrierOffset)) || 
-                   (direction === 'under' && update.sell_spot < (currentSpot - barrierOffset))
-          };
-
-          setContractResult(result);
-          setHistory(prev => [result, ...prev.slice(0, 4)]);
-          setBalance(prev => prev + parseFloat(update.profit || 0));
-        }
-      });
-
-      await buy.send();
-
-    } catch (error) {
-      console.error('Trade error:', error);
-      Alert.error(error.message || 'Failed to place trade');
-    } finally {
-      setLoading(false);
+    console.log('Sending contract:', contractData);
+    if (api) {
+      api.send(contractData)
+        .then(response => {
+          onPurchase && onPurchase(response);
+        })
+        .catch(error => {
+          console.error('Contract error:', error);
+        })
+        .finally(() => {
+          setIsSubmitting(false);
+        });
+    } else {
+      setTimeout(() => {
+        onPurchase && onPurchase({ 
+          contract_id: Math.random().toString(36).substring(7),
+          ...contractData 
+        });
+        setIsSubmitting(false);
+      }, 1000);
     }
   };
 
@@ -142,228 +76,131 @@ const OverUnderTrader = () => {
     <Card 
       title={
         <Space>
-          <LineChartOutlined />
-          <Title level={4} style={{ margin: 0 }}>Over/Under Contract</Title>
+          <NumberOutlined />
+          <Title level={4} style={{ margin: 0 }}>Over/Under</Title>
         </Space>
       }
-      style={{ maxWidth: 600, margin: '0 auto' }}
-      extra={
-        <Badge count={history.length} overflowCount={4}>
-          <Button 
-            type="text" 
-            onClick={() => setHistory([])}
-            disabled={!history.length}
-          >
-            Clear History
-          </Button>
-        </Badge>
-      }
+      style={{ maxWidth: 500, margin: '0 auto' }}
     >
-      <Form
-        form={form}
-        layout="vertical"
-        initialValues={{
-          symbol: 'R_100',
-          direction: 'over',
-          amount: 5,
-          duration: 5
-        }}
-        onFinish={onFinish}
-      >
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item label="Account Balance" style={{ marginBottom: 24 }}>
-              <Statistic 
-                prefix={<DollarOutlined />} 
-                value={balance.toFixed(2)} 
-                precision={2} 
-              />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item label="Current Spot Price" style={{ marginBottom: 24 }}>
-              <Statistic 
-                value={currentSpot ? currentSpot.toFixed(4) : '--'} 
-                precision={4} 
-              />
-            </Form.Item>
-          </Col>
+      {/* Tick Duration Selector */}
+      <div style={{ marginBottom: 24 }}>
+        <Text strong style={{ display: 'block', marginBottom: 8 }}>Duration (Ticks):</Text>
+        <Row justify="space-between" style={{ padding: '0 20px' }}>
+          {[...Array(10)].map((_, i) => {
+            const tick = i + 1;
+            const isActive = tick <= duration;
+            const IconComponent = isActive ? CheckCircleOutlined : CloseCircleOutlined;
+            
+            return (
+              <Col key={tick}>
+                <IconComponent
+                  style={{ 
+                    fontSize: 24,
+                    color: isActive ? '#1890ff' : '#d9d9d9',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => setDuration(tick)}
+                  title={`${tick} tick${tick > 1 ? 's' : ''}`}
+                />
+              </Col>
+            );
+          })}
         </Row>
+        <Text type="secondary" style={{ display: 'block', textAlign: 'center', marginTop: 8 }}>
+          Selected: {duration} tick{duration > 1 ? 's' : ''}
+        </Text>
+      </div>
 
-        <Form.Item 
-          name="symbol" 
-          label="Select Index"
-          rules={[{ required: true }]}
+      {/* Digit Selection */}
+      <div style={{ marginBottom: 24 }}>
+        <Text strong style={{ display: 'block', marginBottom: 8 }}>Select Digit (0-9):</Text>
+        <Row justify="space-between" style={{ padding: '0 10px' }}>
+          {[...Array(10)].map((_, i) => (
+            <Col key={i}>
+              <Badge
+                count={i}
+                style={{
+                  backgroundColor: selectedDigit === i ? '#1890ff' : '#f0f0f0',
+                  color: selectedDigit === i ? '#fff' : '#000',
+                  fontSize: 16,
+                  width: 32,
+                  height: 32,
+                  lineHeight: '32px',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                  boxShadow: selectedDigit === i ? '0 0 0 2px #1890ff' : 'none'
+                }}
+                onClick={() => setSelectedDigit(i)}
+              />
+            </Col>
+          ))}
+        </Row>
+        <Text type="secondary" style={{ display: 'block', textAlign: 'center', marginTop: 8 }}>
+          Selected: {selectedDigit}
+        </Text>
+      </div>
+
+      {/* Basis Selection */}
+      <div style={{ marginBottom: 24 }}>
+        <Text strong style={{ display: 'block', marginBottom: 8 }}>Basis:</Text>
+        <Radio.Group 
+          value={basis} 
+          onChange={(e) => setBasis(e.target.value)}
+          buttonStyle="solid"
         >
-          <Select>
-            <Option value="R_10">Volatility 10 Index (R_10)</Option>
-            <Option value="R_100">Volatility 100 Index (R_100)</Option>
-          </Select>
-        </Form.Item>
+          <Radio.Button value="stake">
+            <DollarOutlined style={{ marginRight: 8 }} />
+            Stake
+          </Radio.Button>
+          <Radio.Button value="payout">
+            <LineChartOutlined style={{ marginRight: 8 }} />
+            Payout
+          </Radio.Button>
+        </Radio.Group>
+      </div>
 
-        <Form.Item 
-          name="direction" 
-          label="Contract Direction"
-          rules={[{ required: true }]}
-        >
-          <Radio.Group>
-            <Radio.Button value="over" style={{ color: '#52c41a' }}>
-              <ArrowUpOutlined /> Over
-            </Radio.Button>
-            <Radio.Button value="under" style={{ color: '#f5222d' }}>
-              <ArrowDownOutlined /> Under
-            </Radio.Button>
-          </Radio.Group>
-        </Form.Item>
+      {/* Price Input */}
+      <div style={{ marginBottom: 32 }}>
+        <Text strong style={{ display: 'block', marginBottom: 8 }}>Amount (USD):</Text>
+        <InputNumber
+          min={1}
+          max={10000}
+          value={price}
+          onChange={setPrice}
+          style={{ width: '100%' }}
+          prefix={<DollarOutlined />}
+        />
+      </div>
 
-        <Form.Item label="Barrier Offset" style={{ marginBottom: 24 }}>
-          <Slider
-            min={0.1}
-            max={2}
-            step={0.1}
-            value={barrier}
-            onChange={setBarrier}
-            tooltip={{
-              formatter: (value) => `${value} points`, 
-            }}
-          />
-          <Text type="secondary">
-            {`Barrier will be set at ${currentSpot ? (currentSpot + (form.getFieldValue('direction') === 'over' ? barrier : -barrier)).toFixed(4) : '--'}`}
-          </Text>
-        </Form.Item>
-
-        <Form.Item 
-          name="amount" 
-          label="Amount (USD)"
-          rules={[
-            { required: true },
-            { type: 'number', min: 0.5, max: balance }
-          ]}
-        >
-          <InputNumber 
-            min={0.5} 
-            max={balance} 
-            step={0.5}
-            style={{ width: '100%' }} 
-            prefix="$" 
-          />
-        </Form.Item>
-
-        <Form.Item 
-          name="duration" 
-          label="Duration (ticks)"
-          rules={[
-            { required: true },
-            { type: 'number', min: 5, max: 100 }
-          ]}
-        >
-          <InputNumber min={5} max={100} style={{ width: '100%' }} />
-        </Form.Item>
-
-        <Form.Item>
+      {/* Action Buttons */}
+      <Row gutter={16}>
+        <Col span={12}>
           <Button 
             type="primary" 
-            htmlType="submit" 
             block 
             size="large"
-            loading={loading}
-            icon={<LineChartOutlined />}
+            icon={<ArrowUpOutlined />} 
+            loading={isSubmitting}
+            onClick={() => handleSubmit('over')}
+            disabled={isSubmitting}
           >
-            Place Over/Under Contract
+            Over ({selectedDigit}+)
           </Button>
-        </Form.Item>
-      </Form>
-
-      {/* Trade History */}
-      {history.length > 0 && (
-        <div style={{ marginTop: 16 }}>
-          <Text strong>Recent Contracts:</Text>
-          <Space direction="vertical" style={{ width: '100%', marginTop: 8 }}>
-            {history.map((item, index) => (
-              <Badge.Ribbon 
-                key={index}
-                text={item.isWin ? 'WON' : 'LOST'}
-                color={item.isWin ? 'green' : 'red'}
-              >
-                <Card size="small">
-                  <Space>
-                    <Text>{item.symbol}</Text>
-                    <Text strong>{item.direction.toUpperCase()}</Text>
-                    <Text>Barrier: {item.barrier.toFixed(4)}</Text>
-                    <Text>Payout: ${item.payout.toFixed(2)}</Text>
-                  </Space>
-                </Card>
-              </Badge.Ribbon>
-            ))}
-          </Space>
-        </div>
-      )}
-
-      {/* Contract Results */}
-      {contractResult && (
-        <div style={{ marginTop: 24 }}>
-          <Divider>Contract Result</Divider>
-          <Card size="small">
-            {contractResult.status === 'open' ? (
-              <Spin indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />} />
-            ) : (
-              <>
-                <Row gutter={16}>
-                  <Col span={12}>
-                    <Statistic 
-                      title="Direction" 
-                      value={contractResult.direction.toUpperCase()} 
-                      valueStyle={{ 
-                        color: contractResult.direction === 'over' ? '#52c41a' : '#f5222d'
-                      }}
-                    />
-                  </Col>
-                  <Col span={12}>
-                    <Statistic 
-                      title="Barrier" 
-                      value={contractResult.barrier.toFixed(4)} 
-                    />
-                  </Col>
-                </Row>
-                <Row gutter={16} style={{ marginTop: 16 }}>
-                  <Col span={12}>
-                    <Statistic 
-                      title="Entry" 
-                      value={contractResult.spotAtPurchase.toFixed(4)} 
-                    />
-                  </Col>
-                  <Col span={12}>
-                    <Statistic 
-                      title="Exit" 
-                      value={contractResult.spotAtExpiry.toFixed(4)} 
-                    />
-                  </Col>
-                </Row>
-                <Divider />
-                <Statistic 
-                  title="Result" 
-                  value={contractResult.isWin ? 'WON' : 'LOST'} 
-                  valueStyle={{ 
-                    color: contractResult.isWin ? '#52c41a' : '#f5222d',
-                    fontSize: 24
-                  }}
-                  prefix={contractResult.isWin ? <CheckOutlined /> : <CloseOutlined />}
-                />
-                <Statistic 
-                  title="Payout" 
-                  value={contractResult.payout} 
-                  precision={2} 
-                  prefix="$" 
-                  style={{ marginTop: 16 }}
-                />
-              </>
-            )}
-            <Text type="secondary" style={{ display: 'block', marginTop: 16 }}>
-              Contract ID: {contractResult.contractId}
-            </Text>
-          </Card>
-        </div>
-      )}
+        </Col>
+        <Col span={12}>
+          <Button 
+            type="danger" 
+            block 
+            size="large"
+            icon={<ArrowDownOutlined />} 
+            loading={isSubmitting}
+            onClick={() => handleSubmit('under')}
+            disabled={isSubmitting}
+          >
+            Under ({selectedDigit}-)
+          </Button>
+        </Col>
+      </Row>
     </Card>
   );
 };
