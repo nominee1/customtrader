@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { Button, Card, Radio, InputNumber, Row, Col, Space, Typography } from 'antd';
-import { CloseCircleOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { CloseCircleOutlined, CheckCircleOutlined, NumberOutlined } from '@ant-design/icons';
+import { useUser } from '../../../context/AuthContext';
+const { Title } = Typography;
 
 const { Text } = Typography;
 
 const EvenOddContract = ({ api, onPurchase }) => {
+  const { user } = useUser(); 
   const [duration, setDuration] = useState(1);
   const [basis, setBasis] = useState('stake');
   const [price, setPrice] = useState(10);
@@ -12,29 +15,30 @@ const EvenOddContract = ({ api, onPurchase }) => {
 
   const handleSubmit = (contractType) => {
     setIsSubmitting(true);
-    
+
     const contractData = {
       buy: 1,
       price: price,
       parameters: {
-        amount: price, 
+        amount: price,
         basis: basis,
         contract_type: contractType === 'even' ? 'DIGITEVEN' : 'DIGITODD',
         currency: 'USD',
         duration: duration,
         duration_unit: 't',
-        symbol: 'R_100'
-      }
+        symbol: 'R_100',
+      },
+      loginid: user?.loginid,
     };
 
     // Simulate API call - replace with your actual Deriv API call
     console.log('Sending contract:', contractData);
     if (api) {
       api.send(contractData)
-        .then(response => {
+        .then((response) => {
           onPurchase && onPurchase(response);
         })
-        .catch(error => {
+        .catch((error) => {
           console.error('Contract error:', error);
         })
         .finally(() => {
@@ -43,37 +47,44 @@ const EvenOddContract = ({ api, onPurchase }) => {
     } else {
       // For demo purposes
       setTimeout(() => {
-        onPurchase && onPurchase({ 
-          contract_id: Math.random().toString(36).substring(7),
-          ...contractData 
-        });
+        onPurchase &&
+          onPurchase({
+            contract_id: Math.random().toString(36).substring(7),
+            ...contractData,
+          });
         setIsSubmitting(false);
       }, 1000);
     }
   };
 
   return (
-    <Card 
-      title="Even/Odd Contract" 
-      style={{ maxWidth: 600, margin: '0 auto' }}
-      headStyle={{ textAlign: 'center' }}
+    <Card
+      title={
+        <Space>
+          <NumberOutlined />
+          <Title level={4} style={{ margin: 0 }}>Even/Odd</Title>
+        </Space>
+      }
+      style={{ maxWidth: 500, margin: '0 auto' }}
     >
-      {/* Tick Duration Selector (Dots) */}
+      {/* Tick Duration Selector */}
       <div style={{ marginBottom: 24 }}>
-        <Text strong style={{ display: 'block', marginBottom: 8 }}>Duration (Ticks):</Text>
+        <Text strong style={{ display: 'block', marginBottom: 8 }}>
+          Duration (Ticks):
+        </Text>
         <Row justify="space-between" style={{ padding: '0 20px' }}>
           {[...Array(10)].map((_, i) => {
             const tick = i + 1;
             const isActive = tick <= duration;
             const IconComponent = isActive ? CheckCircleOutlined : CloseCircleOutlined;
-            
+
             return (
               <Col key={tick}>
                 <IconComponent
-                  style={{ 
+                  style={{
                     fontSize: 24,
                     color: isActive ? '#1890ff' : '#d9d9d9',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
                   }}
                   onClick={() => setDuration(tick)}
                   title={`${tick} tick${tick > 1 ? 's' : ''}`}
@@ -89,12 +100,10 @@ const EvenOddContract = ({ api, onPurchase }) => {
 
       {/* Basis Selection */}
       <div style={{ marginBottom: 24 }}>
-        <Text strong style={{ display: 'block', marginBottom: 8 }}>Basis:</Text>
-        <Radio.Group 
-          value={basis} 
-          onChange={(e) => setBasis(e.target.value)}
-          buttonStyle="solid"
-        >
+        <Text strong style={{ display: 'block', marginBottom: 8 }}>
+          Basis:
+        </Text>
+        <Radio.Group value={basis} onChange={(e) => setBasis(e.target.value)} buttonStyle="solid">
           <Radio.Button value="stake">Stake</Radio.Button>
           <Radio.Button value="payout">Payout</Radio.Button>
         </Radio.Group>
@@ -102,7 +111,9 @@ const EvenOddContract = ({ api, onPurchase }) => {
 
       {/* Price Input */}
       <div style={{ marginBottom: 32 }}>
-        <Text strong style={{ display: 'block', marginBottom: 8 }}>Amount (USD):</Text>
+        <Text strong style={{ display: 'block', marginBottom: 8 }}>
+          Amount (USD):
+        </Text>
         <InputNumber
           min={1}
           max={1000}

@@ -20,13 +20,15 @@ import {
   LineChartOutlined,
   NumberOutlined
 } from '@ant-design/icons';
+import { useUser } from '../../../context/AuthContext';
 
 const { Option } = Select;
 const { Title, Text } = Typography;
 
 const OverUnderTrader = ({ api, onPurchase }) => {
+  const { user } = useUser();
   const [duration, setDuration] = useState(1);
-  const [selectedDigit, setSelectedDigit] = useState(5); // Default to middle digit
+  const [selectedDigit, setSelectedDigit] = useState(5);
   const [basis, setBasis] = useState('stake');
   const [price, setPrice] = useState(10);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,8 +47,9 @@ const OverUnderTrader = ({ api, onPurchase }) => {
         duration: duration,
         duration_unit: 't',
         symbol: 'R_100',
-        barrier: selectedDigit.toString() // Important: Add the selected digit as barrier
-      }
+        barrier: selectedDigit.toString() 
+      },
+      loginid: user?.loginid,
     };
 
     console.log('Sending contract:', contractData);
@@ -179,6 +182,7 @@ const OverUnderTrader = ({ api, onPurchase }) => {
             type="primary" 
             block 
             size="large"
+            style={{background: '#722ed1', borderColor: '#722ed1' }}
             icon={<ArrowUpOutlined />} 
             loading={isSubmitting}
             onClick={() => handleSubmit('over')}
@@ -189,7 +193,7 @@ const OverUnderTrader = ({ api, onPurchase }) => {
         </Col>
         <Col span={12}>
           <Button 
-            type="danger" 
+            type="primary" 
             block 
             size="large"
             icon={<ArrowDownOutlined />} 

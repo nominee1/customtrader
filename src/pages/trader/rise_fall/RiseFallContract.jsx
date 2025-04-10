@@ -19,12 +19,13 @@ import {
   LineChartOutlined,
   RiseOutlined
 } from '@ant-design/icons';
-
+import { useUser } from '../../../context/AuthContext';
 const { Title, Text } = Typography;
 const { Option } = Select;
 
 const RiseFallTrader = ({ api, onPurchase }) => {
-  const [durationType, setDurationType] = useState('ticks'); // 'ticks' or 'minutes'
+  const { user } = useUser(); 
+  const [durationType, setDurationType] = useState('ticks'); 
   const [duration, setDuration] = useState(1);
   const [minutes, setMinutes] = useState(1);
   const [basis, setBasis] = useState('stake');
@@ -45,7 +46,8 @@ const RiseFallTrader = ({ api, onPurchase }) => {
         duration: durationType === 'ticks' ? duration : minutes,
         duration_unit: durationType === 'ticks' ? 't' : 'm',
         symbol: 'R_100' // You might want to make this configurable too
-      }
+      },
+      loginid: user?.loginid,
     };
 
     console.log('Sending contract:', contractData);

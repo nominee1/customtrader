@@ -19,12 +19,14 @@ import {
   LineChartOutlined,
   NumberOutlined
 } from '@ant-design/icons';
+import { useUser } from '../../../context/AuthContext';
 
 const { Title, Text } = Typography;
 
 const MatchesDiffersTrader = ({ api, onPurchase }) => {
+  const { user } = useUser();
   const [duration, setDuration] = useState(1);
-  const [selectedDigit, setSelectedDigit] = useState(5); // Default middle digit
+  const [selectedDigit, setSelectedDigit] = useState(5);
   const [basis, setBasis] = useState('stake');
   const [price, setPrice] = useState(10);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,8 +45,9 @@ const MatchesDiffersTrader = ({ api, onPurchase }) => {
         duration: duration,
         duration_unit: 't',
         symbol: 'R_100',
-        barrier: selectedDigit.toString() // Use selected digit as barrier
-      }
+        barrier: selectedDigit.toString() 
+      },
+      loginid: user?.loginid,
     };
 
     console.log('Sending contract:', contractData);
@@ -181,7 +184,7 @@ const MatchesDiffersTrader = ({ api, onPurchase }) => {
             loading={isSubmitting}
             onClick={() => handleSubmit('matches')}
             disabled={isSubmitting}
-            style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+            style={{ background: '#722ed1', borderColor: '#722ed1' }}
           >
             Matches {selectedDigit}
           </Button>
@@ -195,7 +198,6 @@ const MatchesDiffersTrader = ({ api, onPurchase }) => {
             loading={isSubmitting}
             onClick={() => handleSubmit('differs')}
             disabled={isSubmitting}
-            style={{ backgroundColor: '#f5222d', borderColor: '#f5222d' }}
           >
             Differs {selectedDigit}
           </Button>
