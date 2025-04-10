@@ -29,8 +29,9 @@ const RiseFallTrader = ({ api, onPurchase }) => {
   const [duration, setDuration] = useState(1);
   const [minutes, setMinutes] = useState(1);
   const [basis, setBasis] = useState('stake');
+  const [symbol, setSymbol] = useState('R_10');
   const [price, setPrice] = useState(10);
-  const [isSubmitting, setIsSubmitting] = useState(false);  
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = (contractType) => {
     setIsSubmitting(true);
@@ -45,7 +46,7 @@ const RiseFallTrader = ({ api, onPurchase }) => {
         currency: 'USD',
         duration: durationType === 'ticks' ? duration : minutes,
         duration_unit: durationType === 'ticks' ? 't' : 'm',
-        symbol: 'R_100' // You might want to make this configurable too
+        symbol: symbol === 'R_10' ? 'R_10' : symbol, 
       },
       loginid: user?.loginid,
     };
@@ -84,6 +85,28 @@ const RiseFallTrader = ({ api, onPurchase }) => {
       }
       style={{ maxWidth: 500, margin: '0 auto' }}
     >
+      {/* Symbol Selection */}
+      <div style={{ marginBottom: 16 }}>
+        <Text strong style={{ display: 'block', marginBottom: 8 }}>Volatility:</Text>
+        <Select
+          value={symbol}
+          onChange={setSymbol}
+          style={{ width: '100%' }}
+          placeholder="Select a symbol"
+        >
+          <Option className="Volatility10" value="R_10">Volatility 10 index</Option>
+          <Option className="Volatility10s" value="1HZ10V">Volatility 10(1s) index</Option>
+          <Option className="Volatility25" value="R_25">Volatility 25 index</Option>
+          <Option className="Volatility25s" value="1HZ25V">Volatility 25(1s) index</Option>
+          <Option className="Volatility50" value="R_50">Volatility 50 index</Option>
+          <Option className="Volatility50s" value="1HZ50V">Volatility 50(1s) index</Option>
+          <Option className="Volatility75" value="R_75">Volatility 75 index</Option>
+          <Option className="Volatility75s" value="1HZ75V">Volatility 75(1s) index</Option>
+          <Option className="Volatility100" value="R_100">Volatility 100 index</Option>
+          <Option className="Volatility100s" value="1HZ100V">Volatility 100(1s) index</Option>
+        </Select>
+      </div>
+      
       {/* Duration Type Selection */}
       <div style={{ marginBottom: 16 }}>
         <Text strong style={{ display: 'block', marginBottom: 8 }}>Duration Type:</Text>
