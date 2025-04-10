@@ -1,4 +1,4 @@
-import { derivWebSocket } from './DerivWebSocket';
+import { derivWebSocket } from './websocket_client';
 
 export const fetchActiveSymbols = () => {
     return new Promise((resolve, reject) => {
