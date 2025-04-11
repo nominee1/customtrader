@@ -1,3 +1,4 @@
+import React from 'react';
 import { 
   Card, 
   Row, 
@@ -30,7 +31,7 @@ const { Title, Text } = Typography;
 const { Content } = Layout;
 
 const DashboardMainContent = () => {
-  const { user } = useUser();
+  const { user, realityCheck } = useUser();
 
   if (!user) {
     return (
@@ -40,18 +41,32 @@ const DashboardMainContent = () => {
     );
   }
 
-  // Sample data - replace with real data from your API
-  const performanceData = {
-    profit: 1582.50,
-    growth: 5.2,
-    trades: {
-      total: 4,
-      long: 1,
-      short: 3
-    },
-    symbols: 10,
-    contracts: 12
+  // Extract values from realityCheck
+  const totalPurchases = realityCheck?.reality_check?.total_purchases || 0;
+  const totalProfitLoss = realityCheck?.reality_check?.total_profit_loss || 0;
+  const totalPayouts = realityCheck?.reality_check?.total_payouts || 0;
+  const numTransactions = realityCheck?.reality_check?.num_transactions || 0;
+  const sessionDuration = realityCheck?.reality_check?.session_duration || 0;
+
+  // Calculate percentage growth
+  const percentageGrowth = totalPurchases
+    ? ((totalProfitLoss / totalPurchases) * 100).toFixed(2)
+    : 0;
+
+  // Convert session duration to human-readable format
+  const formatSessionDuration = (durationInSeconds) => {
+    const minutes = Math.floor(durationInSeconds / 60);
+    const hours = Math.floor(minutes / 60);
+    if (hours > 0) {
+      return `in the last ${hours} hour${hours > 1 ? 's' : ''}`;
+    } else if (minutes > 0) {
+      return `in the last ${minutes} minute${minutes > 1 ? 's' : ''}`;
+    } else {
+      return `just now`;
+    }
   };
+
+  const readableSessionDuration = formatSessionDuration(sessionDuration);
 
   return (
     <ConfigProvider
@@ -131,10 +146,12 @@ const DashboardMainContent = () => {
                   title={
                     <Space>
                       <SwapOutlined style={{ color: '#00CEFF' }} />
-                      <Text>Trades Today</Text>
+                      <Text>Total Purchases</Text>
                     </Space>
                   }
-                  value={performanceData.trades.total}
+                  value={totalPurchases}
+                  precision={2}
+                  prefix="$"
                   valueStyle={{ fontSize: 24, fontWeight: 600 }}
                 />
                 <Progress 
@@ -144,14 +161,7 @@ const DashboardMainContent = () => {
                   strokeColor="#00CEFF"
                   trailColor="#E8FAFF"
                 />
-                <Space>
-                  <Tag icon={<RiseOutlined />} color="#00CEFF20" style={{ color: '#00CEFF' }}>
-                    {performanceData.trades.long} long
-                  </Tag>
-                  <Tag icon={<FallOutlined />} color="#FF767520" style={{ color: '#FF7675' }}>
-                    {performanceData.trades.short} short
-                  </Tag>
-                </Space>
+                <Text type="secondary">{numTransactions} transactions {readableSessionDuration}</Text>
               </Card>
             </Col>
 
@@ -168,19 +178,22 @@ const DashboardMainContent = () => {
                   title={
                     <Space>
                       <ArrowUpOutlined style={{ color: '#3f8600' }} />
-                      <Text>Today's Profit</Text>
+                      <Text>Profit Growth</Text>
                     </Space>
                   }
-                  value={performanceData.profit}
+                  value={totalProfitLoss}
                   precision={2}
                   prefix="$"
                   valueStyle={{ color: '#3f8600', fontSize: 24, fontWeight: 600 }}
                 />
-                <div style={{ marginTop: 8 }}>
-                  <Text type="secondary">
-                    <ArrowUpOutlined style={{ color: '#3f8600' }} /> {performanceData.growth}% portfolio growth
-                  </Text>
-                </div>
+                <Progress
+                  percent={percentageGrowth}
+                  status="active"
+                  showInfo={false}
+                  strokeColor="#3f8600"
+                  trailColor="#E6FFED"
+                />
+                <Text type="secondary">{percentageGrowth}% Growth {readableSessionDuration}</Text>
               </Card>
             </Col>
 
@@ -197,12 +210,13 @@ const DashboardMainContent = () => {
                   title={
                     <Space>
                       <LineChartOutlined style={{ color: '#FF7675' }} />
-                      <Text>Active Symbols</Text>
+                      <Text>Total Payouts</Text>
                     </Space>
                   }
-                  value={performanceData.symbols}
-                  suffix="daily"
-                  valueStyle={{ fontSize: 24, fontWeight: 600 }}
+                  value={totalPayouts}
+                  precision={2}
+                  prefix="$"
+                  valueStyle={{ color: '#FF7675', fontSize: 24, fontWeight: 600 }}
                 />
                 <Progress 
                   percent={25} 
@@ -211,7 +225,7 @@ const DashboardMainContent = () => {
                   strokeColor="#FF7675"
                   trailColor="#FFEEED"
                 />
-                <Text type="secondary">{performanceData.contracts} contracts in last hour</Text>
+                <Text type="secondary">{numTransactions} transactions {readableSessionDuration}</Text>
               </Card>
             </Col>
           </Row>
@@ -277,59 +291,65 @@ const DashboardMainContent = () => {
           </Row>
 
           {/* Quick Actions */}
-          <Row gutter={[24, 24]} style={{ marginTop: 24 }}>
-            <Col span={24}>
+          <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
+            <Col xs={12} sm={6} md={6}>
               <Card 
-                title="Quick Actions"
-                style={{ borderRadius: 16 }}
+                hoverable
+                style={{ 
+                  textAlign: 'center',
+                  borderRadius: 12,
+                  border: '1px solid #6C5CE720',
+                  background: '#6C5CE710'
+                }}
               >
-                <Row gutter={[24, 16]}>
-                  <Col xs={24} sm={8}>
-                    <Card 
-                      hoverable
-                      style={{ 
-                        textAlign: 'center',
-                        borderRadius: 12,
-                        border: '1px solid #6C5CE720',
-                        background: '#6C5CE710'
-                      }}
-                    >
-                      <RiseOutlined style={{ fontSize: 32, color: '#6C5CE7' }} />
-                      <Title level={5} style={{ marginTop: 16, color: '#6C5CE7' }}>Rise/Fall</Title>
-                      <Text type="secondary">Predict market direction</Text>
-                    </Card>
-                  </Col>
-                  <Col xs={24} sm={8}>
-                    <Card 
-                      hoverable
-                      style={{ 
-                        textAlign: 'center',
-                        borderRadius: 12,
-                        border: '1px solid #00CEFF20',
-                        background: '#00CEFF10'
-                      }}
-                    >
-                      <NumberOutlined style={{ fontSize: 32, color: '#00CEFF' }} />
-                      <Title level={5} style={{ marginTop: 16, color: '#00CEFF' }}>Even/Odd</Title>
-                      <Text type="secondary">Bet on digit outcomes</Text>
-                    </Card>
-                  </Col>
-                  <Col xs={24} sm={8}>
-                    <Card 
-                      hoverable
-                      style={{ 
-                        textAlign: 'center',
-                        borderRadius: 12,
-                        border: '1px solid #FF767520',
-                        background: '#FF767510'
-                      }}
-                    >
-                      <ArrowUpOutlined style={{ fontSize: 32, color: '#FF7675' }} />
-                      <Title level={5} style={{ marginTop: 16, color: '#FF7675' }}>Over/Under</Title>
-                      <Text type="secondary">Set your price barriers</Text>
-                    </Card>
-                  </Col>
-                </Row>
+                <RiseOutlined style={{ fontSize: 24, color: '#6C5CE7' }} />
+                <Title level={5} style={{ marginTop: 8, fontSize: 14, color: '#6C5CE7' }}>Rise/Fall</Title>
+                <Text type="secondary" style={{ fontSize: 12 }}>Predict market direction</Text>
+              </Card>
+            </Col>
+            <Col xs={12} sm={6} md={6}>
+              <Card 
+                hoverable
+                style={{ 
+                  textAlign: 'center',
+                  borderRadius: 12,
+                  border: '1px solid #00CEFF20',
+                  background: '#00CEFF10'
+                }}
+              >
+                <NumberOutlined style={{ fontSize: 24, color: '#00CEFF' }} />
+                <Title level={5} style={{ marginTop: 8, fontSize: 14, color: '#00CEFF' }}>Even/Odd</Title>
+                <Text type="secondary" style={{ fontSize: 12 }}>Bet on digit outcomes</Text>
+              </Card>
+            </Col>
+            <Col xs={12} sm={6} md={6}>
+              <Card 
+                hoverable
+                style={{ 
+                  textAlign: 'center',
+                  borderRadius: 12,
+                  border: '1px solid #FF767520',
+                  background: '#FF767510'
+                }}
+              >
+                <ArrowUpOutlined style={{ fontSize: 24, color: '#FF7675' }} />
+                <Title level={5} style={{ marginTop: 8, fontSize: 14, color: '#FF7675' }}>Over/Under</Title>
+                <Text type="secondary" style={{ fontSize: 12 }}>Set your price barriers</Text>
+              </Card>
+            </Col>
+            <Col xs={12} sm={6} md={6}>
+              <Card 
+                hoverable
+                style={{ 
+                  textAlign: 'center',
+                  borderRadius: 12,
+                  border: '1px solid #3f860020',
+                  background: '#3f860010'
+                }}
+              >
+                <SwapOutlined style={{ fontSize: 24, color: '#3f8600' }} />
+                <Title level={5} style={{ marginTop: 8, fontSize: 14, color: '#3f8600' }}>Matches/Differs</Title>
+                <Text type="secondary" style={{ fontSize: 12 }}>Predict the digit outcomes</Text>
               </Card>
             </Col>
           </Row>

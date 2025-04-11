@@ -1,177 +1,304 @@
-import React, { useState } from 'react';
-import { Button, Card, Radio, InputNumber, Row, Col, Space, Typography, Select } from 'antd';
-import { CloseCircleOutlined, CheckCircleOutlined, NumberOutlined } from '@ant-design/icons';
+import React, { useState, useEffect } from 'react';
+import { 
+  Button, 
+  Card, 
+  Radio, 
+  InputNumber, 
+  Row, 
+  Col, 
+  Space, 
+  Typography, 
+  Select, 
+  Statistic,
+  Progress,
+  Divider,
+  Badge,
+  Tooltip,
+  Alert,
+  ConfigProvider,
+  theme,
+  Tag
+} from 'antd';
+import { 
+  NumberOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  InfoCircleOutlined,
+  ArrowUpOutlined,
+  ArrowDownOutlined,
+  HistoryOutlined
+} from '@ant-design/icons';
 import { useUser } from '../../../context/AuthContext';
+import RecentTrades from '../../../components/RecentTrades';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-const EvenOddContract = ({ api, onPurchase }) => {
+const EvenOddContract = () => {
   const { user } = useUser(); 
-  const [duration, setDuration] = useState(1);
+  const { token } = theme.useToken();
+  const [duration, setDuration] = useState(5);
   const [basis, setBasis] = useState('stake');
   const [symbol, setSymbol] = useState('R_10');
-  const [price, setPrice] = useState(10);
+  const [amount, setAmount] = useState(10);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [payout, setPayout] = useState(0);
+
+  // Calculate payout based on amount and symbol
+  useEffect(() => {
+    const payoutMultiplier = symbol.includes('10') ? 0.95 : 
+                          symbol.includes('25') ? 0.92 :
+                          symbol.includes('50') ? 0.89 : 0.85;
+    setPayout((amount * (1 + payoutMultiplier)).toFixed(2));
+  }, [amount, symbol]);
 
   const handleSubmit = (contractType) => {
     setIsSubmitting(true);
 
     const contractData = {
       buy: 1,
-      price: price,
+      price: amount,
       parameters: {
-        amount: price,
+        amount: amount,
         basis: basis,
         contract_type: contractType === 'even' ? 'DIGITEVEN' : 'DIGITODD',
-        currency: 'USD',
+        currency: user?.currency || 'USD',
         duration: duration,
         duration_unit: 't',
-        symbol: symbol === 'R_10' ? 'R_10' : symbol, 
+        symbol: symbol,
       },
       loginid: user?.loginid,
     };
 
     // Simulate API call - replace with your actual Deriv API call
     console.log('Sending contract:', contractData);
-    if (api) {
-      api.send(contractData)
-        .then((response) => {
-          onPurchase && onPurchase(response);
-        })
-        .catch((error) => {
-          console.error('Contract error:', error);
-        })
-        .finally(() => {
-          setIsSubmitting(false);
-        });
-    } else {
-      // For demo purposes
-      setTimeout(() => {
-        onPurchase &&
-          onPurchase({
-            contract_id: Math.random().toString(36).substring(7),
-            ...contractData,
-          });
-        setIsSubmitting(false);
-      }, 1000);
-    }
   };
 
+  const volatilityOptions = [
+    { value: 'R_10', label: 'Volatility 10 Index', payout: '95%' },
+    { value: '1HZ10V', label: 'Volatility 10 (1s) Index', payout: '95%' },
+    { value: 'R_25', label: 'Volatility 25 Index', payout: '92%' },
+    { value: '1HZ25V', label: 'Volatility 25 (1s) Index', payout: '92%' },
+    { value: 'R_50', label: 'Volatility 50 Index', payout: '89%' },
+    { value: '1HZ50V', label: 'Volatility 50 (1s) Index', payout: '89%' },
+    { value: 'R_75', label: 'Volatility 75 Index', payout: '87%' },
+    { value: '1HZ75V', label: 'Volatility 75 (1s) Index', payout: '87%' },
+    { value: 'R_100', label: 'Volatility 100 Index', payout: '85%' },
+    { value: '1HZ100V', label: 'Volatility 100 (1s) Index', payout: '85%' }
+  ];
+
   return (
-    <Card
-      title={
-        <Space>
-          <NumberOutlined />
-          <Title level={4} style={{ margin: 0 }}>Even/Odd</Title>
-        </Space>
-      }
-      style={{ maxWidth: 500, margin: '0 auto' }}
+    <ConfigProvider
+      theme={{
+        components: {
+          Card: {
+            borderRadiusLG: 16,
+          },
+          Button: {
+            colorPrimary: token.colorPrimary,
+            colorPrimaryHover: `${token.colorPrimary}dd`,
+          }
+        }
+      }}
     >
-      {/* Symbol Selector */}
-      <div style={{ marginBottom: 16 }}>
-        <Text strong style={{ display: 'block', marginBottom: 8 }}>Volatility:</Text>
-        <Select
-          value={symbol}
-          onChange={setSymbol}
-          style={{ width: '100%' }}
-          placeholder="Select a symbol"
-        >
-          <Option className="Volatility10" value="R_10">Volatility 10 index</Option>
-          <Option className="Volatility10s" value="1HZ10V">Volatility 10(1s) index</Option>
-          <Option className="Volatility25" value="R_25">Volatility 25 index</Option>
-          <Option className="Volatility25s" value="1HZ25V">Volatility 25(1s) index</Option>
-          <Option className="Volatility50" value="R_50">Volatility 50 index</Option>
-          <Option className="Volatility50s" value="1HZ50V">Volatility 50(1s) index</Option>
-          <Option className="Volatility75" value="R_75">Volatility 75 index</Option>
-          <Option className="Volatility75s" value="1HZ75V">Volatility 75(1s) index</Option>
-          <Option className="Volatility100" value="R_100">Volatility 100 index</Option>
-          <Option className="Volatility100s" value="1HZ100V">Volatility 100(1s) index</Option>
-        </Select>
-      </div>
+      <Row gutter={[24, 24]}>
+        <Col xs={24} md={16}>
+          <Card
+            title={
+              <Space>
+                <NumberOutlined style={{ color: token.colorPrimary }} />
+                <Title level={4} style={{ margin: 0, color: token.colorPrimary }}>Even/Odd Contract</Title>
+              </Space>
+            }
+            style={{ 
+              borderRadius: 16,
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)'
+            }}
+            extra={
+              <Tooltip title="Predict whether the last digit of the tick is an even or odd number">
+                <InfoCircleOutlined style={{ color: token.colorPrimary }} />
+              </Tooltip>
+            }
+          >
+            <Space direction="vertical" size={24} style={{ width: '100%' }}>
+              {/* Symbol Selector */}
+              <div>
+                <Text strong style={{ display: 'block', marginBottom: 8 }}>Volatility Index</Text>
+                <Select
+                  value={symbol}
+                  onChange={setSymbol}
+                  style={{ width: '100%' }}
+                  placeholder="Select a volatility index"
+                  optionLabelProp="label"
+                >
+                  {volatilityOptions.map(option => (
+                    <Option 
+                      key={option.value} 
+                      value={option.value}
+                      label={
+                        <Space>
+                          <span>{option.label}</span>
+                          <Tag color={token.colorPrimary}>{option.payout} payout</Tag>
+                        </Space>
+                      }
+                    >
+                      <Space>
+                        <span>{option.label}</span>
+                        <Tag color={token.colorPrimary} style={{ marginLeft: 'auto' }}>
+                          {option.payout} payout
+                        </Tag>
+                      </Space>
+                    </Option>
+                  ))}
+                </Select>
+              </div>
 
-      {/* Tick Duration Selector */}
-      <div style={{ marginBottom: 24 }}>
-        <Text strong style={{ display: 'block', marginBottom: 8 }}>
-          Duration (Ticks):
-        </Text>
-        <Row justify="space-between" style={{ padding: '0 20px' }}>
-          {[...Array(10)].map((_, i) => {
-            const tick = i + 1;
-            const isActive = tick <= duration;
-            const IconComponent = isActive ? CheckCircleOutlined : CloseCircleOutlined;
+              {/* Tick Duration Selector */}
+              <div>
+                <Text strong style={{ display: 'block', marginBottom: 8 }}>
+                  Duration (Ticks)
+                </Text>
+                <Row justify="space-between" style={{ padding: '0 10px' }}>
+                  {[...Array(10)].map((_, i) => {
+                    const tick = i + 1;
+                    const isActive = tick === duration;
+                    const IconComponent = isActive ? CheckCircleOutlined : CloseCircleOutlined;
 
-            return (
-              <Col key={tick}>
-                <IconComponent
-                  style={{
-                    fontSize: 24,
-                    color: isActive ? '#1890ff' : '#d9d9d9',
-                    cursor: 'pointer',
-                  }}
-                  onClick={() => setDuration(tick)}
-                  title={`${tick} tick${tick > 1 ? 's' : ''}`}
+                    return (
+                      <Col key={tick}>
+                        <Tooltip title={`${tick} tick${tick > 1 ? 's' : ''}`}>
+                          <IconComponent
+                            style={{
+                              fontSize: 24,
+                              color: isActive ? token.colorPrimary : token.colorBorder,
+                              cursor: 'pointer',
+                            }}
+                            onClick={() => setDuration(tick)}
+                          />
+                        </Tooltip>
+                      </Col>
+                    );
+                  })}
+                </Row>
+                <Text type="secondary" style={{ display: 'block', textAlign: 'center', marginTop: 8 }}>
+                  Selected: {duration} tick{duration > 1 ? 's' : ''}
+                </Text>
+              </div>
+
+              {/* Basis Selection */}
+              <div>
+                <Text strong style={{ display: 'block', marginBottom: 8 }}>
+                  Basis
+                </Text>
+                <Radio.Group 
+                  value={basis} 
+                  onChange={(e) => setBasis(e.target.value)} 
+                  buttonStyle="solid"
+                  style={{ width: '100%' }}
+                >
+                  <Radio.Button value="stake" style={{ width: '50%', textAlign: 'center' }}>
+                    Stake
+                  </Radio.Button>
+                  <Radio.Button value="payout" style={{ width: '50%', textAlign: 'center' }}>
+                    Payout
+                  </Radio.Button>
+                </Radio.Group>
+              </div>
+
+              {/* Amount Input */}
+              <div>
+                <Text strong style={{ display: 'block', marginBottom: 8 }}>
+                  Amount ({user?.currency || 'USD'})
+                </Text>
+                <InputNumber
+                  min={1}
+                  max={user?.balance || 1000}
+                  value={amount}
+                  onChange={setAmount}
+                  style={{ width: '100%' }}
+                  precision={2}
+                  prefix="$"
+                  step={5}
                 />
-              </Col>
-            );
-          })}
-        </Row>
-        <Text type="secondary" style={{ display: 'block', textAlign: 'center', marginTop: 8 }}>
-          Selected: {duration} tick{duration > 1 ? 's' : ''}
-        </Text>
-      </div>
+                <Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
+                  Available balance: {user?.balance?.toFixed(2) || '0.00'} {user?.currency || 'USD'}
+                </Text>
+              </div>
 
-      {/* Basis Selection */}
-      <div style={{ marginBottom: 24 }}>
-        <Text strong style={{ display: 'block', marginBottom: 8 }}>
-          Basis:
-        </Text>
-        <Radio.Group value={basis} onChange={(e) => setBasis(e.target.value)} buttonStyle="solid">
-          <Radio.Button value="stake">Stake</Radio.Button>
-          <Radio.Button value="payout">Payout</Radio.Button>
-        </Radio.Group>
-      </div>
+              {/* Payout Information */}
+              <div>
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <Statistic
+                      title="Potential Payout"
+                      value={payout}
+                      precision={2}
+                      prefix={<ArrowUpOutlined style={{ color: token.colorSuccess }} />}
+                      valueStyle={{ color: token.colorSuccess }}
+                    />
+                  </Col>
+                  <Col span={12}>
+                    <Statistic
+                      title="Potential Loss"
+                      value={amount}
+                      precision={2}
+                      prefix={<ArrowDownOutlined style={{ color: token.colorError }} />}
+                      valueStyle={{ color: token.colorError }}
+                    />
+                  </Col>
+                </Row>
+                <Progress
+                  percent={((payout - amount) / amount * 100).toFixed(0)}
+                  strokeColor={token.colorSuccess}
+                  trailColor={token.colorError}
+                  format={percent => `${percent}% return`}
+                  style={{ marginTop: 16 }}
+                />
+              </div>
 
-      {/* Price Input */}
-      <div style={{ marginBottom: 32 }}>
-        <Text strong style={{ display: 'block', marginBottom: 8 }}>
-          Amount (USD):
-        </Text>
-        <InputNumber
-          min={1}
-          max={1000}
-          value={price}
-          onChange={setPrice}
-          style={{ width: '100%' }}
-          precision={2}
-          prefix="$"
-        />
-      </div>
+              {/* Action Buttons */}
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Button
+                    type="primary"
+                    size="large"
+                    block
+                    style={{ 
+                      background: '#722ed1',
+                      borderColor: '#722ed1',
+                      height: 48
+                    }}
+                    onClick={() => handleSubmit('odd')}
+                    loading={isSubmitting}
+                    disabled={isSubmitting || !user}
+                  >
+                    ODD
+                  </Button>
+                </Col>
+                <Col span={12}>
+                  <Button
+                    type="primary"
+                    size="large"
+                    block
+                    style={{ height: 48 }}
+                    onClick={() => handleSubmit('even')}
+                    loading={isSubmitting}
+                    disabled={isSubmitting || !user}
+                  >
+                    EVEN
+                  </Button>
+                </Col>
+              </Row>
+            </Space>
+          </Card>
+        </Col>
 
-      {/* Action Buttons */}
-      <Space size="large" style={{ width: '100%', justifyContent: 'center' }}>
-        <Button
-          type="primary"
-          size="large"
-          style={{ width: 120, background: '#722ed1', borderColor: '#722ed1' }}
-          onClick={() => handleSubmit('odd')}
-          loading={isSubmitting}
-          disabled={isSubmitting}
-        >
-          ODD
-        </Button>
-        <Button
-          type="primary"
-          size="large"
-          style={{ width: 120 }}
-          onClick={() => handleSubmit('even')}
-          loading={isSubmitting}
-          disabled={isSubmitting}
-        >
-          EVEN
-        </Button>
-      </Space>
-    </Card>
+        {/* Recent Trades */}
+        <Col xs={24} md={8}>
+          <RecentTrades />
+        </Col>
+      </Row>
+    </ConfigProvider>
   );
 };
 
