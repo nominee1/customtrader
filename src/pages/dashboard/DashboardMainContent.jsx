@@ -1,263 +1,361 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { 
   Card, 
   Row, 
   Col, 
   Typography, 
   Statistic, 
-  Table, 
-  Tag,
   Progress,
-  Space,
-  Button,
-  List,
-  Tabs,
-  DatePicker,
-  Input,
   Layout,
-  Select,
-  Avatar
+  Spin,
+  Space,
+  Divider,
+  Tag
 } from 'antd';
 import {
   DollarOutlined,
   ArrowUpOutlined,
-  ArrowDownOutlined
+  ArrowDownOutlined,
+  LineChartOutlined,
+  WalletOutlined,
+  SwapOutlined,
+  RiseOutlined,
+  FallOutlined,
+  NumberOutlined
 } from '@ant-design/icons';
-import { 
-  portfolioData,
-  recentTransactions,
-  marketData
-} from './data/DashboardData';
+import { useUser } from '../../context/AuthContext';
+import VolatilityMonitor from '../../components/VolatilityMonitor';
+import { ConfigProvider } from 'antd';
 
 const { Title, Text } = Typography;
-const { Option } = Select;
 const { Content } = Layout;
-const { RangePicker } = DatePicker;
 
 const DashboardMainContent = () => {
-  const [activeTab, setActiveTab] = useState('portfolio');
+  const { user, realityCheck } = useUser();
 
-  const renderChange = (value) => {
-    const isPositive = value >= 0;
+  if (!user) {
     return (
-      <Text type={isPositive ? 'success' : 'danger'}>
-        {isPositive ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
-        {Math.abs(value)}%
-      </Text>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Spin size="large" />
+      </div>
     );
+  }
+
+  // Extract values from realityCheck
+  const totalPurchases = realityCheck?.reality_check?.total_purchases || 0;
+  const totalProfitLoss = realityCheck?.reality_check?.total_profit_loss || 0;
+  const totalPayouts = realityCheck?.reality_check?.total_payouts || 0;
+  const numTransactions = realityCheck?.reality_check?.num_transactions || 0;
+  const sessionDuration = realityCheck?.reality_check?.session_duration || 0;
+
+  // Calculate percentage growth
+  const percentageGrowth = totalPurchases
+    ? ((totalProfitLoss / totalPurchases) * 100).toFixed(2)
+    : 0;
+
+  // Convert session duration to human-readable format
+  const formatSessionDuration = (durationInSeconds) => {
+    const minutes = Math.floor(durationInSeconds / 60);
+    const hours = Math.floor(minutes / 60);
+    if (hours > 0) {
+      return `in the last ${hours} hour${hours > 1 ? 's' : ''}`;
+    } else if (minutes > 0) {
+      return `in the last ${minutes} minute${minutes > 1 ? 's' : ''}`;
+    } else {
+      return `just now`;
+    }
   };
 
+  const readableSessionDuration = formatSessionDuration(sessionDuration);
+
   return (
-    <div>
-      <Content style={{ margin: '24px 16px', padding: 24, background: '#fff' }}>
+    <ConfigProvider
+      theme={{
+        token: {
+          colorPrimary: '#6C5CE7',
+          borderRadius: 8,
+        },
+        components: {
+          Card: {
+            borderRadiusLG: 16,
+            headerBg: 'transparent',
+          },
+        },
+      }}
+    >
+      <div style={{ background: '#f9f9f9', minHeight: '100vh' }}>
+        <Content style={{ margin: '24px 16px', padding: 24 }}>
+          {/* Welcome Header */}
+          <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
+            <Col span={24}>
+              <Card bordered={false} style={{ background: 'transparent', boxShadow: 'none' }}>
+                <Title level={2} style={{ color: '#6C5CE7', marginBottom: 8 }}>
+                  Welcome back, {user?.fullname || "Trader"}!
+                </Title>
+                <Text type="secondary">
+                  Here's your trading overview for today
+                </Text>
+              </Card>
+            </Col>
+          </Row>
+
+          {/* Stats Cards */}
+          <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
+            <Col xs={24} sm={12} md={6}>
+              <Card 
+                hoverable
+                style={{ 
+                  borderTop: '4px solid #6C5CE7',
+                  borderRadius: 16,
+                  boxShadow: '0 4px 12px rgba(108, 92, 231, 0.1)'
+                }}
+              >
+                <Statistic
+                  title={
+                    <Space>
+                      <WalletOutlined style={{ color: '#6C5CE7' }} />
+                      <Text>Account Balance</Text>
+                    </Space>
+                  }
+                  value={user?.balance}
+                  precision={2}
+                  prefix="$"
+                  valueStyle={{ fontSize: 24, fontWeight: 600 }}
+                />
+                <Progress 
+                  percent={68} 
+                  status="active" 
+                  showInfo={false} 
+                  strokeColor="#6C5CE7"
+                  trailColor="#F1F3FE"
+                />
+                <Text type="secondary">Available balance</Text>
+              </Card>
+            </Col>
+
+            <Col xs={24} sm={12} md={6}>
+              <Card 
+                hoverable
+                style={{ 
+                  borderTop: '4px solid #00CEFF',
+                  borderRadius: 16,
+                  boxShadow: '0 4px 12px rgba(0, 206, 255, 0.1)'
+                }}
+              >
+                <Statistic
+                  title={
+                    <Space>
+                      <SwapOutlined style={{ color: '#00CEFF' }} />
+                      <Text>Total Purchases</Text>
+                    </Space>
+                  }
+                  value={totalPurchases}
+                  precision={2}
+                  prefix="$"
+                  valueStyle={{ fontSize: 24, fontWeight: 600 }}
+                />
+                <Progress 
+                  percent={45} 
+                  status="normal" 
+                  showInfo={false}
+                  strokeColor="#00CEFF"
+                  trailColor="#E8FAFF"
+                />
+                <Text type="secondary">{numTransactions} transactions {readableSessionDuration}</Text>
+              </Card>
+            </Col>
+
+            <Col xs={24} sm={12} md={6}>
+              <Card 
+                hoverable
+                style={{ 
+                  borderTop: '4px solid #3f8600',
+                  borderRadius: 16,
+                  boxShadow: '0 4px 12px rgba(63, 134, 0, 0.1)'
+                }}
+              >
+                <Statistic
+                  title={
+                    <Space>
+                      <ArrowUpOutlined style={{ color: '#3f8600' }} />
+                      <Text>Profit Growth</Text>
+                    </Space>
+                  }
+                  value={totalProfitLoss}
+                  precision={2}
+                  prefix="$"
+                  valueStyle={{ color: '#3f8600', fontSize: 24, fontWeight: 600 }}
+                />
+                <Progress
+                  percent={percentageGrowth}
+                  status="active"
+                  showInfo={false}
+                  strokeColor="#3f8600"
+                  trailColor="#E6FFED"
+                />
+                <Text type="secondary">{percentageGrowth}% Growth {readableSessionDuration}</Text>
+              </Card>
+            </Col>
+
+            <Col xs={24} sm={12} md={6}>
+              <Card 
+                hoverable
+                style={{ 
+                  borderTop: '4px solid #FF7675',
+                  borderRadius: 16,
+                  boxShadow: '0 4px 12px rgba(255, 118, 117, 0.1)'
+                }}
+              >
+                <Statistic
+                  title={
+                    <Space>
+                      <LineChartOutlined style={{ color: '#FF7675' }} />
+                      <Text>Total Payouts</Text>
+                    </Space>
+                  }
+                  value={totalPayouts}
+                  precision={2}
+                  prefix="$"
+                  valueStyle={{ color: '#FF7675', fontSize: 24, fontWeight: 600 }}
+                />
+                <Progress 
+                  percent={25} 
+                  status="exception" 
+                  showInfo={false}
+                  strokeColor="#FF7675"
+                  trailColor="#FFEEED"
+                />
+                <Text type="secondary">{numTransactions} transactions {readableSessionDuration}</Text>
+              </Card>
+            </Col>
+          </Row>
+
+          {/* Volatility Monitor Section */}
           <Row gutter={[24, 24]}>
             <Col span={24}>
-              <Title level={3}>Dashboard</Title>
-            </Col>
-            {/* Stats Cards */}
-            <Col xs={24} sm={12} md={6}>
-              <Card>
-                <Statistic
-                  title="Account Balance"
-                  value={112893}
-                  precision={2}
-                  prefix={<DollarOutlined />}
-                />
-                <Progress percent={68} status="active" showInfo={false} />
-                <Text type="secondary">+12.5% from last month</Text>
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} md={6}>
-              <Card>
-                <Statistic
-                  title="Open Positions"
-                  value={8}
-                />
-                <Progress percent={45} status="normal" showInfo={false} />
-                <Text type="secondary">3 long, 5 short</Text>
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} md={6}>
-              <Card>
-                <Statistic
-                  title="Today's Profit"
-                  value={1582.50}
-                  precision={2}
-                  prefix={<DollarOutlined />}
-                  valueStyle={{ color: '#3f8600' }}
-                />
-                <Text type="secondary">5.2% portfolio growth</Text>
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} md={6}>
-              <Card>
-                <Statistic
-                  title="API Calls"
-                  value={1242}
-                  suffix="/ 5000 daily"
-                />
-                <Progress percent={25} status="exception" showInfo={false} />
-                <Text type="secondary">42 calls in last hour</Text>
-              </Card>
-            </Col>
-            
-            {/* Main Content */}
-            <Col span={24}>
-              <Card>
-                <Tabs
-                  activeKey={activeTab}
-                  onChange={setActiveTab}
-                  items={[
-                    {
-                      key: 'portfolio',
-                      label: 'Portfolio',
-                      children: (
-                        <Table
-                          columns={[
-                            { title: 'Asset', dataIndex: 'asset', key: 'asset' },
-                            { title: 'Type', dataIndex: 'type', key: 'type' },
-                            { 
-                              title: 'Amount', 
-                              dataIndex: 'amount', 
-                              key: 'amount',
-                              render: (value) => `$${value.toLocaleString()}`
-                            },
-                            { 
-                              title: '24h Change', 
-                              dataIndex: 'change', 
-                              key: 'change',
-                              render: renderChange
-                            },
-                            { 
-                              title: 'Status', 
-                              dataIndex: 'status', 
-                              key: 'status',
-                              render: (status) => (
-                                <Tag color={status === 'active' ? 'green' : 'orange'}>
-                                  {status.toUpperCase()}
-                                </Tag>
-                              )
-                            },
-                          ]}
-                          dataSource={portfolioData}
-                          rowKey="id"
-                          pagination={false}
-                        />
-                      ),
-                    },
-                    {
-                      key: 'transactions',
-                      label: 'Transactions',
-                      children: (
-                        <List
-                          itemLayout="horizontal"
-                          dataSource={recentTransactions}
-                          renderItem={item => (
-                            <List.Item
-                              actions={[
-                                <Tag color={item.status === 'completed' ? 'green' : 'orange'}>
-                                  {item.status}
-                                </Tag>
-                              ]}
-                            >
-                              <List.Item.Meta
-                                avatar={<Avatar icon={<DollarOutlined />} />}
-                                title={`${item.type} ${item.asset}`}
-                                description={`$${item.amount} • ${item.time}`}
-                              />
-                            </List.Item>
-                          )}
-                        />
-                      ),
-                    },
-                    {
-                      key: 'market',
-                      label: 'Market Data',
-                      children: (
-                        <Table
-                          columns={[
-                            { title: 'Symbol', dataIndex: 'symbol', key: 'symbol' },
-                            { 
-                              title: 'Price', 
-                              dataIndex: 'price', 
-                              key: 'price',
-                              render: (value) => `$${value.toLocaleString()}`
-                            },
-                            { 
-                              title: 'Change', 
-                              dataIndex: 'change', 
-                              key: 'change',
-                              render: (value) => (
-                                <Text type={value >= 0 ? 'success' : 'danger'}>
-                                  {value >= 0 ? '+' : ''}{value.toFixed(4)}
-                                </Text>
-                              )
-                            },
-                            { 
-                              title: 'Change %', 
-                              dataIndex: 'changePercent', 
-                              key: 'changePercent',
-                              render: renderChange
-                            },
-                            {
-                              title: 'Action',
-                              key: 'action',
-                              render: () => (
-                                <Space>
-                                  <Button size="small">Buy</Button>
-                                  <Button size="small" danger>Sell</Button>
-                                </Space>
-                              )
-                            }
-                          ]}
-                          dataSource={marketData}
-                          rowKey="symbol"
-                          pagination={false}
-                        />
-                      ),
-                    },
-                  ]}
-                />
-              </Card>
-            </Col>
-            
-            {/* API Console */}
-            <Col xs={24} md={12}>
-              <Card title="API Console">
-                <Space direction="vertical" style={{ width: '100%' }}>
-                  <Select defaultValue="ticks" style={{ width: '100%' }}>
-                    <Option value="ticks">Get Ticks</Option>
-                    <Option value="ohlc">Get OHLC</Option>
-                    <Option value="balance">Get Balance</Option>
-                    <Option value="buy">Buy Contract</Option>
-                  </Select>
-                  <RangePicker showTime style={{ width: '100%' }} />
-                  <Input.TextArea rows={4} placeholder="Enter parameters as JSON..." />
-                  <Button type="primary" block>Execute API Call</Button>
-                </Space>
-              </Card>
-            </Col>
-            
-            {/* Quick Trade */}
-            <Col xs={24} md={12}>
-              <Card title="Quick Trade">
-                <Space direction="vertical" style={{ width: '100%' }}>
-                  <Select defaultValue="EUR/USD" style={{ width: '100%' }}>
-                    <Option value="EUR/USD">EUR/USD</Option>
-                    <Option value="GBP/USD">GBP/USD</Option>
-                    <Option value="BTC/USD">BTC/USD</Option>
-                  </Select>
-                  <Input placeholder="Amount" prefix="$" />
-                  <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-                    <Button type="primary" danger style={{ width: '48%' }}>Sell</Button>
-                    <Button type="primary" style={{ width: '48%' }}>Buy</Button>
+              <Card 
+                title={
+                  <Space>
+                    <LineChartOutlined style={{ color: '#6C5CE7' }} />
+                    <Text strong style={{ fontSize: 18 }}>Volatility Index Monitor</Text>
                   </Space>
-                </Space>
+                }
+                style={{ borderRadius: 16 }}
+                extra={
+                  <Space>
+                    <Tag color="#6C5CE7">R_10</Tag>
+                    <Tag color="#00CEFF">R_25</Tag>
+                    <Tag color="#FF7675">R_50</Tag>
+                    <Tag color="#6C5CE7">R_100</Tag>
+                  </Space>
+                }
+              >
+                <VolatilityMonitor />
+                <Divider />
+                <Row gutter={[24, 24]}>
+                  <Col xs={24} md={12}>
+                    <Title level={5} style={{ color: '#6C5CE7' }}>
+                      <RiseOutlined /> Recent Winning Trades
+                    </Title>
+                    {/* Add your recent trades component here */}
+                    <div style={{ 
+                      height: 150, 
+                      background: 'linear-gradient(90deg, #6C5CE710, #6C5CE705)', 
+                      borderRadius: 8,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <Text type="secondary">Winning trades chart</Text>
+                    </div>
+                  </Col>
+                  <Col xs={24} md={12}>
+                    <Title level={5} style={{ color: '#FF7675' }}>
+                      <FallOutlined /> Recent Losing Trades
+                    </Title>
+                    {/* Add your recent trades component here */}
+                    <div style={{ 
+                      height: 150, 
+                      background: 'linear-gradient(90deg, #FF767510, #FF767505)', 
+                      borderRadius: 8,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <Text type="secondary">Losing trades chart</Text>
+                    </div>
+                  </Col>
+                </Row>
+              </Card>
+            </Col>
+          </Row>
+
+          {/* Quick Actions */}
+          <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
+            <Col xs={12} sm={6} md={6}>
+              <Card 
+                hoverable
+                style={{ 
+                  textAlign: 'center',
+                  borderRadius: 12,
+                  border: '1px solid #6C5CE720',
+                  background: '#6C5CE710'
+                }}
+              >
+                <RiseOutlined style={{ fontSize: 24, color: '#6C5CE7' }} />
+                <Title level={5} style={{ marginTop: 8, fontSize: 14, color: '#6C5CE7' }}>Rise/Fall</Title>
+                <Text type="secondary" style={{ fontSize: 12 }}>Predict market direction</Text>
+              </Card>
+            </Col>
+            <Col xs={12} sm={6} md={6}>
+              <Card 
+                hoverable
+                style={{ 
+                  textAlign: 'center',
+                  borderRadius: 12,
+                  border: '1px solid #00CEFF20',
+                  background: '#00CEFF10'
+                }}
+              >
+                <NumberOutlined style={{ fontSize: 24, color: '#00CEFF' }} />
+                <Title level={5} style={{ marginTop: 8, fontSize: 14, color: '#00CEFF' }}>Even/Odd</Title>
+                <Text type="secondary" style={{ fontSize: 12 }}>Bet on digit outcomes</Text>
+              </Card>
+            </Col>
+            <Col xs={12} sm={6} md={6}>
+              <Card 
+                hoverable
+                style={{ 
+                  textAlign: 'center',
+                  borderRadius: 12,
+                  border: '1px solid #FF767520',
+                  background: '#FF767510'
+                }}
+              >
+                <ArrowUpOutlined style={{ fontSize: 24, color: '#FF7675' }} />
+                <Title level={5} style={{ marginTop: 8, fontSize: 14, color: '#FF7675' }}>Over/Under</Title>
+                <Text type="secondary" style={{ fontSize: 12 }}>Set your price barriers</Text>
+              </Card>
+            </Col>
+            <Col xs={12} sm={6} md={6}>
+              <Card 
+                hoverable
+                style={{ 
+                  textAlign: 'center',
+                  borderRadius: 12,
+                  border: '1px solid #3f860020',
+                  background: '#3f860010'
+                }}
+              >
+                <SwapOutlined style={{ fontSize: 24, color: '#3f8600' }} />
+                <Title level={5} style={{ marginTop: 8, fontSize: 14, color: '#3f8600' }}>Matches/Differs</Title>
+                <Text type="secondary" style={{ fontSize: 12 }}>Predict the digit outcomes</Text>
               </Card>
             </Col>
           </Row>
         </Content>
-    </div>
+      </div>
+    </ConfigProvider>
   );
 };
 
