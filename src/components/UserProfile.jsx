@@ -1,14 +1,14 @@
 import React from 'react';
-import { 
-  Card, 
-  Row, 
-  Col, 
-  Typography, 
-  Statistic, 
-  Tag, 
-  Divider, 
-  Button, 
-  Space, 
+import {
+  Card,
+  Row,
+  Col,
+  Typography,
+  Statistic,
+  Tag,
+  Divider,
+  Button,
+  Space,
   Avatar,
   List,
   Skeleton,
@@ -16,9 +16,10 @@ import {
   Progress,
   Badge,
   ConfigProvider,
-  theme
+  theme,
+  Switch,
 } from 'antd';
-import { 
+import {
   UserOutlined,
   MailOutlined,
   SafetyOutlined,
@@ -29,15 +30,15 @@ import {
   LockOutlined,
   IdcardOutlined,
   CalendarOutlined,
-  TransactionOutlined
+  TransactionOutlined,
 } from '@ant-design/icons';
-import { useUser } from '../context/AuthContext'; 
+import { useUser } from '../context/AuthContext';
 
 const { Title, Text } = Typography;
 const { useToken } = theme;
 
 const UserProfile = () => {
-  const { user, loading, error } = useUser();
+  const { user, balance, activeAccountType, switchAccount, accounts, loading, error } = useUser();
   const { token } = useToken();
   const { colorPrimary, colorSuccess, colorWarning, colorError } = token;
 
@@ -45,20 +46,22 @@ const UserProfile = () => {
     <List.Item style={{ padding: '12px 0' }}>
       <List.Item.Meta
         avatar={
-          <div style={{
-            width: 40,
-            height: 40,
-            borderRadius: 8,
-            background: `${colorPrimary}10`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            {React.cloneElement(icon, { 
-              style: { 
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 8,
+              background: `${colorPrimary}10`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {React.cloneElement(icon, {
+              style: {
                 color: colorPrimary,
-                fontSize: 18 
-              } 
+                fontSize: 18,
+              },
             })}
           </div>
         }
@@ -69,9 +72,7 @@ const UserProfile = () => {
             {extra && (
               <Space size={4}>
                 {extra}
-                {isVerified && (
-                  <VerifiedOutlined style={{ color: colorSuccess }} />
-                )}
+                {isVerified && <VerifiedOutlined style={{ color: colorSuccess }} />}
               </Space>
             )}
           </Space>
@@ -80,17 +81,19 @@ const UserProfile = () => {
     </List.Item>
   );
 
-  if (loading) return (
-    <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}>
-      <Skeleton active paragraph={{ rows: 8 }} />
-    </div>
-  );
+  if (loading)
+    return (
+      <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}>
+        <Skeleton active paragraph={{ rows: 8 }} />
+      </div>
+    );
 
-  if (error) return (
-    <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}>
-      <Alert message={error} type="error" showIcon banner />
-    </div>
-  );
+  if (error)
+    return (
+      <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}>
+        <Alert message={error} type="error" showIcon banner />
+      </div>
+    );
 
   return (
     <ConfigProvider
@@ -105,58 +108,65 @@ const UserProfile = () => {
             colorSuccess: colorSuccess,
             colorWarning: colorWarning,
             colorError: colorError,
-          }
-        }
+          },
+        },
       }}
     >
       <div style={{ padding: '24px', maxWidth: 1200, margin: '0 auto' }}>
         <Row gutter={[24, 24]}>
-          {/* Profile Overview */}
           <Col xs={24} md={8}>
             <Card
-              style={{ 
+              style={{
                 borderRadius: 16,
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)'
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
               }}
             >
               <Space direction="vertical" align="center" style={{ width: '100%' }}>
-                <Badge 
-                  count={user?.status?.includes('verified') ? 'Verified' : null} 
+                <Badge
+                  count={user?.status?.includes('verified') ? 'Verified' : null}
                   color={colorSuccess}
                   offset={[-20, 90]}
                   style={{ fontWeight: 600 }}
                 >
-                  <Avatar 
-                    size={128} 
-                    icon={<UserOutlined />} 
+                  <Avatar
+                    size={128}
+                    icon={<UserOutlined />}
                     src={user?.profile_image}
-                    style={{ 
+                    style={{
                       background: colorPrimary,
                       color: 'white',
-                      fontSize: 48
+                      fontSize: 48,
                     }}
                   />
                 </Badge>
                 <Title level={4} style={{ marginTop: 16, marginBottom: 0 }}>
                   {user?.fullname || 'Deriv User'}
                 </Title>
-                <Tag 
-                  icon={<VerifiedOutlined />} 
-                  color={user?.account_type === 'premium' ? colorPrimary : 'default'}
-                  style={{ 
+                <Tag
+                  icon={<VerifiedOutlined />}
+                  color={colorPrimary}
+                  style={{
                     marginTop: 8,
                     textTransform: 'uppercase',
-                    fontWeight: 600
+                    fontWeight: 600,
                   }}
                 >
-                  {user?.account_type || 'Standard'}
+                  {activeAccountType ? activeAccountType.charAt(0).toUpperCase() + activeAccountType.slice(1) : 'N/A'}
                 </Tag>
-                <Button 
-                  type="primary" 
-                  icon={<EditOutlined />} 
-                  style={{ 
+                <Switch
+                  checked={activeAccountType === 'real'}
+                  onChange={(checked) => switchAccount(checked ? 'real' : 'demo')}
+                  checkedChildren="Real"
+                  unCheckedChildren="Demo"
+                  disabled={!accounts.real || !accounts.demo}
+                  style={{ marginTop: 16 }}
+                />
+                <Button
+                  type="primary"
+                  icon={<EditOutlined />}
+                  style={{
                     marginTop: 24,
-                    width: '100%'
+                    width: '100%',
                   }}
                 >
                   Edit Profile
@@ -164,12 +174,12 @@ const UserProfile = () => {
               </Space>
             </Card>
 
-            <Card 
-              title="Account Security" 
-              style={{ 
+            <Card
+              title="Account Security"
+              style={{
                 marginTop: 24,
                 borderRadius: 16,
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)'
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
               }}
             >
               <List size="large">
@@ -186,13 +196,13 @@ const UserProfile = () => {
                   <LockOutlined />,
                   'Two-Factor Authentication',
                   user?.two_factor_authentication ? 'Enabled' : 'Disabled',
-                  <Button 
-                    type={user?.two_factor_authentication ? 'default' : 'primary'} 
+                  <Button
+                    type={user?.two_factor_authentication ? 'default' : 'primary'}
                     size="small"
                     style={{
                       background: user?.two_factor_authentication ? 'transparent' : `${colorPrimary}10`,
                       color: user?.two_factor_authentication ? colorError : colorPrimary,
-                      borderColor: user?.two_factor_authentication ? colorError : colorPrimary
+                      borderColor: user?.two_factor_authentication ? colorError : colorPrimary,
                     }}
                   >
                     {user?.two_factor_authentication ? 'Disable' : 'Enable'}
@@ -200,9 +210,11 @@ const UserProfile = () => {
                 )}
                 <Divider style={{ margin: '12px 0' }} />
                 <div style={{ padding: '0 16px' }}>
-                  <Text strong style={{ display: 'block', marginBottom: 8 }}>Account Strength</Text>
-                  <Progress 
-                    percent={user?.status?.includes('verified') ? 85 : 45} 
+                  <Text strong style={{ display: 'block', marginBottom: 8 }}>
+                    Account Strength
+                  </Text>
+                  <Progress
+                    percent={user?.status?.includes('verified') ? 85 : 45}
                     strokeColor={user?.status?.includes('verified') ? colorSuccess : colorWarning}
                     trailColor="#f0f0f0"
                     showInfo={false}
@@ -215,48 +227,32 @@ const UserProfile = () => {
             </Card>
           </Col>
 
-          {/* Account Details */}
           <Col xs={24} md={16}>
-            <Card 
+            <Card
               title="Personal Information"
-              style={{ 
+              style={{
                 borderRadius: 16,
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)'
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
               }}
             >
               <List itemLayout="horizontal">
-                {renderDetailItem(
-                  <MailOutlined />, 
-                  'Email Address', 
-                  user?.email,
+                {renderDetailItem(<MailOutlined />, 'Email Address', user?.email, 
                   <Tag color={user?.email_verified ? colorSuccess : colorWarning}>
                     {user?.email_verified ? 'Verified' : 'Unverified'}
                   </Tag>
                 )}
-                {renderDetailItem(
-                  <GlobalOutlined />, 
-                  'Country of Residence', 
-                  user?.country
-                )}
-                {renderDetailItem(
-                  <IdcardOutlined />, 
-                  'Account ID', 
-                  user?.loginid
-                )}
-                {renderDetailItem(
-                  <DollarOutlined />, 
-                  'Account Currency', 
-                  user?.currency
-                )}
+                {renderDetailItem(<GlobalOutlined />, 'Country of Residence', user?.country)}
+                {renderDetailItem(<IdcardOutlined />, 'Account ID', user?.loginid)}
+                {renderDetailItem(<DollarOutlined />, 'Account Currency', user?.currency)}
               </List>
             </Card>
 
-            <Card 
-              title="Financial Summary" 
-              style={{ 
+            <Card
+              title="Financial Summary"
+              style={{
                 marginTop: 24,
                 borderRadius: 16,
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)'
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
               }}
             >
               <Row gutter={[24, 24]}>
@@ -268,12 +264,12 @@ const UserProfile = () => {
                         <Text>Account Balance</Text>
                       </Space>
                     }
-                    value={user?.balance}
+                    value={balance}
                     precision={2}
-                    valueStyle={{ 
+                    valueStyle={{
                       fontSize: 28,
                       fontWeight: 600,
-                      color: colorPrimary
+                      color: colorPrimary,
                     }}
                   />
                 </Col>
@@ -287,9 +283,9 @@ const UserProfile = () => {
                     }
                     value={user?.daily_transfers?.max || 0}
                     precision={2}
-                    valueStyle={{ 
+                    valueStyle={{
                       fontSize: 28,
-                      fontWeight: 600 
+                      fontWeight: 600,
                     }}
                   />
                 </Col>
@@ -303,23 +299,24 @@ const UserProfile = () => {
               </Space>
             </Card>
 
-            {/* Recent Activity */}
-            <Card 
+            <Card
               title="Recent Activity"
-              style={{ 
+              style={{
                 marginTop: 24,
                 borderRadius: 16,
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)'
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
               }}
             >
-              <div style={{ 
-                height: 200, 
-                background: 'linear-gradient(90deg, #6C5CE710, #6C5CE705)', 
-                borderRadius: 8,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
+              <div
+                style={{
+                  height: 200,
+                  background: 'linear-gradient(90deg, #6C5CE710, #6C5CE705)',
+                  borderRadius: 8,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
                 <Text type="secondary">Recent activity chart will appear here</Text>
               </div>
             </Card>

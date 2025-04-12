@@ -30,6 +30,7 @@ import {
 } from '@ant-design/icons';
 import { useUser } from '../../../context/AuthContext';
 import RecentTrades from '../../../components/RecentTrades';
+import RequestIdGenerator from '../../../services/uniqueIdGenerator'; 
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -55,6 +56,9 @@ const EvenOddContract = () => {
   const handleSubmit = (contractType) => {
     setIsSubmitting(true);
 
+    // Generate a unique request ID for the contract
+    const req_id = RequestIdGenerator.generateContractId();
+
     const contractData = {
       buy: 1,
       price: amount,
@@ -68,6 +72,7 @@ const EvenOddContract = () => {
         symbol: symbol,
       },
       loginid: user?.loginid,
+      req_id: req_id,
     };
 
     // Simulate API call - replace with your actual Deriv API call
