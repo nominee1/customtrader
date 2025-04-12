@@ -206,14 +206,18 @@ export const UserProvider = ({ children }) => {
       return;
     }
 
-    if (data.balance) {
-      setAccountData((prev) => ({
-        ...prev,
-        [data.balance.account]: {
-          ...prev[data.balance.account],
-          balance: data.balance.balance,
-        },
-      }));
+    if (data.balance && data.balance.loginid) {
+      setAccountData((prev) => {
+        const loginid = data.balance.loginid;
+        const existing = prev[loginid] || {};
+        return {
+          ...prev,
+          [loginid]: {
+            ...existing,
+            balance: data.balance.balance,
+          },
+        };
+      });
     }
   };
 

@@ -31,7 +31,7 @@ const { Title, Text } = Typography;
 const { Content } = Layout;
 
 const DashboardMainContent = () => {
-  const { user, realityCheck } = useUser();
+  const { user, balance, realityCheck } = useUser();
 
   if (!user) {
     return (
@@ -117,7 +117,7 @@ const DashboardMainContent = () => {
                       <Text>Account Balance</Text>
                     </Space>
                   }
-                  value={user?.balance}
+                  value={balance}
                   precision={2}
                   prefix="$"
                   valueStyle={{ fontSize: 24, fontWeight: 600 }}
