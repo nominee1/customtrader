@@ -1,7 +1,6 @@
 export function parseDerivAuthTokens() {
   const urlParams = new URLSearchParams(window.location.search);
 
-
   const accounts = [];
   for (let i = 1; i <= 5; i++) {
     const token = urlParams.get(`token${i}`);
@@ -13,6 +12,12 @@ export function parseDerivAuthTokens() {
     }
   }
 
-  console.log('✅ Parsed Deriv Tokens:', accounts); 
+  if (accounts.length > 0) {
+    // Save tokens to local storage
+    localStorage.setItem('derivTokens', JSON.stringify(accounts));
+    console.log('✅ Saved Deriv Tokens to localStorage:', accounts);
+  }
+
+  console.log('✅ Parsed Deriv Tokens:', accounts);
   return accounts;
 }
