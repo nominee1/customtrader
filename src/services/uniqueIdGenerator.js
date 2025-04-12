@@ -51,7 +51,7 @@ const RequestIdGenerator = {
      * @returns {string} - A unique contract request ID
      */
     generateContractId() {
-      return this.generate('contract');
+      return this.generate('111');
     },
   
     /**
@@ -60,7 +60,7 @@ const RequestIdGenerator = {
      * @returns {string} - A unique account request ID
      */
     generateAccountId() {
-      return this.generate('account');
+      return this.generate('222');
     },
   
     /**
@@ -69,7 +69,7 @@ const RequestIdGenerator = {
      * @returns {string} - A unique price request ID
      */
     generatePriceId() {
-      return this.generate('price');
+      return this.generate('333');
     },
   
     /**

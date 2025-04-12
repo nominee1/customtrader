@@ -34,6 +34,7 @@ import {
 } from '@ant-design/icons';
 import { useUser } from '../../../context/AuthContext';
 import RecentTrades from '../../../components/RecentTrades';
+import RequestIdGenerator from '../../../services/uniqueIdGenerator'; 
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -63,6 +64,9 @@ const RiseFallTrader = () => {
   const handleSubmit = (contractType) => {
     setIsSubmitting(true);
 
+    // Generate a unique request ID for the contract
+    const req_id = RequestIdGenerator.generateContractId();
+
     const contractData = {
       buy: 1,
       price: amount,
@@ -76,6 +80,7 @@ const RiseFallTrader = () => {
         symbol: symbol,
       },
       loginid: user?.loginid,
+      req_id: req_id,
     };
 
     console.log('Sending contract:', contractData);
