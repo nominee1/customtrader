@@ -105,80 +105,74 @@ export const UserProvider = ({ children }) => {
         // Connect WebSocket
         await connectWebSocket();
 
-        // Select default account (USD priority or first)
-        const defaultAccount = parsedAccounts.find((acc) => acc.currency === 'USD') || parsedAccounts[0];
-        console.log('📌 Selected default account:', defaultAccount);
+        // Authorize all parsed accounts
+        const accountAuths = await Promise.all(
+          parsedAccounts.map((acc) => {
+            return new Promise((resolve, reject) => {
+              const unsubscribe = derivWebSocket.subscribe((event, data) => {
+                if (event === 'message' && data.authorize) {
+                  unsubscribers.push(unsubscribe);
+                  resolve({
+                    token: acc.token,
+                    loginid: data.authorize.loginid,
+                    currency: data.authorize.currency,
+                    balance: data.authorize.balance,
+                    email: data.authorize.email,
+                    fullname: data.authorize.fullname,
+                    country: data.authorize.country,
+                    is_virtual: data.authorize.is_virtual,
+                    landing_company_fullname: data.authorize.landing_company_fullname,
+                    raw: data.authorize,
+                  });
+                } else if (event === 'message' && data.error) {
+                  unsubscribers.push(unsubscribe);
+                  console.error(`❌ Error authorizing token for loginid ${acc.loginid}:`, data.error);
+                  resolve(null); // skip failed accounts
+                }
+              });
 
-        // Authenticate with default account token
-        const authResponse = await new Promise((resolve, reject) => {
-          const unsubscribe = derivWebSocket.subscribe((event, data) => {
-            if (event === 'message' && data.authorize) {
-              console.log('📌 Authorization response:', data);
-              if (data.error) {
-                console.error('📌 Authorization error:', data.error);
-                reject(new Error(data.error.message));
-              } else {
-                resolve(data.authorize);
-              }
-              unsubscribers.push(unsubscribe);
-            }
-          });
-          unsubscribers.push(unsubscribe);
+              derivWebSocket.send({ authorize: acc.token });
+            });
+          })
+        );
 
-          console.log('📌 Sending authorize request:', { authorize: defaultAccount.token });
-          derivWebSocket.send({ authorize: defaultAccount.token });
-        });
+        // Filter valid accounts
+        const validAccounts = accountAuths.filter((acc) => acc !== null);
 
-        // Process accounts
-        const accountList = authResponse.account_list || [];
-        console.log('📌 Fetched account list:', accountList);
-
+        // Organize accounts into real/demo
         const newAccounts = { real: [], demo: [] };
         const initialAccountData = {};
 
-        parsedAccounts.forEach((parsedAcc) => {
-          const apiAccount = accountList.find((apiAcc) => apiAcc.loginid === parsedAcc.loginid);
-          if (apiAccount) {
-            const accountType = apiAccount.is_virtual ? 'demo' : 'real';
-            const account = {
-              loginid: apiAccount.loginid,
-              currency: apiAccount.currency,
-              balance: apiAccount.balance || 0,
-              created_at: apiAccount.created_at || Math.floor(Date.now() / 1000),
-              token: parsedAcc.token,
-            };
-            newAccounts[accountType].push(account);
+        validAccounts.forEach((account) => {
+          const type = account.is_virtual ? 'demo' : 'real';
+          newAccounts[type].push(account);
 
-            initialAccountData[apiAccount.loginid] = {
-              balance: apiAccount.balance || 0,
-              recentTrades: JSON.parse(localStorage.getItem(`recentTrades_${apiAccount.loginid}`)) || [],
-              statement: null,
-              transactions: null,
-            };
-
-            console.log(`📌 Processed ${accountType} account:`, account);
-          }
+          initialAccountData[account.loginid] = {
+            balance: account.balance,
+            recentTrades: JSON.parse(localStorage.getItem(`recentTrades_${account.loginid}`)) || [],
+            statement: null,
+            transactions: null,
+            profile: account.raw,
+          };
         });
 
-        console.log('📌 Updated accounts state:', newAccounts);
         setAccounts(newAccounts);
-        console.log('📌 Updated accountData state:', initialAccountData);
         setAccountData(initialAccountData);
 
-        // Set active account
-        const active = newAccounts.real.find((acc) => acc.loginid === defaultAccount.loginid) ||
-                       newAccounts.demo.find((acc) => acc.loginid === defaultAccount.loginid);
+        // Select default active account
+        const defaultAccount =
+          validAccounts.find((acc) => acc.currency === 'USD') || validAccounts[0];
+
+        const active = newAccounts.real.find((a) => a.loginid === defaultAccount.loginid)
+          || newAccounts.demo.find((a) => a.loginid === defaultAccount.loginid);
+
         if (active) {
-          console.log('📌 Setting active account:', active);
           setActiveAccount(active);
           localStorage.setItem('activeAccountLoginid', active.loginid);
-        } else {
-          console.warn('📌 No matching active account found for default:', defaultAccount.loginid);
         }
 
-        // Subscribe to balance for all accounts
-        [...newAccounts.real, ...newAccounts.demo].forEach((account) => {
-          console.log(`📌 Subscribing to balance for account: ${account.loginid}`);
+        // Subscribe to balance updates
+        validAccounts.forEach((account) => {
           derivWebSocket.send({
             balance: 1,
             account: account.loginid,
