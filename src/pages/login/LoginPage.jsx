@@ -16,7 +16,6 @@ import {
   UserOutlined, 
   LockOutlined, 
   GoogleOutlined, 
-  FacebookOutlined,
   TwitterOutlined,
   MailOutlined
 } from '@ant-design/icons';
@@ -51,6 +50,13 @@ const LoginPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDerivAuth = async () => {
+    const appId = import.meta.env.VITE_DERIV_APP_ID;
+    const redirectUri = `${window.location.origin}/dashboard`; // Provided redirect URL
+    window.location.href = `https://oauth.deriv.com/oauth2/authorize?app_id=${appId}&response_type=token&scope=read&redirect_uri=${encodeURIComponent(redirectUri)}`;
+    console.log('Redirecting to Deriv authentication...');
   };
 
   return (
@@ -155,31 +161,15 @@ const LoginPage = () => {
 
           <Space direction="vertical" style={{ width: '100%' }}>
             <Button 
-              icon={<GoogleOutlined />} 
               block 
               size="large"
-              onClick={() => message.info('Google login coming soon')}
+              onClick={handleDerivAuth}
+              icon={<MailOutlined />}
+              style={{ backgroundColor: '#FF3D00', color: '#fff' }}
             >
-              Google
-            </Button>
-            <Button 
-              icon={<FacebookOutlined />} 
-              block 
-              size="large"
-              onClick={() => message.info('Facebook login coming soon')}
-            >
-              Facebook
-            </Button>
-            <Button 
-              icon={<TwitterOutlined />} 
-              block 
-              size="large"
-              onClick={() => message.info('Twitter login coming soon')}
-            >
-              Twitter
+              Login with Deriv
             </Button>
           </Space>
-
           <div style={{ textAlign: 'center', marginTop: 24 }}>
             <Text type="secondary">Don't have an account? </Text>
             <Link to="/register">
