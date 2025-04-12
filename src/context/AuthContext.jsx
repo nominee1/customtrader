@@ -1,10 +1,9 @@
-import { createContext, useState, useEffect, useContext } from 'react';
+import { createContext, useState, useEffect, useContext, useMemo } from 'react';
 import { derivWebSocket } from '../services/websocket_client';
 import { parseDerivAuthTokens } from '../services/parseDerivAuth';
 
 const UserContext = createContext();
 
-// eslint-disable-next-line react-refresh/only-export-components
 export const useUser = () => {
   const context = useContext(UserContext);
   if (context === undefined) {
@@ -20,6 +19,11 @@ export const UserProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Derived state
+  const activeAccountType = useMemo(() => 
+    activeAccount?.is_virtual ? 'demo' : 'real', 
+  [activeAccount]);
+
   // Load active account from localStorage
   useEffect(() => {
     const savedLoginid = localStorage.getItem('activeAccountLoginid');
@@ -33,7 +37,7 @@ export const UserProvider = ({ children }) => {
     let unsubscribers = [];
     let retryCount = 0;
     const maxRetries = 5;
-    const baseRetryDelay = 2000; // 2 seconds
+    const baseRetryDelay = 2000;
 
     const connectWebSocket = async () => {
       try {
@@ -81,72 +85,61 @@ export const UserProvider = ({ children }) => {
       setError(null);
 
       try {
-        // Parse tokens from URL
+        // Parse tokens from URL or localStorage
         let parsedAccounts = parseDerivAuthTokens();
-        console.log('📌 Parsed accounts from URL:', parsedAccounts);
-
-        // Fallback to localStorage if URL tokens are empty
         if (!parsedAccounts.length) {
           const storedTokens = localStorage.getItem('derivTokens');
-          if (storedTokens) {
-            parsedAccounts = JSON.parse(storedTokens);
-            console.log('📌 Loaded accounts from localStorage:', parsedAccounts);
-          }
+          if (storedTokens) parsedAccounts = JSON.parse(storedTokens);
         }
 
         if (!parsedAccounts.length) {
           throw new Error('No valid tokens found in URL or localStorage');
         }
 
-        // Store tokens temporarily in local storage
         localStorage.setItem('derivTokens', JSON.stringify(parsedAccounts));
-        console.log('📌 Stored tokens in localStorage for fallback');
 
         // Connect WebSocket
         await connectWebSocket();
 
-        // Authorize all parsed accounts
-        const accountAuths = await Promise.all(
+        // Authorize accounts
+        const accountAuthArrays = await Promise.all(
           parsedAccounts.map((acc) => {
-            return new Promise((resolve, reject) => {
+            return new Promise((resolve) => {
               const unsubscribe = derivWebSocket.subscribe((event, data) => {
                 if (event === 'message' && data.authorize) {
-                  unsubscribers.push(unsubscribe);
-                  resolve({
+                  const accountsFromList = data.authorize.account_list || [];
+                  const mappedAccounts = accountsFromList.map((accInfo) => ({
                     token: acc.token,
-                    loginid: data.authorize.loginid,
-                    currency: data.authorize.currency,
-                    balance: data.authorize.balance,
+                    loginid: accInfo.loginid,
+                    currency: accInfo.currency,
+                    is_virtual: accInfo.is_virtual,
+                    balance: accInfo.loginid === data.authorize.loginid ? data.authorize.balance : 0,
                     email: data.authorize.email,
                     fullname: data.authorize.fullname,
                     country: data.authorize.country,
-                    is_virtual: data.authorize.is_virtual,
                     landing_company_fullname: data.authorize.landing_company_fullname,
-                    raw: data.authorize,
-                  });
+                    raw: accInfo,
+                  }));
+                  unsubscribers.push(unsubscribe);
+                  resolve(mappedAccounts);
                 } else if (event === 'message' && data.error) {
                   unsubscribers.push(unsubscribe);
-                  console.error(`❌ Error authorizing token for loginid ${acc.loginid}:`, data.error);
-                  resolve(null); // skip failed accounts
+                  resolve(null);
                 }
               });
-
               derivWebSocket.send({ authorize: acc.token });
             });
           })
         );
+        const accountAuths = accountAuthArrays.flat();
 
-        // Filter valid accounts
-        const validAccounts = accountAuths.filter((acc) => acc !== null);
-
-        // Organize accounts into real/demo
+        const validAccounts = accountAuths.filter(Boolean);
         const newAccounts = { real: [], demo: [] };
         const initialAccountData = {};
 
         validAccounts.forEach((account) => {
           const type = account.is_virtual ? 'demo' : 'real';
           newAccounts[type].push(account);
-
           initialAccountData[account.loginid] = {
             balance: account.balance,
             recentTrades: JSON.parse(localStorage.getItem(`recentTrades_${account.loginid}`)) || [],
@@ -159,67 +152,52 @@ export const UserProvider = ({ children }) => {
         setAccounts(newAccounts);
         setAccountData(initialAccountData);
 
-        // Select default active account
-        const defaultAccount =
-          validAccounts.find((acc) => acc.currency === 'USD') || validAccounts[0];
+        // Select active account (prefer real, then demo, then first available)
+        const defaultAccount = 
+          newAccounts.real.find(acc => acc.currency === 'USD') || 
+          newAccounts.real[0] || 
+          newAccounts.demo[0];
 
-        const active = newAccounts.real.find((a) => a.loginid === defaultAccount.loginid)
-          || newAccounts.demo.find((a) => a.loginid === defaultAccount.loginid);
-
-        if (active) {
-          setActiveAccount(active);
-          localStorage.setItem('activeAccountLoginid', active.loginid);
+        if (defaultAccount) {
+          setActiveAccount(defaultAccount);
+          localStorage.setItem('activeAccountLoginid', defaultAccount.loginid);
         }
 
         // Subscribe to balance updates
         validAccounts.forEach((account) => {
-          derivWebSocket.send({
-            balance: 1,
-            account: account.loginid,
-            subscribe: 1,
-          });
+          derivWebSocket.send({ balance: 1, account: account.loginid, subscribe: 1 });
         });
 
       } catch (err) {
         console.error('📌 Error fetching user data:', err.message);
         setError(err.message);
         if (err.message.includes('Invalid token') || err.message.includes('Max WebSocket retries')) {
-          console.warn('📌 Clearing state due to error');
           localStorage.removeItem('activeAccountLoginid');
           localStorage.removeItem('derivTokens');
           setActiveAccount(null);
           setAccounts({ real: [], demo: [] });
         }
       } finally {
-        console.log('📌 Fetch user data completed, loading:', false);
         setLoading(false);
       }
     };
 
     fetchUserData();
 
-    // WebSocket message handler
     const messageUnsubscribe = derivWebSocket.subscribe((event, data) => {
-      if (event === 'message') {
-        handleWebSocketMessage(data);
-      }
+      if (event === 'message') handleWebSocketMessage(data);
     });
     unsubscribers.push(messageUnsubscribe);
 
     return () => {
-      console.log('📌 Cleaning up: Unsubscribing from WebSocket');
       unsubscribers.forEach((unsubscribe) => unsubscribe());
     };
   }, []);
 
-  // Handle WebSocket messages
   const handleWebSocketMessage = (data) => {
-    console.log('📌 Received WebSocket message:', data);
-
     if (data.error) {
       console.error('📌 WebSocket error:', data.error);
       if (data.error.code === 'InvalidToken') {
-        console.warn('📌 Invalid token detected, session expired');
         setError('Session expired. Please log in again.');
         setActiveAccount(null);
         localStorage.removeItem('activeAccountLoginid');
@@ -229,10 +207,6 @@ export const UserProvider = ({ children }) => {
     }
 
     if (data.balance) {
-      console.log(`📌 Balance update for account ${data.balance.account}:`, {
-        balance: data.balance.balance,
-        currency: data.balance.currency,
-      });
       setAccountData((prev) => ({
         ...prev,
         [data.balance.account]: {
@@ -243,25 +217,57 @@ export const UserProvider = ({ children }) => {
     }
   };
 
-  // Switch active account
-  const switchAccount = (loginid) => {
-    const account = [...accounts.real, ...accounts.demo].find((acc) => acc.loginid === loginid);
-    if (account) {
-      console.log('📌 Switching to account:', account);
-      setActiveAccount(account);
-      localStorage.setItem('activeAccountLoginid', loginid);
+  const switchAccount = async (accountType) => {
+    try {
+      const targetAccounts = accounts[accountType];
+      if (!targetAccounts || targetAccounts.length === 0) {
+        throw new Error(`No ${accountType} account available to switch.`);
+      }
 
-      console.log('📌 Sending authorize request for account switch:', { authorize: account.token });
-      derivWebSocket.send({ authorize: account.token });
-    } else {
-      console.warn('📌 Account not found for loginid:', loginid);
+      const newActiveAccount = targetAccounts[0];
+      setActiveAccount(newActiveAccount);
+      localStorage.setItem('activeAccountLoginid', newActiveAccount.loginid);
+
+      const unsubscribe = derivWebSocket.subscribe((event, data) => {
+        if (event === 'message') {
+          if (data.authorize && data.authorize.loginid === newActiveAccount.loginid) {
+            setAccountData((prev) => ({
+              ...prev,
+              [newActiveAccount.loginid]: {
+                ...prev[newActiveAccount.loginid],
+                balance: data.authorize.balance,
+                profile: data.authorize,
+              },
+            }));
+          } else if (data.balance && data.balance.account === newActiveAccount.loginid) {
+            setAccountData((prev) => ({
+              ...prev,
+              [newActiveAccount.loginid]: {
+                ...prev[newActiveAccount.loginid],
+                balance: data.balance.balance,
+              },
+            }));
+          }
+        }
+      });
+
+      derivWebSocket.send({ authorize: newActiveAccount.token });
+
+      derivWebSocket.send({
+        balance: 1,
+        account: newActiveAccount.loginid,
+        subscribe: 1,
+      });
+
+    } catch (error) {
+      console.error('📌 Error switching account:', error.message);
+      setError(`Failed to switch account: ${error.message}`);
+      alert(`Failed to switch account: ${error.message}`);
     }
   };
 
-  // Clear recent trades
   const clearRecentTrades = () => {
     if (activeAccount) {
-      console.log('📌 Clearing recent trades for account:', activeAccount.loginid);
       setAccountData((prev) => {
         const updatedData = {
           ...prev,
@@ -276,23 +282,22 @@ export const UserProvider = ({ children }) => {
     }
   };
 
+  const contextValue = {
+    user: activeAccount,
+    accounts,
+    activeAccount,
+    activeAccountType,
+    switchAccount,
+    accountData: activeAccount ? accountData[activeAccount.loginid] : {},
+    balance: activeAccount ? accountData[activeAccount.loginid]?.balance : 0,
+    recentTrades: activeAccount ? accountData[activeAccount.loginid]?.recentTrades || [] : [],
+    clearRecentTrades,
+    loading,
+    error,
+  };
+
   return (
-    <UserContext.Provider
-      value={{
-        user: activeAccount,
-        accounts,
-        activeAccount,
-        switchAccount,
-        realityCheck: null,
-        statement: activeAccount ? accountData[activeAccount.loginid]?.statement : null,
-        transactions: activeAccount ? accountData[activeAccount.loginid]?.transactions : null,
-        recentTrades: activeAccount ? accountData[activeAccount.loginid]?.recentTrades || [] : [],
-        balance: activeAccount ? accountData[activeAccount.loginid]?.balance : 0,
-        clearRecentTrades,
-        loading,
-        error,
-      }}
-    >
+    <UserContext.Provider value={contextValue}>
       {children}
     </UserContext.Provider>
   );
