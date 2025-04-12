@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layout, Button, Space, Badge, Dropdown, Avatar, Typography, Menu, theme } from 'antd';
+import { Layout, Button, Space, Badge, Dropdown, Avatar, Typography, theme } from 'antd';
 import {
   BellOutlined,
   UserOutlined,
@@ -8,6 +8,7 @@ import {
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  SwapOutlined,
 } from '@ant-design/icons';
 import { useUser } from '../../context/AuthContext';
 import { ConfigProvider } from 'antd';
@@ -16,7 +17,7 @@ const { Header } = Layout;
 const { Text } = Typography;
 
 const DashboardHeader = ({ collapsed, setCollapsed, isMobile }) => {
-  const { user, loading } = useUser();
+  const { user, balance, activeAccountType, switchAccount, accounts, loading } = useUser();
   const {
     token: { colorPrimary, colorBgContainer },
   } = theme.useToken();
@@ -25,38 +26,54 @@ const DashboardHeader = ({ collapsed, setCollapsed, isMobile }) => {
     {
       key: 'profile',
       icon: <UserOutlined style={{ color: colorPrimary }} />,
-      label: 'My Profile'
+      label: 'My Profile',
     },
     {
       key: 'wallet',
       icon: <WalletOutlined style={{ color: colorPrimary }} />,
-      label: 'Wallet'
+      label: 'Wallet',
+    },
+    {
+      key: 'switch-real',
+      icon: <SwapOutlined style={{ color: activeAccountType === 'real' ? '#ccc' : colorPrimary }} />,
+      label: 'Switch to Real',
+      disabled: activeAccountType === 'real' || !accounts.real,
+      onClick: () => switchAccount('real'),
+    },
+    {
+      key: 'switch-demo',
+      icon: <SwapOutlined style={{ color: activeAccountType === 'demo' ? '#ccc' : colorPrimary }} />,
+      label: 'Switch to Demo',
+      disabled: activeAccountType === 'demo' || !accounts.demo,
+      onClick: () => switchAccount('demo'),
     },
     {
       key: 'settings',
       icon: <SettingOutlined style={{ color: colorPrimary }} />,
-      label: 'Settings'
+      label: 'Settings',
     },
     {
-      type: 'divider'
+      type: 'divider',
     },
     {
       key: 'logout',
       icon: <LogoutOutlined style={{ color: '#FF7675' }} />,
       label: 'Logout',
-      danger: true
-    }
+      danger: true,
+    },
   ];
 
   if (loading) {
     return (
-      <Header style={{ 
-        padding: '0 24px', 
-        background: colorBgContainer,
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-      }}>
+      <Header
+        style={{
+          padding: '0 24px',
+          background: colorBgContainer,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
         <div>Loading...</div>
       </Header>
     );
@@ -72,23 +89,24 @@ const DashboardHeader = ({ collapsed, setCollapsed, isMobile }) => {
           },
           Badge: {
             colorBgContainer: '#FF7675',
-          }
-        }
+          },
+        },
       }}
     >
-      <Header style={{ 
-        padding: isMobile ? '0 16px' : '0 24px',
-        background: colorBgContainer,
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        boxShadow: '0 1px 4px 0 rgba(0, 0, 0, 0.05)',
-        zIndex: 1,
-        position: 'sticky',
-        top: 0,
-        height: 64,
-      }}>
-        {/* Left Side - Logo and Collapse Button */}
+      <Header
+        style={{
+          padding: isMobile ? '0 16px' : '0 24px',
+          background: colorBgContainer,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          boxShadow: '0 1px 4px 0 rgba(0, 0, 0, 0.05)',
+          zIndex: 1,
+          position: 'sticky',
+          top: 0,
+          height: 64,
+        }}
+      >
         <Space size="middle">
           {isMobile && (
             <Button
@@ -99,84 +117,80 @@ const DashboardHeader = ({ collapsed, setCollapsed, isMobile }) => {
             />
           )}
           <Space>
-            <Avatar 
-              src="/logo.png" 
-              size="large" 
-              style={{ 
+            <Avatar
+              src="/logo.png"
+              size="large"
+              style={{
                 background: colorPrimary,
                 color: 'white',
-                fontWeight: 'bold'
+                fontWeight: 'bold',
               }}
             >
               {!user?.logo && 'M'}
             </Avatar>
             {!isMobile && (
               <Text strong style={{ fontSize: 18, color: colorPrimary }}>
-                Mulla Kenya 
+                Mulla Kenya
               </Text>
             )}
           </Space>
         </Space>
 
-        {/* Right Side - User Controls */}
         <Space size="large" align="center">
           {!isMobile && (
-            <Button 
-              type="primary" 
+            <Button
+              type="primary"
               size="middle"
               icon={<WalletOutlined />}
-              style={{ 
+              style={{
                 background: colorPrimary,
                 display: 'flex',
                 alignItems: 'center',
-                fontWeight: 500
+                fontWeight: 500,
               }}
             >
               <Text style={{ color: 'white' }}>
-                {user?.currency} {user?.balance?.toFixed(2) || '0.00'}
+                {user?.currency} {balance?.toFixed(2) || '0.00'}
               </Text>
             </Button>
           )}
 
           <Badge count={5} size="small" offset={[-5, 5]}>
-            <Button 
-              type="text" 
-              shape="circle" 
+            <Button
+              type="text"
+              shape="circle"
               icon={<BellOutlined style={{ fontSize: 18 }} />}
               style={{ color: colorPrimary }}
             />
           </Badge>
 
-          <Dropdown 
-            menu={{ items: userMenuItems }} 
+          <Dropdown
+            menu={{ items: userMenuItems }}
             placement="bottomRight"
             trigger={['click']}
             overlayStyle={{ minWidth: 180 }}
           >
-            <Space 
-              style={{ 
-                cursor: 'pointer', 
+            <Space
+              style={{
+                cursor: 'pointer',
                 padding: '8px 12px',
                 borderRadius: 8,
                 transition: 'all 0.2s',
-                ':hover': {
-                  background: `${colorPrimary}10`
-                }
               }}
             >
-              <Avatar 
-                src={user?.avatar} 
-                icon={<UserOutlined />} 
-                style={{ 
+              <Avatar
+                src={user?.avatar}
+                icon={<UserOutlined />}
+                style={{
                   background: colorPrimary,
-                  color: 'white'
+                  color: 'white',
                 }}
               />
               {!isMobile && (
                 <>
-                  <Text strong>{user?.fullname || "User"}</Text>
+                  <Text strong>{user?.fullname || 'User'}</Text>
                   <Text type="secondary" style={{ fontSize: 12 }}>
-                    {user?.accountType || "Standard"}
+                    {activeAccountType ? activeAccountType.charAt(0).toUpperCase() + activeAccountType.slice(1) : 'N/A'}
                   </Text>
                 </>
               )}
