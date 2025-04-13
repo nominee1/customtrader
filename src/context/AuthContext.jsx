@@ -331,6 +331,7 @@ export const TradingActivityProvider = ({ children }) => {
       // Subscribe to transactions
       const unsubscribeTx = derivWebSocket.subscribe((event, data) => {
         if (event === 'message' && data.transaction) {
+          console.log('Transaction Response:', data.transaction);
           setTransactions((prev) => ({
             ...prev,
             [account.loginid]: [
@@ -345,9 +346,9 @@ export const TradingActivityProvider = ({ children }) => {
       // Fetch statement
       const statementRequest = derivWebSocket.send({ statement: 1, limit: 50, account: account.loginid });
 
-      // Ensure statementRequest is a Promise
       Promise.resolve(statementRequest)
         .then((res) => {
+          console.log('Statement Response:', res);
           if (res && res.statement) {
             setStatements((prev) => ({
               ...prev,

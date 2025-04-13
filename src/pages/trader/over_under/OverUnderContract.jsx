@@ -34,6 +34,7 @@ import {
 import { useUser } from '../../../context/AuthContext';
 import RecentTrades from '../../../components/RecentTrades';
 import RequestIdGenerator from '../../../services/uniqueIdGenerator'; 
+import { derivWebSocket } from '../../../services/websocket_client';
 
 const { Option } = Select;
 const { Title, Text } = Typography;
@@ -59,12 +60,25 @@ const OverUnderTrader = () => {
     setPayout((amount * (1 + payoutMultiplier)).toFixed(2));
   }, [amount, symbol]);
 
+  useEffect(() => {
+    derivWebSocket.connect();
 
+    const handleOpen = () => {
+      console.log('WebSocket connection established');
+    };
+
+    derivWebSocket.socket.addEventListener('open', handleOpen);
+
+    return () => {
+      derivWebSocket.socket.removeEventListener('open', handleOpen);
+      derivWebSocket.close();
+    };
+  }, []);
 
   const handleSubmit = (contractType) => {
     setIsSubmitting(true);
 
-    // Generate a unique request ID for the contract
+    // Generate a unique numeric request ID for the contract
     const req_id = RequestIdGenerator.generateContractId();
 
     const contractData = {
@@ -73,19 +87,24 @@ const OverUnderTrader = () => {
       parameters: {
         amount: amount,
         basis: basis,
-        contract_type: contractType === 'over' ? 'DIGITOVER' : 'DIGITUNDER',
+        contract_type: contractType === 'over' ? 'CALL' : 'PUT',
         currency: user?.currency || 'USD',
         duration: duration,
-        duration_unit: 't',
+        duration_unit: 't', // Assuming 'ticks' for this example
         symbol: symbol,
-        barrier: selectedDigit.toString()
       },
       loginid: user?.loginid,
-      req_id: req_id,
+      req_id: req_id, // Ensure req_id is numeric
     };
 
-    console.log('Sending contract:', contractData);
-    
+    if (derivWebSocket.socket.readyState === WebSocket.OPEN) {
+      derivWebSocket.send(contractData);
+      console.log('Contract data sent:', contractData);
+    } else {
+      console.error('WebSocket is not ready');
+    }
+
+    setIsSubmitting(false);
   };
 
   const volatilityOptions = [

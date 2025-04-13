@@ -35,6 +35,7 @@ import {
 import { useUser } from '../../../context/AuthContext';
 import RecentTrades from '../../../components/RecentTrades';
 import RequestIdGenerator from '../../../services/uniqueIdGenerator'; 
+import { derivWebSocket } from '../../../services/websocket_client';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -59,10 +60,37 @@ const MatchesDiffersTrader = () => {
     setPayout((amount * (1 + payoutMultiplier)).toFixed(2));
   }, [amount, symbol]);
 
+  useEffect(() => {
+    derivWebSocket.connect();
+
+    const handleOpen = () => {
+      console.log('WebSocket connection established');
+    };
+
+    derivWebSocket.socket.addEventListener('open', handleOpen);
+
+    return () => {
+      derivWebSocket.socket.removeEventListener('open', handleOpen);
+      derivWebSocket.close();
+    };
+  }, []);
+
   const handleSubmit = (contractType) => {
     setIsSubmitting(true);
 
-    // Generate a unique request ID for the contract
+    // Validate inputs
+    if (!amount || amount <= 0) {
+      console.error('Invalid amount');
+      setIsSubmitting(false);
+      return;
+    }
+    if (!selectedDigit || selectedDigit < 0 || selectedDigit > 9) {
+      console.error('Invalid selected digit');
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Generate a unique numeric request ID for the contract
     const req_id = RequestIdGenerator.generateContractId();
 
     const contractData = {
@@ -76,14 +104,21 @@ const MatchesDiffersTrader = () => {
         duration: duration,
         duration_unit: 't',
         symbol: symbol,
-        barrier: selectedDigit.toString()
+        barrier: selectedDigit.toString(),
       },
       loginid: user?.loginid,
       req_id: req_id,
     };
 
-    console.log('Sending contract:', contractData);
-  
+    if (derivWebSocket.socket.readyState === WebSocket.OPEN) {
+      derivWebSocket.send(contractData);
+      console.log('Contract data sent:', contractData);
+    } else {
+      console.error('WebSocket is not ready');
+      // Optionally, implement a retry mechanism here
+    }
+
+    setIsSubmitting(false);
   };
 
   const volatilityOptions = [

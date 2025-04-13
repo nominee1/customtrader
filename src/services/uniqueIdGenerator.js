@@ -51,7 +51,15 @@ const RequestIdGenerator = {
      * @returns {string} - A unique contract request ID
      */
     generateContractId() {
-      return this.generate('111');
+      // Generate a unique numeric ID
+      const timestamp = Date.now(); // Current timestamp
+      const randomPart = Math.floor(Math.random() * 10000); // Random 4-digit number
+      const countPart = this.counter++; // Incremental counter
+
+      // Combine components to form a numeric ID
+      const requestId = parseInt(`${timestamp}${randomPart}${countPart}`, 10);
+
+      return requestId;
     },
   
     /**
