@@ -298,11 +298,91 @@ export const UserProvider = ({ children }) => {
     clearRecentTrades,
     loading,
     error,
+    realityChecks: activeAccount ? accountData[activeAccount.loginid]?.realityChecks : {},
   };
 
   return (
     <UserContext.Provider value={contextValue}>
       {children}
     </UserContext.Provider>
+  );
+};
+
+const TradingActivityContext = createContext();
+
+export const useTradingActivity = () => {
+  const context = useContext(TradingActivityContext);
+  if (context === undefined) {
+    throw new Error('useTradingActivity must be used within a TradingActivityProvider');
+  }
+  return context;
+};
+
+export const TradingActivityProvider = ({ children }) => {
+  const { accounts } = useUser();
+  const [statements, setStatements] = useState({});
+  const [transactions, setTransactions] = useState({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribers = [];
+
+    const fetchActivityForAccount = (account) => {
+      // Subscribe to transactions
+      const unsubscribeTx = derivWebSocket.subscribe((event, data) => {
+        if (event === 'message' && data.transaction) {
+          setTransactions((prev) => ({
+            ...prev,
+            [account.loginid]: [
+              data.transaction,
+              ...(prev[account.loginid] || []).slice(0, 49),
+            ],
+          }));
+        }
+      });
+      unsubscribers.push(unsubscribeTx);
+
+      // Fetch statement
+      const statementRequest = derivWebSocket.send({ statement: 1, limit: 50, account: account.loginid });
+
+      // Ensure statementRequest is a Promise
+      Promise.resolve(statementRequest)
+        .then((res) => {
+          if (res && res.statement) {
+            setStatements((prev) => ({
+              ...prev,
+              [account.loginid]: res.statement.transactions,
+            }));
+          }
+        })
+        .catch((err) => {
+          console.error(`Error fetching statement for account ${account.loginid}:`, err);
+        });
+    };
+
+    const realAccounts = accounts.real || [];
+    const demoAccounts = accounts.demo || [];
+
+    [...realAccounts, ...demoAccounts].forEach((account) => {
+      fetchActivityForAccount(account);
+    });
+
+    setLoading(false);
+
+    return () => {
+      unsubscribers.forEach((unsub) => unsub && unsub());
+    };
+  }, [accounts]);
+
+  const contextValue = {
+    statements,
+    transactions,
+    loading,
+  };
+
+  return (
+    <TradingActivityContext.Provider value={contextValue}>
+      {children}
+    </TradingActivityContext.Provider>
   );
 };
