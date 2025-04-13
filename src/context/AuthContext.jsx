@@ -1,10 +1,9 @@
-import { createContext, useState, useEffect, useContext } from 'react';
+import { createContext, useState, useEffect, useContext, useMemo } from 'react';
 import { derivWebSocket } from '../services/websocket_client';
 import { parseDerivAuthTokens } from '../services/parseDerivAuth';
 
 const UserContext = createContext();
 
-// eslint-disable-next-line react-refresh/only-export-components
 export const useUser = () => {
   const context = useContext(UserContext);
   if (context === undefined) {
@@ -20,6 +19,11 @@ export const UserProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Derived state
+  const activeAccountType = useMemo(() => 
+    activeAccount?.is_virtual ? 'demo' : 'real', 
+  [activeAccount]);
+
   // Load active account from localStorage
   useEffect(() => {
     const savedLoginid = localStorage.getItem('activeAccountLoginid');
@@ -33,7 +37,7 @@ export const UserProvider = ({ children }) => {
     let unsubscribers = [];
     let retryCount = 0;
     const maxRetries = 5;
-    const baseRetryDelay = 2000; // 2 seconds
+    const baseRetryDelay = 2000;
 
     const connectWebSocket = async () => {
       try {
@@ -81,151 +85,119 @@ export const UserProvider = ({ children }) => {
       setError(null);
 
       try {
-        // Parse tokens from URL
+        // Parse tokens from URL or localStorage
         let parsedAccounts = parseDerivAuthTokens();
-        console.log('📌 Parsed accounts from URL:', parsedAccounts);
-
-        // Fallback to localStorage if URL tokens are empty
         if (!parsedAccounts.length) {
           const storedTokens = localStorage.getItem('derivTokens');
-          if (storedTokens) {
-            parsedAccounts = JSON.parse(storedTokens);
-            console.log('📌 Loaded accounts from localStorage:', parsedAccounts);
-          }
+          if (storedTokens) parsedAccounts = JSON.parse(storedTokens);
         }
 
         if (!parsedAccounts.length) {
           throw new Error('No valid tokens found in URL or localStorage');
         }
 
-        // Store tokens temporarily in local storage
         localStorage.setItem('derivTokens', JSON.stringify(parsedAccounts));
-        console.log('📌 Stored tokens in localStorage for fallback');
 
         // Connect WebSocket
         await connectWebSocket();
 
-        // Select default account (USD priority or first)
-        const defaultAccount = parsedAccounts.find((acc) => acc.currency === 'USD') || parsedAccounts[0];
-        console.log('📌 Selected default account:', defaultAccount);
+        // Authorize accounts
+        const accountAuthArrays = await Promise.all(
+          parsedAccounts.map((acc) => {
+            return new Promise((resolve) => {
+              const unsubscribe = derivWebSocket.subscribe((event, data) => {
+                if (event === 'message' && data.authorize) {
+                  const accountsFromList = data.authorize.account_list || [];
+                  const mappedAccounts = accountsFromList.map((accInfo) => ({
+                    token: acc.token,
+                    loginid: accInfo.loginid,
+                    currency: accInfo.currency,
+                    is_virtual: accInfo.is_virtual,
+                    balance: accInfo.loginid === data.authorize.loginid ? data.authorize.balance : 0,
+                    email: data.authorize.email,
+                    fullname: data.authorize.fullname,
+                    country: data.authorize.country,
+                    landing_company_fullname: data.authorize.landing_company_fullname,
+                    raw: accInfo,
+                  }));
+                  unsubscribers.push(unsubscribe);
+                  resolve(mappedAccounts);
+                } else if (event === 'message' && data.error) {
+                  unsubscribers.push(unsubscribe);
+                  resolve(null);
+                }
+              });
+              derivWebSocket.send({ authorize: acc.token });
+            });
+          })
+        );
+        const accountAuths = accountAuthArrays.flat();
 
-        // Authenticate with default account token
-        const authResponse = await new Promise((resolve, reject) => {
-          const unsubscribe = derivWebSocket.subscribe((event, data) => {
-            if (event === 'message' && data.authorize) {
-              console.log('📌 Authorization response:', data);
-              if (data.error) {
-                console.error('📌 Authorization error:', data.error);
-                reject(new Error(data.error.message));
-              } else {
-                resolve(data.authorize);
-              }
-              unsubscribers.push(unsubscribe);
-            }
-          });
-          unsubscribers.push(unsubscribe);
-
-          console.log('📌 Sending authorize request:', { authorize: defaultAccount.token });
-          derivWebSocket.send({ authorize: defaultAccount.token });
-        });
-
-        // Process accounts
-        const accountList = authResponse.account_list || [];
-        console.log('📌 Fetched account list:', accountList);
-
+        const validAccounts = accountAuths.filter(Boolean);
         const newAccounts = { real: [], demo: [] };
         const initialAccountData = {};
 
-        parsedAccounts.forEach((parsedAcc) => {
-          const apiAccount = accountList.find((apiAcc) => apiAcc.loginid === parsedAcc.loginid);
-          if (apiAccount) {
-            const accountType = apiAccount.is_virtual ? 'demo' : 'real';
-            const account = {
-              loginid: apiAccount.loginid,
-              currency: apiAccount.currency,
-              balance: apiAccount.balance || 0,
-              created_at: apiAccount.created_at || Math.floor(Date.now() / 1000),
-              token: parsedAcc.token,
-            };
-            newAccounts[accountType].push(account);
-
-            initialAccountData[apiAccount.loginid] = {
-              balance: apiAccount.balance || 0,
-              recentTrades: JSON.parse(localStorage.getItem(`recentTrades_${apiAccount.loginid}`)) || [],
-              statement: null,
-              transactions: null,
-            };
-
-            console.log(`📌 Processed ${accountType} account:`, account);
-          }
+        validAccounts.forEach((account) => {
+          const type = account.is_virtual ? 'demo' : 'real';
+          newAccounts[type].push(account);
+          initialAccountData[account.loginid] = {
+            balance: account.balance,
+            recentTrades: JSON.parse(localStorage.getItem(`recentTrades_${account.loginid}`)) || [],
+            statement: null,
+            transactions: null,
+            profile: account.raw,
+          };
         });
 
-        console.log('📌 Updated accounts state:', newAccounts);
         setAccounts(newAccounts);
-        console.log('📌 Updated accountData state:', initialAccountData);
         setAccountData(initialAccountData);
 
-        // Set active account
-        const active = newAccounts.real.find((acc) => acc.loginid === defaultAccount.loginid) ||
-                       newAccounts.demo.find((acc) => acc.loginid === defaultAccount.loginid);
-        if (active) {
-          console.log('📌 Setting active account:', active);
-          setActiveAccount(active);
-          localStorage.setItem('activeAccountLoginid', active.loginid);
-        } else {
-          console.warn('📌 No matching active account found for default:', defaultAccount.loginid);
+        // Select active account (prefer real, then demo, then first available)
+        const defaultAccount = 
+          newAccounts.real.find(acc => acc.currency === 'USD') || 
+          newAccounts.real[0] || 
+          newAccounts.demo[0];
+
+        if (defaultAccount) {
+          setActiveAccount(defaultAccount);
+          localStorage.setItem('activeAccountLoginid', defaultAccount.loginid);
         }
 
-        // Subscribe to balance for all accounts
-        [...newAccounts.real, ...newAccounts.demo].forEach((account) => {
-          console.log(`📌 Subscribing to balance for account: ${account.loginid}`);
-          derivWebSocket.send({
-            balance: 1,
-            account: account.loginid,
-            subscribe: 1,
-          });
+        // Subscribe to balance updates
+        validAccounts.forEach((account) => {
+          derivWebSocket.send({ balance: 1, account: account.loginid, subscribe: 1 });
         });
 
       } catch (err) {
         console.error('📌 Error fetching user data:', err.message);
         setError(err.message);
         if (err.message.includes('Invalid token') || err.message.includes('Max WebSocket retries')) {
-          console.warn('📌 Clearing state due to error');
           localStorage.removeItem('activeAccountLoginid');
           localStorage.removeItem('derivTokens');
           setActiveAccount(null);
           setAccounts({ real: [], demo: [] });
         }
       } finally {
-        console.log('📌 Fetch user data completed, loading:', false);
         setLoading(false);
       }
     };
 
     fetchUserData();
 
-    // WebSocket message handler
     const messageUnsubscribe = derivWebSocket.subscribe((event, data) => {
-      if (event === 'message') {
-        handleWebSocketMessage(data);
-      }
+      if (event === 'message') handleWebSocketMessage(data);
     });
     unsubscribers.push(messageUnsubscribe);
 
     return () => {
-      console.log('📌 Cleaning up: Unsubscribing from WebSocket');
       unsubscribers.forEach((unsubscribe) => unsubscribe());
     };
   }, []);
 
-  // Handle WebSocket messages
   const handleWebSocketMessage = (data) => {
-    console.log('📌 Received WebSocket message:', data);
-
     if (data.error) {
       console.error('📌 WebSocket error:', data.error);
       if (data.error.code === 'InvalidToken') {
-        console.warn('📌 Invalid token detected, session expired');
         setError('Session expired. Please log in again.');
         setActiveAccount(null);
         localStorage.removeItem('activeAccountLoginid');
@@ -234,40 +206,107 @@ export const UserProvider = ({ children }) => {
       return;
     }
 
-    if (data.balance) {
-      console.log(`📌 Balance update for account ${data.balance.account}:`, {
-        balance: data.balance.balance,
-        currency: data.balance.currency,
+    if (data.balance && data.balance.loginid) {
+      setAccountData((prev) => {
+        const loginid = data.balance.loginid;
+        const existing = prev[loginid] || {};
+        return {
+          ...prev,
+          [loginid]: {
+            ...existing,
+            balance: data.balance.balance,
+          },
+        };
       });
-      setAccountData((prev) => ({
-        ...prev,
-        [data.balance.account]: {
-          ...prev[data.balance.account],
-          balance: data.balance.balance,
-        },
-      }));
     }
   };
 
-  // Switch active account
-  const switchAccount = (loginid) => {
-    const account = [...accounts.real, ...accounts.demo].find((acc) => acc.loginid === loginid);
-    if (account) {
-      console.log('📌 Switching to account:', account);
-      setActiveAccount(account);
-      localStorage.setItem('activeAccountLoginid', loginid);
+  const sendAuthorizedRequest = async (payload) => {
+    return new Promise((resolve, reject) => {
+      if (!activeAccount?.token) {
+        return reject(new Error('No active account or token available.'));
+      }
 
-      console.log('📌 Sending authorize request for account switch:', { authorize: account.token });
-      derivWebSocket.send({ authorize: account.token });
-    } else {
-      console.warn('📌 Account not found for loginid:', loginid);
+      // Authorize the active account before sending
+      const authUnsubscribe = derivWebSocket.subscribe((event, data) => {
+        if (event === 'message' && data.authorize) {
+          authUnsubscribe();
+
+          const reqId = payload.req_id || Math.floor(Math.random() * 1e15);
+          const messageUnsubscribe = derivWebSocket.subscribe((event, response) => {
+            if (event === 'message' && response.req_id === reqId) {
+              messageUnsubscribe();
+
+              if (response.error) {
+                reject(response.error);
+              } else {
+                resolve(response);
+              }
+            }
+          });
+
+          derivWebSocket.send({ ...payload, req_id: reqId });
+        } else if (event === 'message' && data.error) {
+          authUnsubscribe();
+          reject(data.error);
+        }
+      });
+
+      derivWebSocket.send({ authorize: activeAccount.token });
+    });
+  };
+
+  const switchAccount = async (accountType) => {
+    try {
+      const targetAccounts = accounts[accountType];
+      if (!targetAccounts || targetAccounts.length === 0) {
+        throw new Error(`No ${accountType} account available to switch.`);
+      }
+
+      const newActiveAccount = targetAccounts[0];
+      setActiveAccount(newActiveAccount);
+      localStorage.setItem('activeAccountLoginid', newActiveAccount.loginid);
+
+      const unsubscribe = derivWebSocket.subscribe((event, data) => {
+        if (event === 'message') {
+          if (data.authorize && data.authorize.loginid === newActiveAccount.loginid) {
+            setAccountData((prev) => ({
+              ...prev,
+              [newActiveAccount.loginid]: {
+                ...prev[newActiveAccount.loginid],
+                balance: data.authorize.balance,
+                profile: data.authorize,
+              },
+            }));
+          } else if (data.balance && data.balance.account === newActiveAccount.loginid) {
+            setAccountData((prev) => ({
+              ...prev,
+              [newActiveAccount.loginid]: {
+                ...prev[newActiveAccount.loginid],
+                balance: data.balance.balance,
+              },
+            }));
+          }
+        }
+      });
+
+      derivWebSocket.send({ authorize: newActiveAccount.token });
+
+      derivWebSocket.send({
+        balance: 1,
+        account: newActiveAccount.loginid,
+        subscribe: 1,
+      });
+
+    } catch (error) {
+      console.error('📌 Error switching account:', error.message);
+      setError(`Failed to switch account: ${error.message}`);
+      alert(`Failed to switch account: ${error.message}`);
     }
   };
 
-  // Clear recent trades
   const clearRecentTrades = () => {
     if (activeAccount) {
-      console.log('📌 Clearing recent trades for account:', activeAccount.loginid);
       setAccountData((prev) => {
         const updatedData = {
           ...prev,
@@ -282,24 +321,105 @@ export const UserProvider = ({ children }) => {
     }
   };
 
+  const contextValue = {
+    user: activeAccount,
+    accounts,
+    activeAccount,
+    activeAccountType,
+    switchAccount,
+    accountData: activeAccount ? accountData[activeAccount.loginid] : {},
+    balance: activeAccount ? accountData[activeAccount.loginid]?.balance : 0,
+    recentTrades: activeAccount ? accountData[activeAccount.loginid]?.recentTrades || [] : [],
+    clearRecentTrades,
+    loading,
+    error,
+    realityChecks: activeAccount ? accountData[activeAccount.loginid]?.realityChecks : {},
+    sendAuthorizedRequest, // 👈 Add this line
+  };
+
   return (
-    <UserContext.Provider
-      value={{
-        user: activeAccount,
-        accounts,
-        activeAccount,
-        switchAccount,
-        realityCheck: null,
-        statement: activeAccount ? accountData[activeAccount.loginid]?.statement : null,
-        transactions: activeAccount ? accountData[activeAccount.loginid]?.transactions : null,
-        recentTrades: activeAccount ? accountData[activeAccount.loginid]?.recentTrades || [] : [],
-        balance: activeAccount ? accountData[activeAccount.loginid]?.balance : 0,
-        clearRecentTrades,
-        loading,
-        error,
-      }}
-    >
+    <UserContext.Provider value={contextValue}>
       {children}
     </UserContext.Provider>
+  );
+};
+
+const TradingActivityContext = createContext();
+
+export const useTradingActivity = () => {
+  const context = useContext(TradingActivityContext);
+  if (context === undefined) {
+    throw new Error('useTradingActivity must be used within a TradingActivityProvider');
+  }
+  return context;
+};
+
+export const TradingActivityProvider = ({ children }) => {
+  const { accounts } = useUser();
+  const [statements, setStatements] = useState({});
+  const [transactions, setTransactions] = useState({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribers = [];
+
+    const fetchActivityForAccount = (account) => {
+      // Subscribe to transactions
+      const unsubscribeTx = derivWebSocket.subscribe((event, data) => {
+        if (event === 'message' && data.transaction) {
+          console.log('Transaction Response:', data.transaction);
+          setTransactions((prev) => ({
+            ...prev,
+            [account.loginid]: [
+              data.transaction,
+              ...(prev[account.loginid] || []).slice(0, 49),
+            ],
+          }));
+        }
+      });
+      unsubscribers.push(unsubscribeTx);
+
+      // Fetch statement
+      const statementRequest = derivWebSocket.send({ statement: 1, limit: 50, account: account.loginid });
+
+      Promise.resolve(statementRequest)
+        .then((res) => {
+          console.log('Statement Response:', res);
+          if (res && res.statement) {
+            setStatements((prev) => ({
+              ...prev,
+              [account.loginid]: res.statement.transactions,
+            }));
+          }
+        })
+        .catch((err) => {
+          console.error(`Error fetching statement for account ${account.loginid}:`, err);
+        });
+    };
+
+    const realAccounts = accounts.real || [];
+    const demoAccounts = accounts.demo || [];
+
+    [...realAccounts, ...demoAccounts].forEach((account) => {
+      fetchActivityForAccount(account);
+    });
+
+    setLoading(false);
+
+    return () => {
+      unsubscribers.forEach((unsub) => unsub && unsub());
+    };
+  }, [accounts]);
+
+  const contextValue = {
+    statements,
+    transactions,
+    loading,
+  };
+
+  return (
+    <TradingActivityContext.Provider value={contextValue}>
+      {children}
+    </TradingActivityContext.Provider>
   );
 };

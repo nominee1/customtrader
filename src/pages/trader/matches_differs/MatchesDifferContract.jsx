@@ -40,7 +40,7 @@ const { Title, Text } = Typography;
 const { Option } = Select;
 
 const MatchesDiffersTrader = () => {
-  const { user } = useUser(); 
+  const { user, sendAuthorizedRequest } = useUser(); 
   const { token } = theme.useToken();
   const [duration, setDuration] = useState(5);
   const [selectedDigit, setSelectedDigit] = useState(5);
@@ -59,10 +59,21 @@ const MatchesDiffersTrader = () => {
     setPayout((amount * (1 + payoutMultiplier)).toFixed(2));
   }, [amount, symbol]);
 
-  const handleSubmit = (contractType) => {
+
+  const handleSubmit = async (contractType) => {
     setIsSubmitting(true);
 
-    // Generate a unique request ID for the contract
+    if (!amount || amount <= 0) {
+      console.error('Invalid amount');
+      setIsSubmitting(false);
+      return;
+    }
+    if (!selectedDigit || selectedDigit < 0 || selectedDigit > 9) {
+      console.error('Invalid selected digit');
+      setIsSubmitting(false);
+      return;
+    }
+
     const req_id = RequestIdGenerator.generateContractId();
 
     const contractData = {
@@ -76,14 +87,20 @@ const MatchesDiffersTrader = () => {
         duration: duration,
         duration_unit: 't',
         symbol: symbol,
-        barrier: selectedDigit.toString()
+        barrier: selectedDigit.toString(),
       },
       loginid: user?.loginid,
       req_id: req_id,
     };
 
-    console.log('Sending contract:', contractData);
-  
+    try {
+      await sendAuthorizedRequest(contractData);
+      console.log('Contract data sent (authorized):', contractData);
+    } catch (error) {
+      console.error('Error sending authorized contract:', error);
+    }
+
+    setIsSubmitting(false);
   };
 
   const volatilityOptions = [

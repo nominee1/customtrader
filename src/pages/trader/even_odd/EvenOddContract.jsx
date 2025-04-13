@@ -36,7 +36,7 @@ const { Title, Text } = Typography;
 const { Option } = Select;
 
 const EvenOddContract = () => {
-  const { user } = useUser(); 
+  const { user, sendAuthorizedRequest } = useUser(); 
   const { token } = theme.useToken();
   const [duration, setDuration] = useState(5);
   const [basis, setBasis] = useState('stake');
@@ -53,10 +53,15 @@ const EvenOddContract = () => {
     setPayout((amount * (1 + payoutMultiplier)).toFixed(2));
   }, [amount, symbol]);
 
-  const handleSubmit = (contractType) => {
+  const handleSubmit = async (contractType) => {
     setIsSubmitting(true);
 
-    // Generate a unique request ID for the contract
+    if (!amount || amount <= 0) {
+      console.error('Invalid amount');
+      setIsSubmitting(false);
+      return;
+    }
+
     const req_id = RequestIdGenerator.generateContractId();
 
     const contractData = {
@@ -75,8 +80,14 @@ const EvenOddContract = () => {
       req_id: req_id,
     };
 
-    // Simulate API call - replace with your actual Deriv API call
-    console.log('Sending contract:', contractData);
+    try {
+      await sendAuthorizedRequest(contractData);
+      console.log('Contract data sent (authorized):', contractData);
+    } catch (error) {
+      console.error('Error sending authorized contract:', error);
+    }
+
+    setIsSubmitting(false);
   };
 
   const volatilityOptions = [

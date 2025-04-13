@@ -40,7 +40,7 @@ const { Title, Text } = Typography;
 const { TabPane } = Tabs;
 
 const OverUnderTrader = () => {
-  const { user} = useUser(); 
+  const { user, sendAuthorizedRequest } = useUser(); 
   const { token } = theme.useToken();
   const [duration, setDuration] = useState(5);
   const [selectedDigit, setSelectedDigit] = useState(5);
@@ -60,11 +60,9 @@ const OverUnderTrader = () => {
   }, [amount, symbol]);
 
 
-
-  const handleSubmit = (contractType) => {
+  const handleSubmit = async (contractType) => {
     setIsSubmitting(true);
 
-    // Generate a unique request ID for the contract
     const req_id = RequestIdGenerator.generateContractId();
 
     const contractData = {
@@ -73,19 +71,24 @@ const OverUnderTrader = () => {
       parameters: {
         amount: amount,
         basis: basis,
-        contract_type: contractType === 'over' ? 'DIGITOVER' : 'DIGITUNDER',
+        contract_type: contractType === 'over' ? 'CALL' : 'PUT',
         currency: user?.currency || 'USD',
         duration: duration,
-        duration_unit: 't',
+        duration_unit: 't', 
         symbol: symbol,
-        barrier: selectedDigit.toString()
       },
       loginid: user?.loginid,
-      req_id: req_id,
+      req_id: req_id, 
     };
 
-    console.log('Sending contract:', contractData);
-    
+    try {
+      await sendAuthorizedRequest(contractData);
+      console.log('Contract data sent (authorized):', contractData);
+    } catch (error) {
+      console.error('Error sending authorized contract:', error);
+    }
+
+    setIsSubmitting(false);
   };
 
   const volatilityOptions = [

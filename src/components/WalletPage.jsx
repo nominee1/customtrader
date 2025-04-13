@@ -1,4 +1,4 @@
-import React, { useState} from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Card, 
   Row, 
@@ -32,7 +32,7 @@ import {
   ArrowUpOutlined,
   ArrowDownOutlined
 } from '@ant-design/icons';
-import { useUser } from '../context/AuthContext';
+import { useUser, useTradingActivity } from '../context/AuthContext';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -40,13 +40,20 @@ const { TabPane } = Tabs;
 const { Option } = Select;
 
 const WalletPage = () => {
-  const { user, realityCheck, statement, transactions, loading } = useUser();
+  const { user, activeAccount, loading, realityChecks } = useUser();
+  const { statements, transactions, loading: activityLoading } = useTradingActivity();
   const { token } = theme.useToken();
   const [searchTerm, setSearchTerm] = useState('');
   const [dateRange, setDateRange] = useState([]);
   const [visibleColumns, setVisibleColumns] = useState(['Date', 'Type', 'Amount', 'Description']);
   const [activeTab, setActiveTab] = useState('statement');
   const [exportFormat, setExportFormat] = useState('csv');
+
+  // Log statements and transactions for debugging
+  useEffect(() => {
+    console.log('Statements:', statements);
+    console.log('Transactions:', transactions);
+  }, [statements, transactions]);
 
   // Format date to human-readable form
   const formatDate = (timestamp) => {
@@ -62,7 +69,7 @@ const WalletPage = () => {
   };
 
   // Filtered Statement Data
-  const filteredStatement = statement?.statement?.transactions?.filter((item) => {
+  const filteredStatement = (statements?.[activeAccount?.loginid] || [])?.filter((item) => {
     const transactionDate = new Date(item.purchase_time * 1000);
     const matchesSearch = item.longcode.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesDateRange =
@@ -222,6 +229,9 @@ const WalletPage = () => {
     // Export logic would go here
   };
 
+  // Assuming realityCheck is specific to the active account
+  const realityCheck = realityChecks || {}; // Fallback to an empty object if undefined
+
   return (
     <ConfigProvider
       theme={{
@@ -256,11 +266,11 @@ const WalletPage = () => {
               <Divider style={{ margin: '12px 0' }} />
               <Space>
                 <ArrowUpOutlined style={{ color: token.colorSuccess }} />
-                <Text type="secondary">Deposits: {formatCurrency(realityCheck?.reality_check?.total_deposits || 0)}</Text>
+                <Text type="secondary">Deposits: {formatCurrency(realityChecks?.[activeAccount?.loginid]?.total_deposits || 0)}</Text>
               </Space>
               <Space style={{ marginTop: 8 }}>
                 <ArrowDownOutlined style={{ color: token.colorError }} />
-                <Text type="secondary">Withdrawals: {formatCurrency(realityCheck?.reality_check?.total_withdrawals || 0)}</Text>
+                <Text type="secondary">Withdrawals: {formatCurrency(realityChecks?.[activeAccount?.loginid]?.total_withdrawals || 0)}</Text>
               </Space>
             </Card>
           </Col>
@@ -271,17 +281,17 @@ const WalletPage = () => {
                 boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)'
               }}
             >
-              <Statistic
+                <Statistic
                 title="Total Transactions"
-                value={realityCheck?.reality_check?.num_transactions || 0}
+                value={realityChecks?.[activeAccount?.loginid]?.num_transactions || 0}
                 prefix={<TransactionOutlined />}
               />
               <Divider style={{ margin: '12px 0' }} />
               <Space>
-                <Text type="secondary">Today: {realityCheck?.reality_check?.today_transactions || 0}</Text>
+                <Text type="secondary">Today: {realityChecks?.[activeAccount?.loginid]?.today_transactions || 0}</Text>
               </Space>
               <Space style={{ marginTop: 8 }}>
-                <Text type="secondary">This week: {realityCheck?.reality_check?.week_transactions || 0}</Text>
+                <Text type="secondary">This week: {realityChecks?.[activeAccount?.loginid]?.week_transactions || 0}</Text>
               </Space>
             </Card>
           </Col>
@@ -292,13 +302,13 @@ const WalletPage = () => {
                 boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)'
               }}
             >
-              <Statistic
+                <Statistic
                 title="Net Profit/Loss"
-                value={realityCheck?.reality_check?.total_profit_loss || 0}
+                value={realityChecks?.[activeAccount?.loginid]?.total_profit_loss || 0}
                 precision={2}
                 prefix={<DollarOutlined />}
                 valueStyle={{
-                  color: (realityCheck?.reality_check?.total_profit_loss || 0) >= 0 
+                  color: (realityChecks?.[activeAccount?.loginid]?.total_profit_loss || 0) >= 0 
                     ? token.colorSuccess 
                     : token.colorError
                 }}
@@ -397,7 +407,7 @@ const WalletPage = () => {
                 boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)'
               }}
             >
-              {loading ? (
+              {loading || activityLoading ? (
                 <Spin size="large" style={{ display: 'block', margin: '40px auto' }} />
               ) : filteredStatement.length ? (
                 <Table
@@ -453,9 +463,9 @@ const WalletPage = () => {
             >
               {loading ? (
                 <Spin size="large" style={{ display: 'block', margin: '40px auto' }} />
-              ) : transactions?.transaction ? (
+              ) : transactions?.[activeAccount?.loginid]?.[0] ? (
                 <Table
-                  dataSource={[transactions.transaction]}
+                  dataSource={[transactions?.[activeAccount?.loginid]?.[0]]}
                   columns={transactionColumns}
                   rowKey="transaction_id"
                   pagination={false}
@@ -486,11 +496,11 @@ const WalletPage = () => {
                 boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)'
               }}
             >
-              {loading ? (
+              {loading || activityLoading ? (
                 <Spin size="large" style={{ display: 'block', margin: '40px auto' }} />
-              ) : realityCheck?.reality_check ? (
+              ) : realityChecks?.[activeAccount?.loginid] ? (
                 <Table
-                  dataSource={[realityCheck.reality_check]}
+                  dataSource={[realityChecks?.[activeAccount?.loginid]]}
                   columns={realityCheckColumns}
                   rowKey="start_time"
                   pagination={false}
@@ -506,6 +516,7 @@ const WalletPage = () => {
             </Card>
           </TabPane>
         </Tabs>
+        <p>Reality Check: {JSON.stringify(realityCheck)}</p>
       </div>
     </ConfigProvider>
   );

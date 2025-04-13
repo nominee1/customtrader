@@ -41,7 +41,7 @@ const { Option } = Select;
 const { TabPane } = Tabs;
 
 const RiseFallTrader = () => {
-  const { user } = useUser(); 
+  const { user, sendAuthorizedRequest } = useUser();
   const { token } = theme.useToken();
   const [durationType, setDurationType] = useState('ticks');
   const [duration, setDuration] = useState(5);
@@ -61,10 +61,9 @@ const RiseFallTrader = () => {
     setPayout((amount * (1 + payoutMultiplier)).toFixed(2));
   }, [amount, symbol]);
 
-  const handleSubmit = (contractType) => {
+  const handleSubmit = async (contractType) => {
     setIsSubmitting(true);
 
-    // Generate a unique request ID for the contract
     const req_id = RequestIdGenerator.generateContractId();
 
     const contractData = {
@@ -82,8 +81,15 @@ const RiseFallTrader = () => {
       loginid: user?.loginid,
       req_id: req_id,
     };
+    
+    try {
+      await sendAuthorizedRequest(contractData);
+      console.log('Contract data sent (authorized):', contractData);
+    } catch (error) {
+      console.error('Error sending authorized contract:', error);
+    }
 
-    console.log('Sending contract:', contractData);
+    setIsSubmitting(false);
   };
 
   const volatilityOptions = [
