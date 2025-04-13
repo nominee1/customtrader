@@ -50,7 +50,6 @@ const VolatilityComparisonChart = () => {
 
     const unsubscribe = derivWebSocket.subscribe((event, data) => {
       if (event === "message") {
-        console.log("Raw WebSocket data:", data); // Debug raw data
         if (data.error) {
           setError(data.error.message);
           setLoading(false);
@@ -60,7 +59,6 @@ const VolatilityComparisonChart = () => {
             value: data.tick.quote,
             symbol: data.tick.symbol,
           };
-          console.log("Processed tick:", tick); // Debug processed tick
           setData((prevData) => [...prevData, tick]);
         } else if (data.subscription) {
           subscriptions.current[data.echo_req.ticks] = data.subscription.id;
