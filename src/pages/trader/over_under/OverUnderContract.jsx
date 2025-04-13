@@ -34,14 +34,13 @@ import {
 import { useUser } from '../../../context/AuthContext';
 import RecentTrades from '../../../components/RecentTrades';
 import RequestIdGenerator from '../../../services/uniqueIdGenerator'; 
-import { derivWebSocket } from '../../../services/websocket_client';
 
 const { Option } = Select;
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
 
 const OverUnderTrader = () => {
-  const { user} = useUser(); 
+  const { user, sendAuthorizedRequest } = useUser(); 
   const { token } = theme.useToken();
   const [duration, setDuration] = useState(5);
   const [selectedDigit, setSelectedDigit] = useState(5);
@@ -60,25 +59,10 @@ const OverUnderTrader = () => {
     setPayout((amount * (1 + payoutMultiplier)).toFixed(2));
   }, [amount, symbol]);
 
-  useEffect(() => {
-    derivWebSocket.connect();
 
-    const handleOpen = () => {
-      console.log('WebSocket connection established');
-    };
-
-    derivWebSocket.socket.addEventListener('open', handleOpen);
-
-    return () => {
-      derivWebSocket.socket.removeEventListener('open', handleOpen);
-      derivWebSocket.close();
-    };
-  }, []);
-
-  const handleSubmit = (contractType) => {
+  const handleSubmit = async (contractType) => {
     setIsSubmitting(true);
 
-    // Generate a unique numeric request ID for the contract
     const req_id = RequestIdGenerator.generateContractId();
 
     const contractData = {
@@ -90,18 +74,18 @@ const OverUnderTrader = () => {
         contract_type: contractType === 'over' ? 'CALL' : 'PUT',
         currency: user?.currency || 'USD',
         duration: duration,
-        duration_unit: 't', // Assuming 'ticks' for this example
+        duration_unit: 't', 
         symbol: symbol,
       },
       loginid: user?.loginid,
-      req_id: req_id, // Ensure req_id is numeric
+      req_id: req_id, 
     };
 
-    if (derivWebSocket.socket.readyState === WebSocket.OPEN) {
-      derivWebSocket.send(contractData);
-      console.log('Contract data sent:', contractData);
-    } else {
-      console.error('WebSocket is not ready');
+    try {
+      await sendAuthorizedRequest(contractData);
+      console.log('Contract data sent (authorized):', contractData);
+    } catch (error) {
+      console.error('Error sending authorized contract:', error);
     }
 
     setIsSubmitting(false);

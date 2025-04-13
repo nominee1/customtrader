@@ -221,6 +221,41 @@ export const UserProvider = ({ children }) => {
     }
   };
 
+  const sendAuthorizedRequest = async (payload) => {
+    return new Promise((resolve, reject) => {
+      if (!activeAccount?.token) {
+        return reject(new Error('No active account or token available.'));
+      }
+
+      // Authorize the active account before sending
+      const authUnsubscribe = derivWebSocket.subscribe((event, data) => {
+        if (event === 'message' && data.authorize) {
+          authUnsubscribe();
+
+          const reqId = payload.req_id || Math.floor(Math.random() * 1e15);
+          const messageUnsubscribe = derivWebSocket.subscribe((event, response) => {
+            if (event === 'message' && response.req_id === reqId) {
+              messageUnsubscribe();
+
+              if (response.error) {
+                reject(response.error);
+              } else {
+                resolve(response);
+              }
+            }
+          });
+
+          derivWebSocket.send({ ...payload, req_id: reqId });
+        } else if (event === 'message' && data.error) {
+          authUnsubscribe();
+          reject(data.error);
+        }
+      });
+
+      derivWebSocket.send({ authorize: activeAccount.token });
+    });
+  };
+
   const switchAccount = async (accountType) => {
     try {
       const targetAccounts = accounts[accountType];
@@ -299,6 +334,7 @@ export const UserProvider = ({ children }) => {
     loading,
     error,
     realityChecks: activeAccount ? accountData[activeAccount.loginid]?.realityChecks : {},
+    sendAuthorizedRequest, // 👈 Add this line
   };
 
   return (

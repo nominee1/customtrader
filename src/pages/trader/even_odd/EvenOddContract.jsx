@@ -31,13 +31,12 @@ import {
 import { useUser } from '../../../context/AuthContext';
 import RecentTrades from '../../../components/RecentTrades';
 import RequestIdGenerator from '../../../services/uniqueIdGenerator'; 
-import { derivWebSocket } from '../../../services/websocket_client';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 
 const EvenOddContract = () => {
-  const { user } = useUser(); 
+  const { user, sendAuthorizedRequest } = useUser(); 
   const { token } = theme.useToken();
   const [duration, setDuration] = useState(5);
   const [basis, setBasis] = useState('stake');
@@ -54,33 +53,15 @@ const EvenOddContract = () => {
     setPayout((amount * (1 + payoutMultiplier)).toFixed(2));
   }, [amount, symbol]);
 
-  // WebSocket connection setup
-  useEffect(() => {
-    derivWebSocket.connect();
-
-    const handleOpen = () => {
-      console.log('WebSocket connection established');
-    };
-
-    derivWebSocket.socket.addEventListener('open', handleOpen);
-
-    return () => {
-      derivWebSocket.socket.removeEventListener('open', handleOpen);
-      derivWebSocket.close();
-    };
-  }, []);
-
-  const handleSubmit = (contractType) => {
+  const handleSubmit = async (contractType) => {
     setIsSubmitting(true);
 
-    // Validate inputs
     if (!amount || amount <= 0) {
       console.error('Invalid amount');
       setIsSubmitting(false);
       return;
     }
 
-    // Generate a unique numeric request ID for the contract
     const req_id = RequestIdGenerator.generateContractId();
 
     const contractData = {
@@ -99,11 +80,11 @@ const EvenOddContract = () => {
       req_id: req_id,
     };
 
-    if (derivWebSocket.socket.readyState === WebSocket.OPEN) {
-      derivWebSocket.send(contractData);
-      console.log('Contract data sent:', contractData);
-    } else {
-      console.error('WebSocket is not ready');
+    try {
+      await sendAuthorizedRequest(contractData);
+      console.log('Contract data sent (authorized):', contractData);
+    } catch (error) {
+      console.error('Error sending authorized contract:', error);
     }
 
     setIsSubmitting(false);
