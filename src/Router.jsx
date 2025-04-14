@@ -7,7 +7,7 @@ import TraderPage from './pages/trader/TraderPage';
 import WalletPage from './components/WalletPage';
 import UserProfile from './components/UserProfile';
 import SettingsPage from './components/SettingPage';
-import { UserProvider, TradingActivityProvider } from './context/AuthContext';
+import { UserProvider } from './context/AuthContext';
 
 function AppRoutes() {
   return (
@@ -19,9 +19,7 @@ function AppRoutes() {
           path="/dashboard" 
           element={
             <UserProvider>
-              <TradingActivityProvider>
                 <Dashboard />
-              </TradingActivityProvider>
             </UserProvider>
           }
         >

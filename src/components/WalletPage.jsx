@@ -32,7 +32,7 @@ import {
   ArrowUpOutlined,
   ArrowDownOutlined
 } from '@ant-design/icons';
-import { useUser, useTradingActivity } from '../context/AuthContext';
+import { useUser } from '../context/AuthContext';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -40,8 +40,7 @@ const { TabPane } = Tabs;
 const { Option } = Select;
 
 const WalletPage = () => {
-  const { user, activeAccount, loading, realityChecks } = useUser();
-  const { statements, transactions, loading: activityLoading } = useTradingActivity();
+  const { user, activeAccount, loading } = useUser();
   const { token } = theme.useToken();
   const [searchTerm, setSearchTerm] = useState('');
   const [dateRange, setDateRange] = useState([]);
@@ -49,11 +48,34 @@ const WalletPage = () => {
   const [activeTab, setActiveTab] = useState('statement');
   const [exportFormat, setExportFormat] = useState('csv');
 
-  // Log statements and transactions for debugging
+  // Log user and account for debugging
+  useEffect(() => {
+    console.log('User:', user);
+    console.log('Active Account:', activeAccount);
+  }, [user, activeAccount]);
+
+  // Replace statements with an empty array
+  const statements = [];
+
+  // Replace realityChecks with an empty array
+  const realityChecks = [];
+
+  // Replace realityCheck with an empty object
+  const realityCheck = {};
+
+  // Replace transactions with an empty array
+  const transactions = [];
+
+  // Log statements, realityChecks, realityCheck, and transactions for debugging
   useEffect(() => {
     console.log('Statements:', statements);
+    console.log('Reality Checks:', realityChecks);
+    console.log('Reality Check:', realityCheck);
     console.log('Transactions:', transactions);
-  }, [statements, transactions]);
+  }, []);
+
+  // Replace activityLoading with `loading` or remove it if not needed
+  const isLoading = loading; // Use `loading` from `useUser` or set to `false` if not needed
 
   // Format date to human-readable form
   const formatDate = (timestamp) => {
@@ -229,8 +251,7 @@ const WalletPage = () => {
     // Export logic would go here
   };
 
-  // Assuming realityCheck is specific to the active account
-  const realityCheck = realityChecks || {}; // Fallback to an empty object if undefined
+  // Removed legacy realityCheck assignment in favor of local state
 
   return (
     <ConfigProvider
@@ -407,7 +428,7 @@ const WalletPage = () => {
                 boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)'
               }}
             >
-              {loading || activityLoading ? (
+              {loading || isLoading ? (
                 <Spin size="large" style={{ display: 'block', margin: '40px auto' }} />
               ) : filteredStatement.length ? (
                 <Table
@@ -496,7 +517,7 @@ const WalletPage = () => {
                 boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)'
               }}
             >
-              {loading || activityLoading ? (
+              {loading || isLoading ? (
                 <Spin size="large" style={{ display: 'block', margin: '40px auto' }} />
               ) : realityChecks?.[activeAccount?.loginid] ? (
                 <Table

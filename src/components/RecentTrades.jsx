@@ -1,12 +1,16 @@
 import React from 'react';
 import { Card, Space, Typography, Row, Col, Tag } from 'antd';
 import { HistoryOutlined } from '@ant-design/icons';
-import { useUser } from '../context/AuthContext';
 
 const { Text } = Typography;
 
 const RecentTrades = () => {
-    const { recentTrades } = useUser();
+    
+    const recentTrades = [
+        { id: 1, asset: 'BTC/USD', type: 'buy' },
+        { id: 2, asset: 'ETH/USD', type: 'sell' },
+        { id: 3, asset: 'LTC/USD', type: 'buy' },
+    ];
 
     return (
         <Card
@@ -33,30 +37,21 @@ const RecentTrades = () => {
                                 borderRadius: 8,
                             }}
                         >
-                            <Space direction="vertical" size={4} style={{ width: '100%' }}>
-                                <Row justify="space-between">
-                                    <Text strong>{trade.type.toUpperCase()}</Text>
-                                    <Tag color="blue">{trade.symbol}</Tag>
-                                </Row>
-                                <Row justify="space-between">
-                                    <Text>Amount:</Text>
-                                    <Text strong>${trade.amount.toFixed(2)}</Text>
-                                </Row>
-                                <Row justify="space-between">
-                                    <Text>Profit:</Text>
-                                    <Text strong type={trade.profit > 0 ? 'success' : 'danger'}>
-                                        ${trade.profit.toFixed(2)}
-                                    </Text>
-                                </Row>
-                                <Row justify="space-between">
-                                    <Text type="secondary">{trade.time}</Text>
-                                </Row>
-                            </Space>
+                            <Row justify="space-between">
+                                <Col>
+                                    <Text>{trade.asset}</Text>
+                                </Col>
+                                <Col>
+                                    <Tag color={trade.type === 'buy' ? 'green' : 'red'}>
+                                        {trade.type.toUpperCase()}
+                                    </Tag>
+                                </Col>
+                            </Row>
                         </Card>
                     ))}
                 </Space>
             ) : (
-                <Text type="secondary">No recent trades</Text>
+                <Text type="secondary">No recent trades available.</Text>
             )}
         </Card>
     );
