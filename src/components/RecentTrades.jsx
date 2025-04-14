@@ -1,16 +1,39 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, Space, Typography, Row, Col, Tag } from 'antd';
 import { HistoryOutlined } from '@ant-design/icons';
+import { useUser } from '../context/AuthContext';
 
 const { Text } = Typography;
 
 const RecentTrades = () => {
+    const { user, activeAccount, loading: authLoading, sendAuthorizedRequest } = useUser();
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [recentTrades, setRecentTrades] = useState([]);
+
+    useEffect(() => {
+        const fetchRecentTrades = async () => {
+            if (!user || !activeAccount) return;
+            
+            setLoading(true);
+            try {
+                const response = await sendAuthorizedRequest({
+                    transaction: 1, 
+                    subscribe: 1
+                });
+                // Assuming the response contains trades data
+                setRecentTrades(response?.data || []);
+            } catch (error) {
+                console.error('Error fetching recent trades:', error);
+                setError('Failed to fetch recent trades.');
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchRecentTrades();
+    }, [user, activeAccount, sendAuthorizedRequest]);  
     
-    const recentTrades = [
-        { id: 1, asset: 'BTC/USD', type: 'buy' },
-        { id: 2, asset: 'ETH/USD', type: 'sell' },
-        { id: 3, asset: 'LTC/USD', type: 'buy' },
-    ];
+    // Remove the hardcoded recentTrades array since we're using state now
 
     return (
         <Card
@@ -25,8 +48,11 @@ const RecentTrades = () => {
                 boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
                 height: '100%',
             }}
+            loading={authLoading || loading}
         >
-            {recentTrades.length > 0 ? (
+            {error ? (
+                <Text type="danger">{error}</Text>
+            ) : recentTrades.length > 0 ? (
                 <Space direction="vertical" size={16} style={{ width: '100%' }}>
                     {recentTrades.map((trade) => (
                         <Card
