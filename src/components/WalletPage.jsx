@@ -24,13 +24,9 @@ import {
 import { 
   SearchOutlined,
   FilterOutlined,
-  DownloadOutlined,
   DollarOutlined,
-  TransactionOutlined,
   HistoryOutlined,
   InfoCircleOutlined,
-  ArrowUpOutlined,
-  ArrowDownOutlined,
   SyncOutlined
 } from '@ant-design/icons';
 import { useUser } from '../context/AuthContext';
@@ -41,7 +37,7 @@ const { TabPane } = Tabs;
 const { Option } = Select;
 
 const WalletPage = () => {
-  const { user, activeAccount, loading: authLoading, sendAuthorizedRequest } = useUser();
+  const { user, activeAccount, balance, loading: authLoading, sendAuthorizedRequest } = useUser();
   const { token } = theme.useToken();
   
   // State management
@@ -50,7 +46,6 @@ const WalletPage = () => {
   const [visibleColumns, setVisibleColumns] = useState(['Date', 'Type', 'Amount', 'Description']);
   const [activeTab, setActiveTab] = useState('statement');
   const [statements, setStatements] = useState([]);
-  const [transactions, setTransactions] = useState([]);
   const [realityCheck, setRealityCheck] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -80,21 +75,13 @@ const WalletPage = () => {
     setError(null);
   
     try {
-      const [statementsRes, transactionsRes, realityCheckRes] = await Promise.all([
-        sendAuthorizedRequest({ statement: 1, limit: 100, loginid: accountId }),
-        sendAuthorizedRequest({ transaction: 1, subscribe:1 }), 
-        sendAuthorizedRequest({ reality_check: 1, loginid: accountId })
-      ]);
+      const statementsRes = await sendAuthorizedRequest({ statement: 1, limit: 100, loginid: accountId });
   
       console.log('Statements Response:', statementsRes);
-      console.log('Transactions Response:', transactionsRes);
-      console.log('Reality Check Response:', realityCheckRes);
 
-  
       setStatements(statementsRes?.statement?.transactions || []);
       setStatementCount(statementsRes?.statement?.count || 0);
-      setTransactions(transactionsRes?.transaction ? [transactionsRes.transaction] : []);
-      setRealityCheck(realityCheckRes?.reality_check || null);
+      localStorage.setItem(`statements_${accountId}`, JSON.stringify(statementsRes?.statement?.transactions || []));
     } catch (err) {
       console.error('Error fetching wallet data:', err);
       setError('Failed to load wallet data. Please try again.');
@@ -107,7 +94,13 @@ const WalletPage = () => {
   // Initial data load
   useEffect(() => {
     if (accountId) {
-      fetchData();
+      const cached = localStorage.getItem(`statements_${accountId}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        setStatements(parsed);
+        setStatementCount(parsed.length);
+      }
+      fetchData(); // always fetch in background to refresh
     }
   }, [accountId]);
 
@@ -165,6 +158,13 @@ const WalletPage = () => {
       visible: visibleColumns.includes('Amount'),
     },
     {
+      title: 'Description',
+      dataIndex: 'longcode',
+      key: 'longcode',
+      ellipsis: true,
+      visible: visibleColumns.includes('Description'),
+    },
+    {
       title: 'Transaction ID',
       dataIndex: 'transaction_id',
       key: 'transaction_id',
@@ -178,88 +178,6 @@ const WalletPage = () => {
       visible: visibleColumns.includes('Status'),
     }
   ].filter(col => col.visible), [visibleColumns, token]);
-
-  const transactionColumns = useMemo(() => [
-    {
-      title: 'Date',
-      dataIndex: 'purchase_time',
-      key: 'purchase_time',
-      render: formatDate,
-      sorter: (a, b) => a.purchase_time - b.purchase_time,
-    },
-    {
-      title: 'Type',
-      dataIndex: 'action',
-      key: 'action',
-    },
-    {
-      title: 'Amount',
-      dataIndex: 'amount',
-      key: 'amount',
-      render: amount => (
-        <Text type={amount >= 0 ? 'success' : 'danger'}>
-          {formatCurrency(amount)}
-        </Text>
-      ),
-      sorter: (a, b) => a.amount - b.amount,
-    },
-    {
-      title: 'Description',
-      dataIndex: 'longcode',
-      key: 'longcode',
-      ellipsis: true,
-    },
-    {
-      title: 'Reference',
-      dataIndex: 'transaction_id',
-      key: 'transaction_id',
-      render: id => <Text code>{id?.substring(0, 8) || 'N/A'}</Text>,
-    }
-  ], [token]);
-
-  const realityCheckColumns = useMemo(() => [
-    {
-      title: 'Session Start',
-      dataIndex: 'start_time',
-      key: 'start_time',
-      render: formatDate,
-      sorter: (a, b) => a.start_time - b.start_time,
-    },
-    {
-      title: 'Transactions',
-      dataIndex: 'num_transactions',
-      key: 'num_transactions',
-      sorter: (a, b) => a.num_transactions - b.num_transactions,
-    },
-    {
-      title: 'Purchases',
-      dataIndex: 'total_purchases',
-      key: 'total_purchases',
-      render: formatCurrency,
-      sorter: (a, b) => a.total_purchases - b.total_purchases,
-    },
-    {
-      title: 'Profit/Loss',
-      dataIndex: 'total_profit_loss',
-      key: 'total_profit_loss',
-      render: amount => (
-        <Text type={amount >= 0 ? 'success' : 'danger'}>
-          {formatCurrency(amount)}
-        </Text>
-      ),
-      sorter: (a, b) => a.total_profit_loss - b.total_profit_loss,
-    },
-    {
-      title: 'Duration',
-      dataIndex: 'session_duration',
-      key: 'session_duration',
-      render: seconds => {
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
-        return `${hours}h ${minutes}m`;
-      },
-    }
-  ], []);
 
   const handleRefresh = () => {
     fetchData();
@@ -305,7 +223,7 @@ const WalletPage = () => {
             >
               <Statistic
                 title="Total Balance"
-                value={user?.balance}
+                value={balance}
                 precision={2}
                 prefix={<DollarOutlined />}
                 valueStyle={{ color: token.colorPrimary }}
@@ -323,7 +241,7 @@ const WalletPage = () => {
               <Statistic
                 title="Total Transactions"
                 value={summaryData.totalTransactions}
-                prefix={<TransactionOutlined />}
+                prefix={<HistoryOutlined />}
               />
               <Divider style={{ margin: '12px 0' }} />
             </Card>
@@ -464,93 +382,6 @@ const WalletPage = () => {
                   image={Empty.PRESENTED_IMAGE_SIMPLE}
                   description={
                     <Text type="secondary">No transactions found</Text>
-                  }
-                />
-              )}
-            </Card>
-          </TabPane>
-
-          <TabPane
-            tab={
-              <Space>
-                <TransactionOutlined />
-                Transactions
-              </Space>
-            }
-            key="transactions"
-          >
-            <Card
-              style={{ 
-                borderRadius: 16,
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)'
-              }}
-            >
-              {isLoading ? (
-                <Spin size="large" style={{ display: 'block', margin: '40px auto' }} />
-              ) : error ? (
-                <Empty
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  description={
-                    <Text type="danger">{error}</Text>
-                  }
-                />
-              ) : transactions.length ? (
-                <Table
-                  dataSource={transactions}
-                  columns={transactionColumns}
-                  rowKey="transaction_id"
-                  pagination={{
-                    pageSize: 10,
-                    showSizeChanger: true,
-                  }}
-                />
-              ) : (
-                <Empty
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  description={
-                    <Text type="secondary">No transactions available</Text>
-                  }
-                />
-              )}
-            </Card>
-          </TabPane>
-
-          <TabPane
-            tab={
-              <Space>
-                <InfoCircleOutlined />
-                Reality Check
-              </Space>
-            }
-            key="reality"
-          >
-            <Card
-              style={{ 
-                borderRadius: 16,
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)'
-              }}
-            >
-              {isLoading ? (
-                <Spin size="large" style={{ display: 'block', margin: '40px auto' }} />
-              ) : error ? (
-                <Empty
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  description={
-                    <Text type="danger">{error}</Text>
-                  }
-                />
-              ) : realityCheck ? (
-                <Table
-                  dataSource={[realityCheck]}
-                  columns={realityCheckColumns}
-                  rowKey="start_time"
-                  pagination={false}
-                />
-              ) : (
-                <Empty
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  description={
-                    <Text type="secondary">No reality check data available</Text>
                   }
                 />
               )}
