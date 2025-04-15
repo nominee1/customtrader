@@ -19,7 +19,7 @@ export class DerivWebSocket {
     this.socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log('[message] Data received:', data);
+        //console.log('[message] Data received:', data);
         this.notifySubscribers('message', data);
       } catch (error) {
         console.error('[message] Failed to parse response:', error);
