@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Typography, Tag, Input, Checkbox, Button, Tooltip, Spin, Row, Col, Alert } from 'antd';
-import { derivWebSocket } from '../services/websocket_client';
+import { publicWebSocket } from "../services/public_websocket_client";
 
 const { Title } = Typography;
 
@@ -34,7 +34,7 @@ const VolatilityMonitor = () => {
   ];
 
   useEffect(() => {
-    derivWebSocket.connect();
+    publicWebSocket .connect();
 
     const unsubscribers = [];
 
@@ -71,10 +71,10 @@ const VolatilityMonitor = () => {
 
     const subscribeToSymbols = () => {
       volatilitySymbols.forEach(({ code }) => {
-        const unsubscribe = derivWebSocket.subscribe(handleTick);
+        const unsubscribe = publicWebSocket .subscribe(handleTick);
         unsubscribers.push(unsubscribe);
 
-        derivWebSocket.send({
+        publicWebSocket .send({
           ticks: code,
           subscribe: 1,
         });
@@ -86,7 +86,7 @@ const VolatilityMonitor = () => {
       setLoading(false);
     };
 
-    const unsubscribeFromOpen = derivWebSocket.subscribe((event, data) => {
+    const unsubscribeFromOpen = publicWebSocket .subscribe((event, data) => {
       if (event === 'open') {
         onOpen(data);
       }

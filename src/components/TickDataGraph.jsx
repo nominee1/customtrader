@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { derivWebSocket } from "../services/websocket_client";
+import { publicWebSocket } from "../services/public_websocket_client";
 import {
   Card,
   Row,
@@ -46,9 +46,9 @@ const VolatilityComparisonChart = () => {
   const subscriptions = useRef({});
 
   useEffect(() => {
-    derivWebSocket.connect();
+    publicWebSocket.connect();
 
-    const unsubscribe = derivWebSocket.subscribe((event, data) => {
+    const unsubscribe = publicWebSocket.subscribe((event, data) => {
       if (event === "message") {
         if (data.error) {
           setError(data.error.message);
@@ -70,17 +70,17 @@ const VolatilityComparisonChart = () => {
     });
 
     // Wait for WebSocket to open before subscribing
-    derivWebSocket.socket.onopen = () => {
+    publicWebSocket.socket.onopen = () => {
       subscribeToTicks();
     };
 
     return () => {
       const currentSubscriptions = { ...subscriptions.current };
       Object.keys(currentSubscriptions).forEach((symbol) => {
-        derivWebSocket.send({ forget: currentSubscriptions[symbol] });
+        publicWebSocket.send({ forget: currentSubscriptions[symbol] });
       });
       unsubscribe();
-      derivWebSocket.close();
+      publicWebSocket.close();
     };
   }, []);
 
@@ -90,7 +90,7 @@ const VolatilityComparisonChart = () => {
 
     symbols.forEach((symbol) => {
       if (!subscriptions.current[symbol]) {
-        derivWebSocket.send({
+        publicWebSocket.send({
           ticks: symbol,
           subscribe: 1,
         });
@@ -101,7 +101,7 @@ const VolatilityComparisonChart = () => {
 
   const unsubscribeFromTicks = () => {
     Object.keys(subscriptions.current).forEach((symbol) => {
-      derivWebSocket.send({ forget: subscriptions.current[symbol] });
+      publicWebSocket.send({ forget: subscriptions.current[symbol] });
       delete subscriptions.current[symbol];
     });
     setData([]);
@@ -112,7 +112,7 @@ const VolatilityComparisonChart = () => {
     setSymbols(value);
     setData([]); // Clear data for new symbols
     value.forEach((symbol) => {
-      derivWebSocket.send({
+      publicWebSocket.send({
         ticks: symbol,
         subscribe: 1,
       });
