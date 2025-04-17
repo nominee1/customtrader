@@ -1,5 +1,5 @@
-import React,{ useEffect, useState } from 'react';
-import { derivWebSocket } from '../../services/websocket_client';
+import React,{ useState } from 'react';
+
 import { 
   Card, 
   Row, 
@@ -100,25 +100,6 @@ const testimonials = [
 const MainSection = () => {
   const [isHovering, setIsHovering] = useState(null);
 
-  useEffect(() => {
-    // Connect to WebSocket
-    derivWebSocket.connect();
-    
-    // Subscribe to messages
-    const unsubscribe = derivWebSocket.subscribe((event, data) => {
-      console.log('WebSocket event:', event, data);
-    });
-
-    return () => {
-      // Cleanup
-      unsubscribe();
-      derivWebSocket.close();
-    };
-  }, []);
-
-  const handleSendPing = () => {
-    derivWebSocket.send({ ping: 1 });
-  };
 
   return (
     <ConfigProvider
@@ -186,9 +167,9 @@ const MainSection = () => {
                     padding: '0 32px'
                   }}
                   icon={<RocketOutlined />}
-                  onClick={handleSendPing}
+                                
                 >
-                  Start Trading
+                  Start Tradin
                 </Button>
                 <Link to="/dashboard">
                   <Button 
@@ -421,7 +402,6 @@ const MainSection = () => {
                 fontWeight: 600,
                 fontSize: 16
               }}
-              onClick={handleSendPing}
             >
               Create Free Account
             </Button>

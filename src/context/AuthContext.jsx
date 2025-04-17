@@ -4,6 +4,7 @@ import { parseDerivAuthTokens } from '../services/parseDerivAuth';
 
 const UserContext = createContext();
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useUser = () => {
   const context = useContext(UserContext);
   if (context === undefined) {
@@ -18,13 +19,13 @@ export const UserProvider = ({ children }) => {
   const [accountData, setAccountData] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isAuthorized, setIsAuthorized] = useState(false); // Track authorization state
 
-  // Derived state
-  const activeAccountType = useMemo(() => 
-    activeAccount?.is_virtual ? 'demo' : 'real', 
-  [activeAccount]);
+  const activeAccountType = useMemo(
+    () => (activeAccount?.is_virtual ? 'demo' : 'real'),
+    [activeAccount]
+  );
 
-  // Load active account from localStorage
   useEffect(() => {
     const savedLoginid = localStorage.getItem('activeAccountLoginid');
     if (savedLoginid) {
@@ -32,7 +33,6 @@ export const UserProvider = ({ children }) => {
     }
   }, []);
 
-  // Initialize WebSocket and fetch user data
   useEffect(() => {
     let unsubscribers = [];
     let retryCount = 0;
@@ -41,32 +41,12 @@ export const UserProvider = ({ children }) => {
 
     const connectWebSocket = async () => {
       try {
-        if (!derivWebSocket.socket || derivWebSocket.socket.readyState !== WebSocket.OPEN) {
+        if (!derivWebSocket.isConnected()) {
           console.log('📌 Attempting WebSocket connection, attempt:', retryCount + 1);
-          derivWebSocket.connect();
+          await derivWebSocket.connect();
+        } else {
+          console.log('📌 WebSocket already open');
         }
-
-        await new Promise((resolve, reject) => {
-          if (derivWebSocket.socket.readyState === WebSocket.OPEN) {
-            console.log('📌 WebSocket already open');
-            resolve();
-          } else {
-            const unsubscribe = derivWebSocket.subscribe((event, data) => {
-              if (event === 'open') {
-                console.log('📌 WebSocket connection opened');
-                retryCount = 0;
-                resolve();
-              } else if (event === 'error') {
-                console.error('📌 WebSocket connection error:', data);
-                reject(new Error('WebSocket connection failed'));
-              } else if (event === 'close') {
-                console.log('📌 WebSocket closed unexpectedly');
-                reject(new Error('WebSocket closed'));
-              }
-            });
-            unsubscribers.push(unsubscribe);
-          }
-        });
       } catch (err) {
         console.error('📌 WebSocket connection failed:', err.message);
         if (retryCount < maxRetries) {
@@ -83,13 +63,24 @@ export const UserProvider = ({ children }) => {
     const fetchUserData = async () => {
       setLoading(true);
       setError(null);
+      setIsAuthorized(false);
 
       try {
-        // Parse tokens from URL or localStorage
         let parsedAccounts = parseDerivAuthTokens();
         if (!parsedAccounts.length) {
-          const storedTokens = localStorage.getItem('derivTokens');
-          if (storedTokens) parsedAccounts = JSON.parse(storedTokens);
+          try {
+            const storedTokens = localStorage.getItem('derivTokens');
+            if (storedTokens) {
+              parsedAccounts = JSON.parse(storedTokens);
+              if (!Array.isArray(parsedAccounts)) {
+                throw new Error('Invalid token data in localStorage');
+              }
+            }
+          } catch (err) {
+            console.error('📌 Error retrieving tokens from localStorage:', err.message);
+            localStorage.removeItem('derivTokens');
+            parsedAccounts = [];
+          }
         }
 
         if (!parsedAccounts.length) {
@@ -98,10 +89,8 @@ export const UserProvider = ({ children }) => {
 
         localStorage.setItem('derivTokens', JSON.stringify(parsedAccounts));
 
-        // Connect WebSocket
         await connectWebSocket();
 
-        // Authorize accounts
         const accountAuthArrays = await Promise.all(
           parsedAccounts.map((acc) => {
             return new Promise((resolve) => {
@@ -109,7 +98,7 @@ export const UserProvider = ({ children }) => {
                 if (event === 'message' && data.authorize) {
                   const accountsFromList = data.authorize.account_list || [];
                   const mappedAccounts = accountsFromList.map((accInfo) => ({
-                    token: acc.token,
+                    token: parsedAccounts.find((p) => p.loginid === accInfo.loginid)?.token || '',
                     loginid: accInfo.loginid,
                     currency: accInfo.currency,
                     is_virtual: accInfo.is_virtual,
@@ -120,10 +109,11 @@ export const UserProvider = ({ children }) => {
                     landing_company_fullname: data.authorize.landing_company_fullname,
                     raw: accInfo,
                   }));
-                  unsubscribers.push(unsubscribe);
+                  unsubscribe();
                   resolve(mappedAccounts);
                 } else if (event === 'message' && data.error) {
-                  unsubscribers.push(unsubscribe);
+                  console.error(`📌 Authorization failed for token ${acc.loginid}:`, data.error.message);
+                  unsubscribe();
                   resolve(null);
                 }
               });
@@ -131,9 +121,13 @@ export const UserProvider = ({ children }) => {
             });
           })
         );
-        const accountAuths = accountAuthArrays.flat();
 
+        const accountAuths = accountAuthArrays.flat();
         const validAccounts = accountAuths.filter(Boolean);
+        if (!validAccounts.length) {
+          throw new Error('No valid accounts could be authorized. Please log in again.');
+        }
+
         const newAccounts = { real: [], demo: [] };
         const initialAccountData = {};
 
@@ -147,26 +141,46 @@ export const UserProvider = ({ children }) => {
             profile: account.raw,
           };
         });
+        const tokenMap = {};
+        parsedAccounts.forEach((acc) => {
+          tokenMap[acc.loginid] = acc.token;
+        });
+        localStorage.setItem('derivLoginTokenMap', JSON.stringify(tokenMap));
 
         setAccounts(newAccounts);
         setAccountData(initialAccountData);
 
-        // Select active account (prefer real, then demo, then first available)
-        const defaultAccount = 
-          newAccounts.real.find(acc => acc.currency === 'USD') || 
-          newAccounts.real[0] || 
-          newAccounts.demo[0];
+        const savedLoginid = localStorage.getItem('activeAccountLoginid');
+        let defaultAccount = validAccounts.find((acc) => acc.loginid === savedLoginid);
+        if (!defaultAccount) {
+          defaultAccount =
+            newAccounts.real.find((acc) => acc.currency === 'USD') ||
+            newAccounts.real[0] ||
+            newAccounts.demo[0];
+        }
 
         if (defaultAccount) {
           setActiveAccount(defaultAccount);
           localStorage.setItem('activeAccountLoginid', defaultAccount.loginid);
+
+          await new Promise((resolve, reject) => {
+            const unsubscribe = derivWebSocket.subscribe((event, data) => {
+              if (event === 'message' && data.authorize) {
+                setIsAuthorized(true);
+                unsubscribe();
+                resolve();
+              } else if (event === 'message' && data.error) {
+                unsubscribe();
+                reject(new Error(data.error.message));
+              }
+            });
+            derivWebSocket.send({ authorize: defaultAccount.token });
+          });
         }
 
-        // Subscribe to balance updates
         validAccounts.forEach((account) => {
           derivWebSocket.send({ balance: 1, account: account.loginid, subscribe: 1 });
         });
-
       } catch (err) {
         console.error('📌 Error fetching user data:', err.message);
         setError(err.message);
@@ -175,6 +189,9 @@ export const UserProvider = ({ children }) => {
           localStorage.removeItem('derivTokens');
           setActiveAccount(null);
           setAccounts({ real: [], demo: [] });
+          setIsAuthorized(false);
+          // Redirect to Deriv OAuth login
+          // window.location.href = 'https://oauth.deriv.com/oauth2/authorize?app_id=36300&...';
         }
       } finally {
         setLoading(false);
@@ -196,11 +213,14 @@ export const UserProvider = ({ children }) => {
   const handleWebSocketMessage = (data) => {
     if (data.error) {
       console.error('📌 WebSocket error:', data.error);
-      if (data.error.code === 'InvalidToken') {
+      if (data.error.code === 'Invalid fToken') {
         setError('Session expired. Please log in again.');
         setActiveAccount(null);
+        setIsAuthorized(false);
         localStorage.removeItem('activeAccountLoginid');
         localStorage.removeItem('derivTokens');
+        // Redirect to Deriv OAuth login
+        // window.location.href = 'https://oauth.deriv.com/oauth2/authorize?app_id=36300&...';
       }
       return;
     }
@@ -226,16 +246,19 @@ export const UserProvider = ({ children }) => {
         return reject(new Error('No active account or token available.'));
       }
 
-      // Authorize the active account before sending
+      if (!derivWebSocket.isConnected()) {
+        return reject(new Error('WebSocket connection is not open.'));
+      }
+
       const authUnsubscribe = derivWebSocket.subscribe((event, data) => {
         if (event === 'message' && data.authorize) {
           authUnsubscribe();
+          setIsAuthorized(true);
 
           const reqId = payload.req_id || Math.floor(Math.random() * 1e15);
           const messageUnsubscribe = derivWebSocket.subscribe((event, response) => {
             if (event === 'message' && response.req_id === reqId) {
               messageUnsubscribe();
-
               if (response.error) {
                 reject(response.error);
               } else {
@@ -247,10 +270,12 @@ export const UserProvider = ({ children }) => {
           derivWebSocket.send({ ...payload, req_id: reqId });
         } else if (event === 'message' && data.error) {
           authUnsubscribe();
+          setIsAuthorized(false);
           reject(data.error);
         }
       });
 
+      console.log('📌 Sending authorize for request:', activeAccount.loginid);
       derivWebSocket.send({ authorize: activeAccount.token });
     });
   };
@@ -263,33 +288,41 @@ export const UserProvider = ({ children }) => {
       }
 
       const newActiveAccount = targetAccounts[0];
+      const loginTokenMap = JSON.parse(localStorage.getItem('derivLoginTokenMap') || '{}');
+      const token = loginTokenMap[newActiveAccount.loginid];
+      if (!token) throw new Error('Missing token for selected account.');
       setActiveAccount(newActiveAccount);
+      setIsAuthorized(false); // Reset authorization state
       localStorage.setItem('activeAccountLoginid', newActiveAccount.loginid);
 
-      const unsubscribe = derivWebSocket.subscribe((event, data) => {
-        if (event === 'message') {
-          if (data.authorize && data.authorize.loginid === newActiveAccount.loginid) {
-            setAccountData((prev) => ({
-              ...prev,
-              [newActiveAccount.loginid]: {
-                ...prev[newActiveAccount.loginid],
-                balance: data.authorize.balance,
-                profile: data.authorize,
-              },
-            }));
-          } else if (data.balance && data.balance.account === newActiveAccount.loginid) {
-            setAccountData((prev) => ({
-              ...prev,
-              [newActiveAccount.loginid]: {
-                ...prev[newActiveAccount.loginid],
-                balance: data.balance.balance,
-              },
-            }));
+      await new Promise((resolve, reject) => {
+        const unsubscribe = derivWebSocket.subscribe((event, data) => {
+          if (event === 'message') {
+            if (data.authorize && data.authorize.loginid === newActiveAccount.loginid) {
+              setAccountData((prev) => ({
+                ...prev,
+                [newActiveAccount.loginid]: {
+                  ...prev[newActiveAccount.loginid],
+                  balance: data.authorize.balance,
+                  profile: data.authorize,
+                },
+              }));
+              setIsAuthorized(true);
+              unsubscribe();
+              resolve();
+            } else if (data.error) {
+              console.error('📌 Authorization error:', data.error);
+              setIsAuthorized(false);
+              unsubscribe();
+              reject(new Error(data.error.message));
+            }
           }
-        }
-      });
+        });
 
-      derivWebSocket.send({ authorize: newActiveAccount.token });
+        console.log('📌 Switching to loginid:', newActiveAccount.loginid, 'with token:', token);
+        console.log('📌 Sending authorize for switch:', newActiveAccount.loginid);
+        derivWebSocket.send({ authorize: token });
+      });
 
       derivWebSocket.send({
         balance: 1,
@@ -297,10 +330,12 @@ export const UserProvider = ({ children }) => {
         subscribe: 1,
       });
 
+      console.log(`📌 Switched to ${accountType} account: ${newActiveAccount.loginid}`);
     } catch (error) {
       console.error('📌 Error switching account:', error.message);
       setError(`Failed to switch account: ${error.message}`);
       alert(`Failed to switch account: ${error.message}`);
+      throw error;
     }
   };
 
@@ -314,8 +349,9 @@ export const UserProvider = ({ children }) => {
     balance: activeAccount ? accountData[activeAccount.loginid]?.balance : 0,
     loading,
     error,
+    isAuthorized, // Expose authorization state
     realityChecks: activeAccount ? accountData[activeAccount.loginid]?.realityChecks : {},
-    sendAuthorizedRequest, // 👈 Add this line
+    sendAuthorizedRequest,
   };
 
   return (

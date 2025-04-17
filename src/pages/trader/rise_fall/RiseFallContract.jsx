@@ -18,7 +18,9 @@ import {
   theme,
   Tabs,
   Badge,
-  Tag
+  Tag,
+  Spin,
+  App // For useApp hook
 } from 'antd';
 import { 
   ArrowUpOutlined,
@@ -41,8 +43,9 @@ const { Option } = Select;
 const { TabPane } = Tabs;
 
 const RiseFallTrader = () => {
-  const { user, sendAuthorizedRequest } = useUser();
+  const { user, sendAuthorizedRequest, isAuthorized, loading, error } = useUser();
   const { token } = theme.useToken();
+  const { notification } = App.useApp(); // Use useApp for themed notification
   const [durationType, setDurationType] = useState('ticks');
   const [duration, setDuration] = useState(5);
   const [minutes, setMinutes] = useState(1);
@@ -53,6 +56,14 @@ const RiseFallTrader = () => {
   const [payout, setPayout] = useState(0);
   const [activeTab, setActiveTab] = useState('trade');
 
+  // Adjust amount when user changes (e.g., after account switch)
+  useEffect(() => {
+    if (user && user.balance) {
+      setAmount(Math.min(amount, user.balance || 1000)); // Ensure amount doesn’t exceed balance
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
   // Calculate payout based on amount and symbol
   useEffect(() => {
     const payoutMultiplier = symbol.includes('10') ? 0.95 : 
@@ -62,6 +73,56 @@ const RiseFallTrader = () => {
   }, [amount, symbol]);
 
   const handleSubmit = async (contractType) => {
+    if (!user || !isAuthorized) {
+      console.error('User not authorized or no active account');
+      notification.error({
+        message: 'Authorization Error',
+        description: 'Please select an account and ensure it is authorized.',
+        style: { borderRadius: 8, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)' },
+      });
+      return;
+    }
+
+    if (!user.token) {
+      console.error('No valid token for active account');
+      notification.error({
+        message: 'Token Error',
+        description: 'No valid token for the selected account. Please log in again.',
+        style: { borderRadius: 8, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)' },
+      });
+      return;
+    }
+
+    if (!amount || amount <= 0) {
+      console.error('Invalid amount');
+      notification.error({
+        message: 'Invalid Amount',
+        description: 'Please enter a valid amount.',
+        style: { borderRadius: 8, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)' },
+      });
+      return;
+    }
+
+    if (durationType === 'ticks' && (duration < 1 || duration > 10)) {
+      console.error('Invalid tick duration');
+      notification.error({
+        message: 'Invalid Duration',
+        description: 'Please select a tick duration between 1 and 10.',
+        style: { borderRadius: 8, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)' },
+      });
+      return;
+    }
+
+    if (durationType === 'minutes' && (minutes < 1 || minutes > 60)) {
+      console.error('Invalid minute duration');
+      notification.error({
+        message: 'Invalid Duration',
+        description: 'Please select a minute duration between 1 and 60.',
+        style: { borderRadius: 8, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)' },
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     const req_id = RequestIdGenerator.generateContractId();
@@ -73,23 +134,33 @@ const RiseFallTrader = () => {
         amount: amount,
         basis: basis,
         contract_type: contractType === 'rise' ? 'CALL' : 'PUT',
-        currency: user?.currency || 'USD',
+        currency: user.currency || 'USD',
         duration: durationType === 'ticks' ? duration : minutes,
         duration_unit: durationType === 'ticks' ? 't' : 'm',
         symbol: symbol,
       },
-      loginid: user?.loginid,
+      loginid: user.loginid,
       req_id: req_id,
     };
-    
-    try {
-      await sendAuthorizedRequest(contractData);
-      console.log('Contract data sent (authorized):', contractData);
-    } catch (error) {
-      console.error('Error sending authorized contract:', error);
-    }
 
-    setIsSubmitting(false);
+    try {
+      const response = await sendAuthorizedRequest(contractData);
+      console.log('Contract purchased successfully:', response);
+      notification.success({
+        message: 'Contract Purchased',
+        description: `Successfully purchased ${contractType === 'rise' ? 'Rise' : 'Fall'} contract.`,
+        style: { borderRadius: 8, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)' },
+      });
+    } catch (error) {
+      console.error('Error purchasing contract:', error.message);
+      notification.error({
+        message: 'Purchase Failed',
+        description: `Failed to purchase contract: ${error.message}`,
+        style: { borderRadius: 8, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)' },
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const volatilityOptions = [
@@ -121,6 +192,36 @@ const RiseFallTrader = () => {
     >
       <Row gutter={[24, 24]}>
         <Col xs={24} md={16}>
+          {loading ? (
+            <Spin tip="Loading account details..." size="large" style={{ display: 'block', margin: '50px auto' }} />
+          ) : error ? (
+            <Alert
+              message="Error"
+              description={error}
+              type="error"
+              showIcon
+              style={{ marginBottom: 24 }}
+            />
+          ) : !user || !isAuthorized ? (
+            <Alert
+              message="No Active Account"
+              description="Please select an account and ensure it is authorized to proceed."
+              type="warning"
+              showIcon
+              style={{ marginBottom: 24 }}
+            />
+          ) : null}
+
+          {error && error.includes('Invalid token') && (
+            <Alert
+              message="Session Expired"
+              description="Your session has expired. Redirecting to login..."
+              type="error"
+              showIcon
+              style={{ marginBottom: 24 }}
+            />
+          )}
+
           <Card
             title={
               <Space>
@@ -150,6 +251,7 @@ const RiseFallTrader = () => {
                       style={{ width: '100%' }}
                       placeholder="Select a volatility index"
                       optionLabelProp="label"
+                      disabled={!user || !isAuthorized}
                     >
                       {volatilityOptions.map(option => (
                         <Option 
@@ -181,6 +283,7 @@ const RiseFallTrader = () => {
                       onChange={(e) => setDurationType(e.target.value)}
                       buttonStyle="solid"
                       style={{ width: '100%' }}
+                      disabled={!user || !isAuthorized}
                     >
                       <Radio.Button value="ticks" style={{ width: '50%', textAlign: 'center' }}>
                         Ticks
@@ -208,9 +311,9 @@ const RiseFallTrader = () => {
                                   style={{
                                     fontSize: 24,
                                     color: isActive ? token.colorPrimary : token.colorBorder,
-                                    cursor: 'pointer',
+                                    cursor: user && isAuthorized ? 'pointer' : 'not-allowed',
                                   }}
-                                  onClick={() => setDuration(tick)}
+                                  onClick={() => user && isAuthorized && setDuration(tick)}
                                 />
                               </Tooltip>
                             </Col>
@@ -232,6 +335,7 @@ const RiseFallTrader = () => {
                         style={{ width: '100%' }}
                         addonAfter="minutes"
                         prefix={<ClockCircleOutlined />}
+                        disabled={!user || !isAuthorized}
                       />
                     </div>
                   )}
@@ -244,6 +348,7 @@ const RiseFallTrader = () => {
                       onChange={(e) => setBasis(e.target.value)} 
                       buttonStyle="solid"
                       style={{ width: '100%' }}
+                      disabled={!user || !isAuthorized}
                     >
                       <Radio.Button value="stake" style={{ width: '50%', textAlign: 'center' }}>
                         <DollarOutlined style={{ marginRight: 8 }} />
@@ -270,9 +375,10 @@ const RiseFallTrader = () => {
                       precision={2}
                       prefix={<DollarOutlined />}
                       step={5}
+                      disabled={!user || !isAuthorized}
                     />
                     <Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
-                      Available balance: {user?.balance?.toFixed(2) || '0.00'} {user?.currency || 'USD'}
+                      Available balance: {(user?.balance || 0).toFixed(2)} {user?.currency || 'USD'}
                     </Text>
                   </div>
 
@@ -322,7 +428,7 @@ const RiseFallTrader = () => {
                         }}
                         onClick={() => handleSubmit('rise')}
                         loading={isSubmitting}
-                        disabled={isSubmitting || !user}
+                        disabled={isSubmitting || !user || !isAuthorized}
                       >
                         Rise (CALL)
                       </Button>
@@ -336,7 +442,7 @@ const RiseFallTrader = () => {
                         style={{ height: 48 }}
                         onClick={() => handleSubmit('fall')}
                         loading={isSubmitting}
-                        disabled={isSubmitting || !user}
+                        disabled={isSubmitting || !user || !isAuthorized}
                       >
                         Fall (PUT)
                       </Button>

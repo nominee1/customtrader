@@ -18,7 +18,10 @@ import {
   ConfigProvider,
   theme,
   Tabs,
-  Tag
+  Tag,
+  Spin,
+  notification,
+  App
 } from 'antd';
 import { 
   ArrowUpOutlined,
@@ -40,7 +43,7 @@ const { Title, Text } = Typography;
 const { TabPane } = Tabs;
 
 const OverUnderTrader = () => {
-  const { user, sendAuthorizedRequest } = useUser(); 
+  const { user, sendAuthorizedRequest, isAuthorized, loading, error } = useUser(); 
   const { token } = theme.useToken();
   const [duration, setDuration] = useState(5);
   const [selectedDigit, setSelectedDigit] = useState(5);
@@ -51,6 +54,14 @@ const OverUnderTrader = () => {
   const [payout, setPayout] = useState(0);
   const [activeTab, setActiveTab] = useState('trade');
 
+  // Adjust amount when user changes (e.g., after account switch)
+  useEffect(() => {
+    if (user && user.balance) {
+      setAmount(Math.min(amount, user.balance || 1000)); // Ensure amount doesn’t exceed balance
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
   // Calculate payout based on amount and symbol
   useEffect(() => {
     const payoutMultiplier = symbol.includes('10') ? 0.95 : 
@@ -59,8 +70,43 @@ const OverUnderTrader = () => {
     setPayout((amount * (1 + payoutMultiplier)).toFixed(2));
   }, [amount, symbol]);
 
-
   const handleSubmit = async (contractType) => {
+    if (!user || !isAuthorized) {
+      console.error('User not authorized or no active account');
+      notification.error({
+        message: 'Authorization Error',
+        description: 'Please select an account and ensure it is authorized.',
+      });
+      return;
+    }
+
+    if (!user.token) {
+      console.error('No valid token for active account');
+      notification.error({
+        message: 'Token Error',
+        description: 'No valid token for the selected account. Please log in again.',
+      });
+      return;
+    }
+
+    if (!amount || amount <= 0) {
+      console.error('Invalid amount');
+      notification.error({
+        message: 'Invalid Amount',
+        description: 'Please enter a valid amount.',
+      });
+      return;
+    }
+
+    if (selectedDigit < 0 || selectedDigit > 9) {
+      console.error('Invalid selected digit');
+      notification.error({
+        message: 'Invalid Digit',
+        description: 'Please select a digit between 0 and 9.',
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     const req_id = RequestIdGenerator.generateContractId();
@@ -71,24 +117,33 @@ const OverUnderTrader = () => {
       parameters: {
         amount: amount,
         basis: basis,
-        contract_type: contractType === 'over' ? 'CALL' : 'PUT',
-        currency: user?.currency || 'USD',
+        contract_type: contractType === 'over' ? 'DIGITOVER' : 'DIGITUNDER', // Corrected contract types
+        currency: user.currency || 'USD',
         duration: duration,
-        duration_unit: 't', 
+        duration_unit: 't',
         symbol: symbol,
+        barrier: selectedDigit.toString(), // Added barrier for digit-based contracts
       },
-      loginid: user?.loginid,
-      req_id: req_id, 
+      loginid: user.loginid,
+      req_id: req_id,
     };
 
     try {
-      await sendAuthorizedRequest(contractData);
-      console.log('Contract data sent (authorized):', contractData);
+      const response = await sendAuthorizedRequest(contractData);
+      console.log('Contract purchased successfully:', response);
+      notification.success({
+        message: 'Contract Purchased',
+        description: `Successfully purchased ${contractType === 'over' ? 'Over' : 'Under'} contract for digit ${selectedDigit}.`,
+      });
     } catch (error) {
-      console.error('Error sending authorized contract:', error);
+      console.error('Error purchasing contract:', error.message);
+      notification.error({
+        message: 'Purchase Failed',
+        description: `Failed to purchase contract: ${error.message}`,
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setIsSubmitting(false);
   };
 
   const volatilityOptions = [
@@ -120,6 +175,36 @@ const OverUnderTrader = () => {
     >
       <Row gutter={[24, 24]}>
         <Col xs={24} md={16}>
+          {loading ? (
+            <Spin tip="Loading account details..." size="large" style={{ display: 'block', margin: '50px auto' }} />
+          ) : error ? (
+            <Alert
+              message="Error"
+              description={error}
+              type="error"
+              showIcon
+              style={{ marginBottom: 24 }}
+            />
+          ) : !user || !isAuthorized ? (
+            <Alert
+              message="No Active Account"
+              description="Please select an account and ensure it is authorized to proceed."
+              type="warning"
+              showIcon
+              style={{ marginBottom: 24 }}
+            />
+          ) : null}
+
+          {error && error.includes('Invalid token') && (
+            <Alert
+              message="Session Expired"
+              description="Your session has expired. Redirecting to login..."
+              type="error"
+              showIcon
+              style={{ marginBottom: 24 }}
+            />
+          )}
+
           <Card
             title={
               <Space>
@@ -149,6 +234,7 @@ const OverUnderTrader = () => {
                       style={{ width: '100%' }}
                       placeholder="Select a volatility index"
                       optionLabelProp="label"
+                      disabled={!user || !isAuthorized}
                     >
                       {volatilityOptions.map(option => (
                         <Option 
@@ -190,9 +276,9 @@ const OverUnderTrader = () => {
                                 style={{
                                   fontSize: 24,
                                   color: isActive ? token.colorPrimary : token.colorBorder,
-                                  cursor: 'pointer',
+                                  cursor: user && isAuthorized ? 'pointer' : 'not-allowed',
                                 }}
-                                onClick={() => setDuration(tick)}
+                                onClick={() => user && isAuthorized && setDuration(tick)}
                               />
                             </Tooltip>
                           </Col>
@@ -222,11 +308,11 @@ const OverUnderTrader = () => {
                               height: 32,
                               lineHeight: '32px',
                               borderRadius: '50%',
-                              cursor: 'pointer',
+                              cursor: user && isAuthorized ? 'pointer' : 'not-allowed',
                               boxShadow: selectedDigit === i ? `0 0 0 2px ${token.colorPrimary}` : 'none',
                               transition: 'all 0.3s'
                             }}
-                            onClick={() => setSelectedDigit(i)}
+                            onClick={() => user && isAuthorized && setSelectedDigit(i)}
                           />
                         </Col>
                       ))}
@@ -246,6 +332,7 @@ const OverUnderTrader = () => {
                       onChange={(e) => setBasis(e.target.value)} 
                       buttonStyle="solid"
                       style={{ width: '100%' }}
+                      disabled={!user || !isAuthorized}
                     >
                       <Radio.Button value="stake" style={{ width: '50%', textAlign: 'center' }}>
                         <DollarOutlined style={{ marginRight: 8 }} />
@@ -272,9 +359,10 @@ const OverUnderTrader = () => {
                       precision={2}
                       prefix={<DollarOutlined />}
                       step={5}
+                      disabled={!user || !isAuthorized}
                     />
                     <Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
-                      Available balance: {user?.balance?.toFixed(2) || '0.00'} {user?.currency || 'USD'}
+                      Available balance: {(user?.balance || 0).toFixed(2)} {user?.currency || 'USD'}
                     </Text>
                   </div>
 
@@ -324,7 +412,7 @@ const OverUnderTrader = () => {
                         }}
                         onClick={() => handleSubmit('over')}
                         loading={isSubmitting}
-                        disabled={isSubmitting || !user}
+                        disabled={isSubmitting || !user || !isAuthorized}
                       >
                         Over ({selectedDigit}+)
                       </Button>
@@ -338,7 +426,7 @@ const OverUnderTrader = () => {
                         style={{ height: 48 }}
                         onClick={() => handleSubmit('under')}
                         loading={isSubmitting}
-                        disabled={isSubmitting || !user}
+                        disabled={isSubmitting || !user || !isAuthorized}
                       >
                         Under ({selectedDigit}-)
                       </Button>
@@ -359,7 +447,7 @@ const OverUnderTrader = () => {
 
         {/* Recent Trades */}
         <Col xs={24} md={8}>
-            <RecentTrades />
+          <RecentTrades />
         </Col>
       </Row>
     </ConfigProvider>

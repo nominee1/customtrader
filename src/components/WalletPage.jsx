@@ -37,7 +37,7 @@ const { TabPane } = Tabs;
 const { Option } = Select;
 
 const WalletPage = () => {
-  const { user, activeAccount, balance, loading: authLoading, sendAuthorizedRequest } = useUser();
+  const { activeAccount, accountData, balance, loading: authLoading, sendAuthorizedRequest } = useUser();
   const { token } = theme.useToken();
   
   // State management
@@ -82,6 +82,11 @@ const WalletPage = () => {
       setStatements(statementsRes?.statement?.transactions || []);
       setStatementCount(statementsRes?.statement?.count || 0);
       localStorage.setItem(`statements_${accountId}`, JSON.stringify(statementsRes?.statement?.transactions || []));
+      
+      const realityRes = await sendAuthorizedRequest({ reality_check: 1, loginid: accountId });
+      console.log('Reality Check Response:', realityRes);
+      setRealityCheck(realityRes?.reality_check || null);
+      localStorage.setItem(`realityCheck_${accountId}`, JSON.stringify(realityRes?.reality_check || null));
     } catch (err) {
       console.error('Error fetching wallet data:', err);
       setError('Failed to load wallet data. Please try again.');
@@ -100,8 +105,13 @@ const WalletPage = () => {
         setStatements(parsed);
         setStatementCount(parsed.length);
       }
+      const cachedReality = localStorage.getItem(`realityCheck_${accountId}`);
+      if (cachedReality) {
+        setRealityCheck(JSON.parse(cachedReality));
+      }
       fetchData(); // always fetch in background to refresh
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountId]);
 
   // Filtered data
@@ -180,13 +190,14 @@ const WalletPage = () => {
   ].filter(col => col.visible), [visibleColumns, token]);
 
   const handleRefresh = () => {
+    localStorage.removeItem(`lastFetchTime_${accountId}`);
     fetchData();
     message.success('Data refreshed');
   };
 
   // Summary card data
   const summaryData = useMemo(() => ({
-    balance: user?.balance || 0,
+    balance: activeAccount?.balance || 0,
     deposits: realityCheck?.total_deposits || 0,
     withdrawals: realityCheck?.total_withdrawals || 0,
     totalTransactions: statementCount || 0,
@@ -195,7 +206,8 @@ const WalletPage = () => {
     profitLoss: realityCheck?.total_profit_loss || 0,
     winRate: realityCheck?.win_rate || 0,
     avgProfit: realityCheck?.avg_profit || 0,
-  }), [user, realityCheck]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [activeAccount, accountData, realityCheck]);
 
   return (
     <ConfigProvider
