@@ -17,7 +17,8 @@ import {
   Alert,
   ConfigProvider,
   theme,
-  Tag
+  Tag,
+  Spin
 } from 'antd';
 import { 
   NumberOutlined,
@@ -36,14 +37,14 @@ const { Title, Text } = Typography;
 const { Option } = Select;
 
 const EvenOddContract = () => {
-  const { user, sendAuthorizedRequest } = useUser(); 
+  const { user, sendAuthorizedRequest, isAuthorized, loading, error } = useUser(); 
   const { token } = theme.useToken();
   const [duration, setDuration] = useState(5);
   const [basis, setBasis] = useState('stake');
   const [symbol, setSymbol] = useState('R_10');
   const [amount, setAmount] = useState(10);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [payout, setPayout] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Calculate payout based on amount and symbol
   useEffect(() => {
@@ -54,13 +55,19 @@ const EvenOddContract = () => {
   }, [amount, symbol]);
 
   const handleSubmit = async (contractType) => {
-    setIsSubmitting(true);
+    if (!user || !isAuthorized) {
+      console.error('User not authorized or no active account');
+      alert('Please select an account and ensure it is authorized.');
+      return;
+    }
 
     if (!amount || amount <= 0) {
       console.error('Invalid amount');
-      setIsSubmitting(false);
+      alert('Please enter a valid amount.');
       return;
     }
+
+    setIsSubmitting(true);
 
     const req_id = RequestIdGenerator.generateContractId();
 
@@ -71,23 +78,25 @@ const EvenOddContract = () => {
         amount: amount,
         basis: basis,
         contract_type: contractType === 'even' ? 'DIGITEVEN' : 'DIGITODD',
-        currency: user?.currency || 'USD',
+        currency: user.currency || 'USD',
         duration: duration,
         duration_unit: 't',
         symbol: symbol,
       },
-      loginid: user?.loginid,
+      loginid: user.loginid, // Ensured to be the activeAccount's loginid
       req_id: req_id,
     };
 
     try {
-      await sendAuthorizedRequest(contractData);
-      console.log('Contract data sent (authorized):', contractData);
+      const response = await sendAuthorizedRequest(contractData);
+      console.log('Contract purchased successfully:', response);
+      alert('Contract purchased successfully!');
     } catch (error) {
-      console.error('Error sending authorized contract:', error);
+      console.error('Error purchasing contract:', error.message);
+      alert(`Failed to purchase contract: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setIsSubmitting(false);
   };
 
   const volatilityOptions = [
@@ -119,6 +128,26 @@ const EvenOddContract = () => {
     >
       <Row gutter={[24, 24]}>
         <Col xs={24} md={16}>
+          {loading ? (
+            <Spin tip="Loading account details..." size="large" style={{ display: 'block', margin: '50px auto' }} />
+          ) : error ? (
+            <Alert
+              message="Error"
+              description={error}
+              type="error"
+              showIcon
+              style={{ marginBottom: 24 }}
+            />
+          ) : !user || !isAuthorized ? (
+            <Alert
+              message="No Active Account"
+              description="Please select an account and ensure it is authorized to proceed."
+              type="warning"
+              showIcon
+              style={{ marginBottom: 24 }}
+            />
+          ) : null}
+
           <Card
             title={
               <Space>
@@ -235,9 +264,10 @@ const EvenOddContract = () => {
                   precision={2}
                   prefix="$"
                   step={5}
+                  disabled={!user || !isAuthorized}
                 />
                 <Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
-                  Available balance: {user?.balance?.toFixed(2) || '0.00'} {user?.currency || 'USD'}
+                  Available balance: {(user?.balance || 0).toFixed(2)} {user?.currency || 'USD'}
                 </Text>
               </div>
 
@@ -286,7 +316,7 @@ const EvenOddContract = () => {
                     }}
                     onClick={() => handleSubmit('odd')}
                     loading={isSubmitting}
-                    disabled={isSubmitting || !user}
+                    disabled={isSubmitting || !user || !isAuthorized}
                   >
                     ODD
                   </Button>
@@ -299,7 +329,7 @@ const EvenOddContract = () => {
                     style={{ height: 48 }}
                     onClick={() => handleSubmit('even')}
                     loading={isSubmitting}
-                    disabled={isSubmitting || !user}
+                    disabled={isSubmitting || !user || !isAuthorized}
                   >
                     EVEN
                   </Button>
