@@ -1,174 +1,239 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Card, Space, Typography, Row, Col, Tag } from 'antd';
+import React, { useEffect, useState } from 'react';
+import { Card, Space, Typography, Row, Col, Tag, Progress } from 'antd';
 import { HistoryOutlined } from '@ant-design/icons';
 import { useUser } from '../context/AuthContext';
+import { useContracts } from '../context/ContractsContext';
 
 const { Text } = Typography;
 
 const RecentTrades = () => {
-    const { user, activeAccount, loading: authLoading } = useUser();
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const [recentTrades, setRecentTrades] = useState([]);
-    const ws = useRef(null);
-    const [liveContracts, setLiveContracts] = useState([]);
+  const { activeAccount, authLoading, sendAuthorizedRequest } = useUser();
+  const { activeContracts, updateContract, removeContract } = useContracts();
+  const [recentTrades, setRecentTrades] = useState([]);
+  const [liveContracts, setLiveContracts] = useState([]);
 
-    useEffect(() => {
-        if (!user || !activeAccount) return;
+  const accountId = activeAccount?.loginid;
 
-        const accountId = activeAccount.loginid;
-        setLiveContracts([]);
-        setRecentTrades(JSON.parse(localStorage.getItem('recent_trades')) || []);
+  const fetchData = async () => {
+    if (!accountId) return;
 
-        ws.current = new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=36300');
+    try {
+      const portfolioRes = await sendAuthorizedRequest({
+        portfolio: 1,
+        loginid: accountId,
+      });
 
-        ws.current.onopen = () => {
-            ws.current.send(JSON.stringify({ authorize: activeAccount.token }));
+      const trades = portfolioRes.portfolio?.contracts || [];
+      const closedTrades = trades.filter((c) => c.status !== 'open');
+      setRecentTrades(closedTrades);
+      localStorage.setItem(`portfolio_${accountId}`, JSON.stringify(closedTrades));
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (!accountId) {
+      const cachedPortfolio = localStorage.getItem(`portfolio_${accountId}`);
+      if (cachedPortfolio) {
+        setRecentTrades(JSON.parse(cachedPortfolio));
+      }
+      return;
+    }
+
+    const subscriptions = [];
+
+    const subscribeToLiveContracts = async () => {
+      if (!activeContracts.length) return;
+
+      for (const contract of activeContracts) {
+        const payload = {
+          proposal_open_contract: 1,
+          contract_id: contract.contract_id,
+          subscribe: 1,
         };
 
-        ws.current.onmessage = (msg) => {
-            const data = JSON.parse(msg.data);
+        try {
+          sendAuthorizedRequest(payload).then((response) => {
+            if (response.error) return;
 
-            if (data.msg_type === 'authorize') {
-                ws.current.send(JSON.stringify({ portfolio: 1 }));
+            const contractData = response.proposal_open_contract;
+            if (!contractData) return;
+
+            if (contractData.status === 'open') {
+              setLiveContracts((prev) => {
+                const exists = prev.some((c) => c.contract_id === contractData.contract_id);
+                const updated = exists
+                  ? prev.map((c) =>
+                      c.contract_id === contractData.contract_id ? contractData : c
+                    )
+                  : [contractData, ...prev].slice(0, 20);
+                return updated;
+              });
+            } else {
+              setLiveContracts((prev) =>
+                prev.filter((c) => c.contract_id !== contractData.contract_id)
+              );
+              setRecentTrades((prev) => {
+                const exists = prev.some((t) => t.contract_id === contractData.contract_id);
+                if (exists) return prev;
+                return [contractData, ...prev].slice(0, 20);
+              });
+              removeContract(contractData.contract_id);
             }
 
-            if (data.msg_type === 'portfolio') {
-                data.portfolio.contracts.forEach((contract) => {
-                    ws.current.send(JSON.stringify({
-                        proposal_open_contract: 1,
-                        contract_id: contract.contract_id,
-                    }));
-                });
-            }
+            updateContract(contractData.contract_id, {
+              status: contractData.status,
+              details: {
+                ...contractData,
+                entry_tick: contractData.entry_spot || null,
+                exit_tick: contractData.exit_spot || null,
+              },
+            });
+          });
+        } catch (error) {
+          console.error('Error subscribing to live contract:', error);
+        }
+      }
 
-            if (data.msg_type === 'proposal_open_contract') {
-                const contract = data.proposal_open_contract;
-                const isCompleted = contract.status === 'won' || contract.status === 'lost';
+      return () => {
+        subscriptions.forEach((unsubscribe) => {
+          if (typeof unsubscribe === 'function') unsubscribe();
+        });
+      };
+    };
 
-                if (!isCompleted) {
-                    setLiveContracts((prev) => {
-                        const existing = prev.find((c) => c.contract_id === contract.contract_id);
-                        if (existing) return prev.map((c) => c.contract_id === contract.contract_id ? contract : c);
-                        return [...prev, contract];
-                    });
-                } else {
-                    setLiveContracts((prev) => prev.filter((c) => c.contract_id !== contract.contract_id));
-                    const newTrade = {
-                        id: contract.contract_id,
-                        asset: contract.underlying,
-                        type: contract.status === 'won' ? 'buy' : 'sell',
-                        profit: contract.profit,
-                        buy_price: contract.buy_price,
-                        sell_price: contract.sell_price,
-                        entry_tick: contract.entry_tick,
-                        exit_tick: contract.exit_tick,
-                        entry_tick_time: contract.entry_tick_time,
-                        exit_tick_time: contract.exit_tick_time,
-                        contract_type: contract.contract_type,
-                    };
-                    console.log('Completed Trade:', newTrade);
-                    setRecentTrades((prev) => {
-                        const updated = [newTrade, ...prev].slice(0, 20);
-                        localStorage.setItem('recent_trades', JSON.stringify(updated));
-                        return updated;
-                    });
-                }
-            }
-        };
+    fetchData();
+    if (activeContracts.length > 0) {
+      subscribeToLiveContracts();
+    }
 
-        return () => {
-            ws.current?.close();
-            setLiveContracts([]);
-            setRecentTrades([]);
-        };
-    }, [user, activeAccount]);
-    
-    return (
-        <Space direction="vertical" size={24} style={{ width: '100%' }}>
-            <Card
-                title={
-                    <Space>
-                        <HistoryOutlined />
-                        <Text strong>Live Contracts</Text>
-                    </Space>
-                }
+    return () => {
+      subscriptions.forEach((unsubscribe) => {
+        if (typeof unsubscribe === 'function') unsubscribe();
+      });
+    };
+  }, [accountId, activeContracts, sendAuthorizedRequest, updateContract, removeContract]);
+
+  const calculateProgress = (contract) => {
+    if (contract.duration_unit === 't') {
+      const totalTicks = contract.duration;
+      const elapsedTicks = contract.tick_count || 0;
+      return Math.min((elapsedTicks / totalTicks) * 100, 100);
+    }
+    if (!contract.date_start || !contract.date_expiry) return 0;
+    const now = Date.now() / 1000;
+    const totalDuration = contract.date_expiry - contract.date_start;
+    const elapsed = now - contract.date_start;
+    return Math.min((elapsed / totalDuration) * 100, 100);
+  };
+
+  const sortedRecentTrades = [...recentTrades].sort(
+    (a, b) => b.date_start - a.date_start
+  );
+  const sortedLiveContracts = [...liveContracts].sort(
+    (a, b) => b.date_start - a.date_start
+  );
+
+  return (
+    <Space direction="vertical" size={24} style={{ width: '100%' }}>
+      <Card
+        title={
+          <Space>
+            <HistoryOutlined />
+            <Text strong>Live Contracts</Text>
+          </Space>
+        }
+        style={{
+          borderRadius: 16,
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+        }}
+        loading={authLoading}
+      >
+        {sortedLiveContracts.length > 0 ? (
+          <Space direction="vertical" size={16} style={{ width: '100%' }}>
+            {sortedLiveContracts.map((contract) => (
+              <Card
+                key={contract.contract_id}
+                size="small"
+                style={{ borderLeft: '4px solid #1890ff', borderRadius: 8 }}
+              >
+                <Row justify="space-between">
+                  <Col>
+                    <Text strong>{contract.underlying || contract.symbol}</Text> <br />
+                    <Text type="secondary">Type: {contract.contract_type}</Text> <br />
+                    <Text type="secondary">Buy Price: {contract.buy_price} {contract.currency}</Text> <br />
+                    <Text type="secondary">Current Price: {contract.current_spot || 'N/A'}</Text> <br />
+                    <Text type="secondary">Profit: {contract.profit || 0} {contract.currency}</Text> <br />
+                    <Text type="secondary">
+                      Duration: {contract.duration} {contract.duration_unit === 't' ? 'ticks' : 'minutes'}
+                    </Text> <br />
+                    <Progress
+                      percent={calculateProgress(contract)}
+                      size="small"
+                      status="active"
+                      style={{ width: 150 }}
+                    />
+                  </Col>
+                  <Col>
+                    <Tag color="blue">{contract.status?.toUpperCase()}</Tag>
+                  </Col>
+                </Row>
+              </Card>
+            ))}
+          </Space>
+        ) : (
+          <Text type="secondary">No live contracts.</Text>
+        )}
+      </Card>
+
+      <Card
+        title={
+          <Space>
+            <HistoryOutlined />
+            <Text strong>Recent Trades</Text>
+          </Space>
+        }
+        style={{
+          borderRadius: 16,
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+        }}
+        loading={authLoading}
+      >
+        {sortedRecentTrades.length > 0 ? (
+          <Space direction="vertical" size={16} style={{ width: '100%' }}>
+            {sortedRecentTrades.map((trade) => (
+              <Card
+                key={trade.contract_id}
+                size="small"
                 style={{
-                    borderRadius: 16,
-                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+                  borderLeft: `4px solid ${trade.profit > 0 ? '#52c41a' : '#ff4d4f'}`,
+                  borderRadius: 8,
                 }}
-                loading={authLoading || loading}
-            >
-                {liveContracts.length > 0 ? (
-                    <Space direction="vertical" size={16} style={{ width: '100%' }}>
-                        {liveContracts.map((contract) => (
-                            <Card key={contract.contract_id} size="small" style={{ borderLeft: '4px solid #1890ff', borderRadius: 8 }}>
-                                <Row justify="space-between">
-                                    <Col>
-                                        <Text>{contract.underlying}</Text> <br />
-                                        <Text type="secondary">{contract.contract_type}</Text>
-                                    </Col>
-                                    <Col>
-                                        <Tag color="blue">LIVE</Tag>
-                                    </Col>
-                                </Row>
-                            </Card>
-                        ))}
-                    </Space>
-                ) : (
-                    <Text type="secondary">No live contracts.</Text>
-                )}
-            </Card>
-
-            <Card
-                title={
-                    <Space>
-                        <HistoryOutlined />
-                        <Text strong>Recent Trades</Text>
-                    </Space>
-                }
-                style={{
-                    borderRadius: 16,
-                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
-                }}
-                loading={authLoading || loading}
-            >
-                {error ? (
-                    <Text type="danger">{error}</Text>
-                ) : recentTrades.length > 0 ? (
-                    <Space direction="vertical" size={16} style={{ width: '100%' }}>
-                        {recentTrades.map((trade) => (
-                            <Card
-                                key={trade.id}
-                                size="small"
-                                style={{
-                                    borderLeft: `4px solid ${trade.type === 'buy' ? '#52c41a' : '#ff4d4f'}`,
-                                    borderRadius: 8,
-                                }}
-                            >
-                                <Row justify="space-between">
-                                    <Col>
-                                        <Text>{trade.asset}</Text> <br />
-                                        <Text type="secondary">
-                                            {trade.contract_type}<br />
-                                            Entry: {trade.buy_price} | Exit: {trade.sell_price}
-                                        </Text>
-                                    </Col>
-                                    <Col>
-                                        <Tag color={trade.type === 'buy' ? 'green' : 'red'}>
-                                            {trade.type?.toUpperCase()}
-                                        </Tag>
-                                    </Col>
-                                </Row>
-                            </Card>
-                        ))}
-                    </Space>
-                ) : (
-                    <Text type="secondary">No recent trades available.</Text>
-                )}
-            </Card>
-        </Space>
-    );
+              >
+                <Row justify="space-between">
+                  <Col>
+                    <Text strong>{trade.underlying || trade.symbol}</Text> <br />
+                    <Text type="secondary">Type: {trade.contract_type}</Text> <br />
+                    <Text type="secondary">Buy Price: {trade.buy_price} {trade.currency}</Text> <br />
+                    <Text type="secondary">Sell Price: {trade.sell_price || 'N/A'}</Text> <br />
+                    <Text type="secondary">Profit: {trade.profit || 0} {trade.currency}</Text>
+                  </Col>
+                  <Col>
+                    <Tag color={trade.profit > 0 ? 'green' : 'red'}>
+                      {trade.profit > 0 ? 'WON' : 'LOST'}
+                    </Tag>
+                  </Col>
+                </Row>
+              </Card>
+            ))}
+          </Space>
+        ) : (
+          <Text type="secondary">No recent trades available.</Text>
+        )}
+      </Card>
+    </Space>
+  );
 };
 
 export default RecentTrades;

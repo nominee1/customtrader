@@ -8,6 +8,7 @@ import WalletPage from './components/WalletPage';
 import UserProfile from './components/UserProfile';
 import SettingsPage from './components/SettingPage';
 import { UserProvider } from './context/AuthContext';
+import { ContractsProvider } from './context/ContractsContext';
 
 function AppRoutes() {
   return (
@@ -19,7 +20,9 @@ function AppRoutes() {
           path="/dashboard" 
           element={
             <UserProvider>
+              <ContractsProvider>
                 <Dashboard />
+              </ContractsProvider>
             </UserProvider>
           }
         >

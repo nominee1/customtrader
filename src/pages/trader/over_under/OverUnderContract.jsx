@@ -35,6 +35,7 @@ import {
   CloseCircleOutlined
 } from '@ant-design/icons';
 import { useUser } from '../../../context/AuthContext';
+import { useContracts } from '../../../context/ContractsContext';
 import RecentTrades from '../../../components/RecentTrades';
 import RequestIdGenerator from '../../../services/uniqueIdGenerator'; 
 
@@ -44,6 +45,7 @@ const { TabPane } = Tabs;
 
 const OverUnderTrader = () => {
   const { user, sendAuthorizedRequest, isAuthorized, loading, error } = useUser(); 
+  const { addLiveContract } = useContracts();
   const { token } = theme.useToken();
   const [duration, setDuration] = useState(5);
   const [selectedDigit, setSelectedDigit] = useState(5);
@@ -131,6 +133,24 @@ const OverUnderTrader = () => {
     try {
       const response = await sendAuthorizedRequest(contractData);
       console.log('Contract purchased successfully:', response);
+      const contractId = response?.buy?.contract_id;
+      if(!contractId) {
+        throw new Error('No contract_id returned form purchase');
+      }
+
+      const contract = {
+        contract_id:contractId,
+        type: contractType,
+        symbol,
+        status:'open',
+        details: {
+          amount,
+          currency:user.currency || 'USD'
+        },
+      };
+
+      addLiveContract(contract);
+      
       notification.success({
         message: 'Contract Purchased',
         description: `Successfully purchased ${contractType === 'over' ? 'Over' : 'Under'} contract for digit ${selectedDigit}.`,
