@@ -14,33 +14,14 @@ const RecentTrades = () => {
 
   const accountId = activeAccount?.loginid;
 
-  const fetchData = async () => {
-    if (!accountId) return;
-
-    try {
-      const portfolioRes = await sendAuthorizedRequest({
-        portfolio: 1,
-        loginid: accountId,
-      });
-
-      const trades = portfolioRes.portfolio?.contracts || [];
-      const closedTrades = trades.filter((c) => c.status !== 'open');
-      setRecentTrades(closedTrades);
-      localStorage.setItem(`portfolio_${accountId}`, JSON.stringify(closedTrades));
-    } catch (error) {
-      console.error('Error fetching data:', error);
+  useEffect(() => {
+    const cachedRecentTrades = localStorage.getItem(`recentTrades_${accountId}`);
+    if (cachedRecentTrades) {
+      setRecentTrades(JSON.parse(cachedRecentTrades));
     }
-  };
+  }, [accountId]);
 
   useEffect(() => {
-    if (!accountId) {
-      const cachedPortfolio = localStorage.getItem(`portfolio_${accountId}`);
-      if (cachedPortfolio) {
-        setRecentTrades(JSON.parse(cachedPortfolio));
-      }
-      return;
-    }
-
     const subscriptions = [];
 
     const subscribeToLiveContracts = async () => {
@@ -77,7 +58,9 @@ const RecentTrades = () => {
               setRecentTrades((prev) => {
                 const exists = prev.some((t) => t.contract_id === contractData.contract_id);
                 if (exists) return prev;
-                return [contractData, ...prev].slice(0, 20);
+                const updatedTrades = [contractData, ...prev].slice(0, 20);
+                localStorage.setItem(`recentTrades_${accountId}`, JSON.stringify(updatedTrades));
+                return updatedTrades;
               });
               removeContract(contractData.contract_id);
             }
@@ -103,7 +86,6 @@ const RecentTrades = () => {
       };
     };
 
-    fetchData();
     if (activeContracts.length > 0) {
       subscribeToLiveContracts();
     }
@@ -113,19 +95,20 @@ const RecentTrades = () => {
         if (typeof unsubscribe === 'function') unsubscribe();
       });
     };
-  }, [accountId, activeContracts, sendAuthorizedRequest, updateContract, removeContract]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeContracts, sendAuthorizedRequest, updateContract, removeContract]);
 
   const calculateProgress = (contract) => {
     if (contract.duration_unit === 't') {
       const totalTicks = contract.duration;
       const elapsedTicks = contract.tick_count || 0;
-      return Math.min((elapsedTicks / totalTicks) * 100, 100);
+    return Math.round(Math.min((elapsedTicks / totalTicks) * 100, 100));
     }
     if (!contract.date_start || !contract.date_expiry) return 0;
     const now = Date.now() / 1000;
     const totalDuration = contract.date_expiry - contract.date_start;
     const elapsed = now - contract.date_start;
-    return Math.min((elapsed / totalDuration) * 100, 100);
+    return Math.round(Math.min((elapsed / totalDuration) * 100, 100));
   };
 
   const sortedRecentTrades = [...recentTrades].sort(
@@ -160,11 +143,12 @@ const RecentTrades = () => {
               >
                 <Row justify="space-between">
                   <Col>
-                    <Text strong>{contract.underlying || contract.symbol}</Text> <br />
+                    <Text strong>{contract.display_name || contract.underlying}</Text> <br />
                     <Text type="secondary">Type: {contract.contract_type}</Text> <br />
                     <Text type="secondary">Buy Price: {contract.buy_price} {contract.currency}</Text> <br />
                     <Text type="secondary">Current Price: {contract.current_spot || 'N/A'}</Text> <br />
                     <Text type="secondary">Profit: {contract.profit || 0} {contract.currency}</Text> <br />
+                    <Text type="secondary">Pay Out: {contract.payout || 0}{contract.currency}</Text> <br />
                     <Text type="secondary">
                       Duration: {contract.duration} {contract.duration_unit === 't' ? 'ticks' : 'minutes'}
                     </Text> <br />
@@ -200,37 +184,41 @@ const RecentTrades = () => {
         }}
         loading={authLoading}
       >
-        {sortedRecentTrades.length > 0 ? (
-          <Space direction="vertical" size={16} style={{ width: '100%' }}>
-            {sortedRecentTrades.map((trade) => (
-              <Card
-                key={trade.contract_id}
-                size="small"
-                style={{
-                  borderLeft: `4px solid ${trade.profit > 0 ? '#52c41a' : '#ff4d4f'}`,
-                  borderRadius: 8,
-                }}
-              >
-                <Row justify="space-between">
-                  <Col>
-                    <Text strong>{trade.underlying || trade.symbol}</Text> <br />
-                    <Text type="secondary">Type: {trade.contract_type}</Text> <br />
-                    <Text type="secondary">Buy Price: {trade.buy_price} {trade.currency}</Text> <br />
-                    <Text type="secondary">Sell Price: {trade.sell_price || 'N/A'}</Text> <br />
-                    <Text type="secondary">Profit: {trade.profit || 0} {trade.currency}</Text>
-                  </Col>
-                  <Col>
-                    <Tag color={trade.profit > 0 ? 'green' : 'red'}>
-                      {trade.profit > 0 ? 'WON' : 'LOST'}
-                    </Tag>
-                  </Col>
-                </Row>
-              </Card>
-            ))}
-          </Space>
-        ) : (
-          <Text type="secondary">No recent trades available.</Text>
-        )}
+        <div style={{ maxHeight: '360px', overflowY: 'auto' }}>
+          {sortedRecentTrades.length > 0 ? (
+            <Space direction="vertical" size={16} style={{ width: '100%' }}>
+              {sortedRecentTrades.map((trade) => (
+                <Card
+                  key={trade.contract_id}
+                  size="small"
+                  style={{
+                    borderLeft: `4px solid ${trade.profit > 0 ? '#52c41a' : '#ff4d4f'}`,
+                    borderRadius: 8,
+                    transition: 'all 0.3s ease',
+                  }}
+                >
+                  <Row justify="space-between">
+                    <Col>
+                      <Text strong>{trade.display_name || trade.underlying}</Text> <br />
+                      <Text type="secondary">Type: {trade.contract_type}</Text> <br />
+                      <Text type="secondary">Buy Price: {trade.buy_price} {trade.currency}</Text> <br />
+                      <Text type="secondary">Sell Price: {trade.sell_price || 'N/A'}</Text> <br />
+                      <Text type="secondary">Profit: {trade.profit || 0} {trade.currency}</Text> <br />
+                      <Text type="secondary">Pay Out: {trade.payout || 0} {trade.currency}</Text>
+                    </Col>
+                    <Col>
+                      <Tag color={trade.profit > 0 ? 'green' : 'red'}>
+                        {trade.profit > 0 ? 'WON' : 'LOST'}
+                      </Tag>
+                    </Col>
+                  </Row>
+                </Card>
+              ))}
+            </Space>
+          ) : (
+            <Text type="secondary">No recent trades available.</Text>
+          )}
+        </div>
       </Card>
     </Space>
   );
