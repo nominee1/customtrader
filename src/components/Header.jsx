@@ -1,50 +1,26 @@
 import React from 'react';
-import { Layout, Menu, Button, Space, Avatar, Typography } from 'antd';
+import { Layout, Button, Typography } from 'antd';
 import { Link } from 'react-router-dom';
+import '../assets/css/components/Header.css';
 
 const { Header } = Layout;
 const { Text } = Typography;
 
 const AppHeader = () => {
-  const menuItems = [
-    {
-      key: 'trade',
-      label: <Link to="/trade">Trade</Link>,
-    },
-    {
-      key: 'analysis',
-      label: <Link to="/analysis">Analysis</Link>,
-    },
-    {
-      key: 'login',
-      label: (
-        <Link to="/login">
-          <Button type="text">Login</Button>
-        </Link>
-      ),
-    },
-    {
-      key: 'signup',
-      label: (
-        <Link to="/register">
-          <Button type="primary">Start Trading</Button>
-        </Link>
-      ),
-    },
-  ];
-
   return (
-    <Header style={{ position: 'fixed', zIndex: 1, width: '100%', background: '#fff' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: 1200, margin: '0 auto' }}>
-        <Space>
-          <Avatar src="/mulla-logo.png" size="large" />
-          <Text strong style={{ color: '#1890ff', fontSize: 18 }}>Mulla</Text>
-        </Space>
-        <Menu 
-          mode="horizontal" 
-          style={{ borderBottom: 'none' }}
-          items={menuItems}
-        />
+    <Header className="header">
+      <div className="header-container">
+        <div className="logo">
+          <Text className="logo-text">Mulla</Text>
+        </div>
+        <div className="header-buttons">
+          <Link to="/login">
+            <Button className="header-button" variant="outlined" >Login</Button>
+          </Link>
+          <Link to="/signup">
+            <Button className="header-button" type="primary">Sign Up</Button>
+          </Link>
+        </div>
       </div>
     </Header>
   );

@@ -171,7 +171,7 @@ const MainSection = () => {
                 >
                   Start Tradin
                 </Button>
-                <Link to="/dashboard">
+                <Link to="/login">
                   <Button 
                     size="large"
                     style={{

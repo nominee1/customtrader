@@ -1,0 +1,56 @@
+/* General styles for the header */
+.header {
+  position: fixed;
+  z-index: 1;
+  width: 100%;
+  background: #fff;
+}
+
+.header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  margin: 0;
+}
+
+.logo-text {
+  color: #1890ff;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.header-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.header-button {
+  font-size: 14px;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .header-container {
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  .header-buttons {
+    margin-top: 8px;
+    text-align: center;
+  }
+
+  .header-button {
+    display: inline-block; 
+    width: auto; 
+    text-align: center;
+  }
+}

@@ -30,6 +30,7 @@ import {
   HistoryOutlined
 } from '@ant-design/icons';
 import { useUser } from '../../../context/AuthContext';
+import { useContracts } from '../../../context/ContractsContext';
 import RecentTrades from '../../../components/RecentTrades';
 import RequestIdGenerator from '../../../services/uniqueIdGenerator'; 
 
@@ -38,6 +39,7 @@ const { Option } = Select;
 
 const EvenOddContract = () => {
   const { user, sendAuthorizedRequest, isAuthorized, loading, error } = useUser(); 
+  const { addLiveContract } = useContracts();
   const { token } = theme.useToken();
   const [duration, setDuration] = useState(5);
   const [basis, setBasis] = useState('stake');
@@ -90,6 +92,24 @@ const EvenOddContract = () => {
     try {
       const response = await sendAuthorizedRequest(contractData);
       console.log('Contract purchased successfully:', response);
+      const contractId = response?.buy?.contract_id;
+      if(!contractId) {
+        throw new Error('No contract_id returned form purchase');
+      }
+
+      const contract = {
+        contract_id:contractId,
+        type: contractType,
+        symbol,
+        status:'open',
+        details: {
+          amount,
+          currency:user.currency || 'USD'
+        },
+      };
+
+      addLiveContract(contract);
+      
       alert('Contract purchased successfully!');
     } catch (error) {
       console.error('Error purchasing contract:', error.message);

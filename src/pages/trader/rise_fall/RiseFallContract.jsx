@@ -35,6 +35,7 @@ import {
   ClockCircleOutlined
 } from '@ant-design/icons';
 import { useUser } from '../../../context/AuthContext';
+import { useContracts } from '../../../context/ContractsContext';
 import RecentTrades from '../../../components/RecentTrades';
 import RequestIdGenerator from '../../../services/uniqueIdGenerator'; 
 
@@ -44,8 +45,8 @@ const { TabPane } = Tabs;
 
 const RiseFallTrader = () => {
   const { user, sendAuthorizedRequest, isAuthorized, loading, error } = useUser();
+  const { addLiveContract } = useContracts();
   const { token } = theme.useToken();
-  const { notification } = App.useApp(); // Use useApp for themed notification
   const [durationType, setDurationType] = useState('ticks');
   const [duration, setDuration] = useState(5);
   const [minutes, setMinutes] = useState(1);
@@ -55,6 +56,7 @@ const RiseFallTrader = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [payout, setPayout] = useState(0);
   const [activeTab, setActiveTab] = useState('trade');
+  const [alert, setAlert] = useState({ type: '', message: '', description: '', visible: false });
 
   // Adjust amount when user changes (e.g., after account switch)
   useEffect(() => {
@@ -73,60 +75,53 @@ const RiseFallTrader = () => {
   }, [amount, symbol]);
 
   const handleSubmit = async (contractType) => {
-    if (!user || !isAuthorized) {
-      console.error('User not authorized or no active account');
-      notification.error({
+    if (!user || !isAuthorized || !user.token) {
+      setAlert({
+        type: 'error',
         message: 'Authorization Error',
         description: 'Please select an account and ensure it is authorized.',
-        style: { borderRadius: 8, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)' },
+        visible: true,
       });
+      setTimeout(() => setAlert({ ...alert, visible: false }), 5000);
       return;
     }
-
-    if (!user.token) {
-      console.error('No valid token for active account');
-      notification.error({
-        message: 'Token Error',
-        description: 'No valid token for the selected account. Please log in again.',
-        style: { borderRadius: 8, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)' },
-      });
-      return;
-    }
-
+  
     if (!amount || amount <= 0) {
-      console.error('Invalid amount');
-      notification.error({
+      setAlert({
+        type: 'error',
         message: 'Invalid Amount',
         description: 'Please enter a valid amount.',
-        style: { borderRadius: 8, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)' },
+        visible: true,
       });
+      setTimeout(() => setAlert({ ...alert, visible: false }), 5000);
       return;
     }
-
+  
     if (durationType === 'ticks' && (duration < 1 || duration > 10)) {
-      console.error('Invalid tick duration');
-      notification.error({
+      setAlert({
+        type: 'error',
         message: 'Invalid Duration',
         description: 'Please select a tick duration between 1 and 10.',
-        style: { borderRadius: 8, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)' },
+        visible: true,
       });
+      setTimeout(() => setAlert({ ...alert, visible: false }), 5000);
       return;
     }
-
+  
     if (durationType === 'minutes' && (minutes < 1 || minutes > 60)) {
-      console.error('Invalid minute duration');
-      notification.error({
+      setAlert({
+        type: 'error',
         message: 'Invalid Duration',
         description: 'Please select a minute duration between 1 and 60.',
-        style: { borderRadius: 8, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)' },
+        visible: true,
       });
+      setTimeout(() => setAlert({ ...alert, visible: false }), 5000);
       return;
     }
-
+  
     setIsSubmitting(true);
-
+  
     const req_id = RequestIdGenerator.generateContractId();
-
     const contractData = {
       buy: 1,
       price: amount,
@@ -142,27 +137,52 @@ const RiseFallTrader = () => {
       loginid: user.loginid,
       req_id: req_id,
     };
-
+  
     try {
       const response = await sendAuthorizedRequest(contractData);
       console.log('Contract purchased successfully:', response);
-      notification.success({
+  
+      const contractId = response?.buy?.contract_id;
+      if (!contractId) {
+        throw new Error('No contract_id returned from purchase');
+      }
+  
+      const contract = {
+        contract_id: contractId,
+        type: contractType,
+        symbol,
+        status: 'open',
+        details: {
+          amount,
+          currency: user.currency || 'USD',
+          contract_type: contractType === 'rise' ? 'CALL' : 'PUT',
+          duration: durationType === 'ticks' ? duration : minutes,
+          duration_unit: durationType === 'ticks' ? 't' : 'm',
+        },
+      };
+  
+      addLiveContract(contract);
+  
+      setAlert({
+        type: 'success',
         message: 'Contract Purchased',
-        description: `Successfully purchased ${contractType === 'rise' ? 'Rise' : 'Fall'} contract.`,
-        style: { borderRadius: 8, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)' },
+        description: `Successfully purchased ${contractType === 'rise' ? 'Rise' : 'Fall'} contract (ID: ${contractId}).`,
+        visible: true,
       });
+      setTimeout(() => setAlert({ ...alert, visible: false }), 5000);
     } catch (error) {
       console.error('Error purchasing contract:', error.message);
-      notification.error({
+      setAlert({
+        type: 'error',
         message: 'Purchase Failed',
         description: `Failed to purchase contract: ${error.message}`,
-        style: { borderRadius: 8, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)' },
+        visible: true,
       });
+      setTimeout(() => setAlert({ ...alert, visible: false }), 5000);
     } finally {
       setIsSubmitting(false);
     }
   };
-
   const volatilityOptions = [
     { value: 'R_10', label: 'Volatility 10 Index', payout: '95%' },
     { value: '1HZ10V', label: 'Volatility 10 (1s) Index', payout: '95%' },
@@ -218,6 +238,18 @@ const RiseFallTrader = () => {
               description="Your session has expired. Redirecting to login..."
               type="error"
               showIcon
+              style={{ marginBottom: 24 }}
+            />
+          )}
+
+          {alert.visible && (
+            <Alert
+              message={alert.message}
+              description={alert.description}
+              type={alert.type}
+              showIcon
+              closable
+              onClose={() => setAlert({ ...alert, visible: false })}
               style={{ marginBottom: 24 }}
             />
           )}

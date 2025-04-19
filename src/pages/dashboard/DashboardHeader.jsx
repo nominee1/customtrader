@@ -1,7 +1,6 @@
-import React from 'react';
-import { Layout, Button, Space, Badge, Dropdown, Avatar, Typography, theme } from 'antd';
+import React, { useEffect } from 'react';
+import { Layout, Button, Space, Dropdown, Avatar, Typography, ConfigProvider, message } from 'antd';
 import {
-  BellOutlined,
   UserOutlined,
   WalletOutlined,
   SettingOutlined,
@@ -9,48 +8,75 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   SwapOutlined,
+  MenuOutlined,
 } from '@ant-design/icons';
 import { useUser } from '../../context/AuthContext';
-import { ConfigProvider } from 'antd';
+import { useNavigate } from 'react-router-dom';
+import '../../assets/css/pages/dashboard/DashboardHeader.css';
 
 const { Header } = Layout;
 const { Text } = Typography;
 
-const DashboardHeader = ({ collapsed, setCollapsed, isMobile }) => {
-  const { user, balance, activeAccountType, switchAccount, accounts, loading } = useUser();
-  const {
-    token: { colorPrimary, colorBgContainer },
-  } = theme.useToken();
+const DashboardHeader = ({ collapsed, setCollapsed, toggleDrawer }) => {
+  const { user, balance, activeAccountType, switchAccount, accounts, loading, activeAccount, sendAuthorizedRequest } = useUser();
+  const navigate = useNavigate();
+  const accountId = activeAccount?.loginid;
+  const isMobile = window.innerWidth <= 576; // Detect mobile screen
+
+  const handleLogout = async () => {
+    // setError(null); // Removed as it is not defined and seems unnecessary
+    try {
+      const response = await sendAuthorizedRequest({ logout: 1 });
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to logout.');
+      }
+      localStorage.removeItem('activeAccountType');
+      localStorage.removeItem('activeAccount');
+      localStorage.removeItem('accounts');
+      message.success('Logged out successfully.');
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout Error:', error);
+      message.error(error.message || 'Logout failed. Please try again.');
+    }
+  };
+
+  useEffect(() => {
+    if (!accountId) return;
+  }, [accountId]);
 
   const userMenuItems = [
     {
       key: 'profile',
-      icon: <UserOutlined style={{ color: colorPrimary }} />,
+      icon: <UserOutlined style={{ color: '#1890ff' }} />,
       label: 'My Profile',
+      onClick: () => navigate('/dashboard/account'),
     },
     {
       key: 'wallet',
-      icon: <WalletOutlined style={{ color: colorPrimary }} />,
+      icon: <WalletOutlined style={{ color: '#1890ff' }} />,
       label: 'Wallet',
+      onClick: () => navigate('/dashboard/wallet'),
     },
     {
       key: 'switch-real',
-      icon: <SwapOutlined style={{ color: activeAccountType === 'real' ? '#ccc' : colorPrimary }} />,
+      icon: <SwapOutlined style={{ color: activeAccountType === 'real' ? '#ccc' : '#1890ff' }} />,
       label: 'Switch to Real',
       disabled: activeAccountType === 'real' || !accounts.real,
       onClick: () => switchAccount('real'),
     },
     {
       key: 'switch-demo',
-      icon: <SwapOutlined style={{ color: activeAccountType === 'demo' ? '#ccc' : colorPrimary }} />,
+      icon: <SwapOutlined style={{ color: activeAccountType === 'demo' ? '#ccc' : '#1890ff' }} />,
       label: 'Switch to Demo',
       disabled: activeAccountType === 'demo' || !accounts.demo,
       onClick: () => switchAccount('demo'),
     },
     {
       key: 'settings',
-      icon: <SettingOutlined style={{ color: colorPrimary }} />,
+      icon: <SettingOutlined style={{ color: '#1890ff' }} />,
       label: 'Settings',
+      onClick: () => navigate('/dashboard/settings'),
     },
     {
       type: 'divider',
@@ -60,136 +86,77 @@ const DashboardHeader = ({ collapsed, setCollapsed, isMobile }) => {
       icon: <LogoutOutlined style={{ color: '#FF7675' }} />,
       label: 'Logout',
       danger: true,
+      onClick: handleLogout,
     },
   ];
 
   if (loading) {
     return (
-      <Header
-        style={{
-          padding: '0 24px',
-          background: colorBgContainer,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
+      <Header className={`header header-loading`}>
         <div>Loading...</div>
       </Header>
     );
   }
 
   return (
-    <ConfigProvider
-      theme={{
-        components: {
-          Button: {
-            colorPrimary: colorPrimary,
-            colorPrimaryHover: `${colorPrimary}dd`,
-          },
-          Badge: {
-            colorBgContainer: '#FF7675',
-          },
-        },
-      }}
-    >
+    <ConfigProvider>
       <Header
-        style={{
-          padding: isMobile ? '0 16px' : '0 24px',
-          background: colorBgContainer,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          boxShadow: '0 1px 4px 0 rgba(0, 0, 0, 0.05)',
-          zIndex: 1,
-          position: 'sticky',
-          top: 0,
-          height: 64,
-        }}
+        className={`header ${isMobile ? 'header-mobile' : 'header-desktop'}`}
+        style={{ position: 'fixed', width: '100%', zIndex: 1000, top: 0 }}
       >
         <Space size="middle">
-          {isMobile && (
+          {isMobile ? (
+            <Button
+              type="text"
+              icon={<MenuOutlined />}
+              onClick={toggleDrawer}
+              className="menu-toggle"
+              style={{ fontSize: '20px', color: '#1890ff' }}
+            />
+          ) : (
             <Button
               type="text"
               icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
               onClick={() => setCollapsed(!collapsed)}
-              style={{ fontSize: '16px' }}
+              className="menu-toggle"
+              style={{ fontSize: '20px', color: '#1890ff' }}
             />
           )}
-          <Space>
-            <Avatar
-              src="/logo.png"
-              size="large"
-              style={{
-                background: colorPrimary,
-                color: 'white',
-                fontWeight: 'bold',
-              }}
-            >
-              {!user?.logo && 'M'}
-            </Avatar>
-            {!isMobile && (
-              <Text strong style={{ fontSize: 18, color: colorPrimary }}>
-                Mulla Kenya
-              </Text>
-            )}
-          </Space>
+          {!isMobile && (
+            <Text strong className="user-name">
+              Mulla
+            </Text>
+          )}
         </Space>
-
         <Space size="large" align="center">
           {!isMobile && (
             <Button
               type="primary"
               size="middle"
               icon={<WalletOutlined />}
-              style={{
-                background: colorPrimary,
-                display: 'flex',
-                alignItems: 'center',
-                fontWeight: 500,
-              }}
+              className="balance-button"
             >
-              <Text style={{ color: 'white' }}>
+              <Text className="balance-text">
                 {user?.currency} {balance?.toFixed(2) || '0.00'}
               </Text>
             </Button>
           )}
-
-          <Badge count={5} size="small" offset={[-5, 5]}>
-            <Button
-              type="text"
-              shape="circle"
-              icon={<BellOutlined style={{ fontSize: 18 }} />}
-              style={{ color: colorPrimary }}
-            />
-          </Badge>
-
           <Dropdown
             menu={{ items: userMenuItems }}
             placement="bottomRight"
             trigger={['click']}
             overlayStyle={{ minWidth: 180 }}
           >
-            <Space
-              style={{
-                cursor: 'pointer',
-                padding: '8px 12px',
-                borderRadius: 8,
-                transition: 'all 0.2s',
-              }}
-            >
+            <Space className="user-menu">
               <Avatar
                 src={user?.avatar}
                 icon={<UserOutlined />}
-                style={{
-                  background: colorPrimary,
-                  color: 'white',
-                }}
+                className="avatar"
               />
               {!isMobile && (
                 <>
                   <Text strong>{user?.fullname || 'User'}</Text>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
+                  <Text type="secondary" className="user-account-type">
                     {activeAccountType ? activeAccountType.charAt(0).toUpperCase() + activeAccountType.slice(1) : 'N/A'}
                   </Text>
                 </>

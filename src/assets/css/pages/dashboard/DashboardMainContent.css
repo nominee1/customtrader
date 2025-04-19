@@ -1,0 +1,68 @@
+/* DashboardMainContent.css */
+.dashboard-container {
+    background: #f9f9f9;
+    min-height: 100vh;
+  }
+  .dashboard-content {
+    margin: 24px 16px;
+    padding: 24px;
+  }
+  .error-alert {
+    margin-bottom: 24px;
+  }
+  .welcome-card {
+    background: transparent;
+    box-shadow: none;
+  }
+  .welcome-title {
+    color: #6C5CE7;
+    margin-bottom: 8px;
+  }
+  .statistic-card {
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(108, 92, 231, 0.1);
+  }
+  .statistic-card-title {
+    color: #6C5CE7;
+  }
+  .progress-stroke {
+    stroke: #6C5CE7;
+    stroke-dasharray: #F1F3FE;
+  }
+  .volatility-card {
+    border-radius: 16px;
+  }
+  .recent-trade-title {
+    color: #6C5CE7;
+  }
+  .recent-trade-card {
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .trade-description {
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .card-hover {
+    text-align: center;
+    border-radius: 12px;
+  }
+  .card-border {
+    border: 1px solid;
+  }
+  .card-background {
+    border-radius: 12px;
+  }
+  .card-title {
+    margin-top: 8px;
+    font-size: 14px;
+  }
+  .card-text {
+    font-size: 12px;
+  }
+  @media (max-width: 768px) {
+    .dashboard-content {
+      margin: 16px;
+      padding: 16px;
+    }
+  }
