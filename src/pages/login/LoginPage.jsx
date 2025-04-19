@@ -15,12 +15,11 @@ import {
 import { 
   UserOutlined, 
   LockOutlined, 
-  GoogleOutlined, 
-  TwitterOutlined,
   MailOutlined
 } from '@ant-design/icons';
+
 import { useNavigate, Link } from 'react-router-dom';
-import derivLogo from '../../assets/react.svg'; 
+import '../../assets/css/pages/LoginPage.css';
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -34,17 +33,12 @@ const LoginPage = () => {
   const onFinish = async (values) => {
     setLoading(true);
     setError(null);
-    
     try {
-      // Replace with actual Deriv API authentication
-      console.log('Login values:', values);
-      
       // Simulate API call
+      console.log('Login values:', values);
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // On successful login
       message.success('Login successful!');
-      navigate('/dashboard'); // Redirect to dashboard
+      navigate('/dashboard'); 
     } catch (err) {
       setError(err.message || 'Failed to login. Please try again.');
     } finally {
@@ -54,49 +48,31 @@ const LoginPage = () => {
 
   const handleDerivAuth = async () => {
     const appId = import.meta.env.VITE_DERIV_APP_ID;
-    const redirectUri = `${window.location.origin}/dashboard`; // Provided redirect URL
+    const redirectUri = `${window.location.origin}/`; 
     window.location.href = `https://oauth.deriv.com/oauth2/authorize?app_id=${appId}&response_type=token&scope=read&redirect_uri=${encodeURIComponent(redirectUri)}`;
     console.log('Redirecting to Deriv authentication...');
   };
 
   return (
-    <Layout style={{ minHeight: '100vh', background: '#f0f2f5' }}>
-      <Content style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center',
-        padding: '24px'
-      }}>
-        <Card
-          style={{ 
-            width: '100%',
-            maxWidth: 420,
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-            border: 'none'
-          }}
-          bodyStyle={{ padding: '32px' }}
-        >
+    <Layout className="layout">
+      <Content className="content">
+        <Card className="card">
           <div style={{ textAlign: 'center', marginBottom: 24 }}>
-            <img 
-              src={derivLogo} 
-              alt="Deriv Logo" 
-              style={{ height: 48, marginBottom: 16 }} 
-            />
-            <Title level={3} style={{ marginBottom: 8 }}>Sign in to your account</Title>
+            <Title level={2} className='logo'>Mulla</Title>
+            <Divider ></Divider>
+            <Title level={3} className="title">Sign in to your account</Title>
             <Text type="secondary">Connect with Deriv API to start trading</Text>
           </div>
-
           {error && (
             <Alert 
               message={error} 
               type="error" 
               showIcon 
-              style={{ marginBottom: 24 }}
+              className="error-alert"
               closable
               onClose={() => setError(null)}
             />
           )}
-
           <Form
             form={form}
             name="login"
@@ -117,7 +93,6 @@ const LoginPage = () => {
                 size="large"
               />
             </Form.Item>
-
             <Form.Item
               name="password"
               rules={[
@@ -131,19 +106,14 @@ const LoginPage = () => {
                 size="large"
               />
             </Form.Item>
-
-            <Form.Item>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Form.Item name="remember" valuePropName="checked" noStyle>
-                  <Checkbox>Remember me</Checkbox>
-                </Form.Item>
-
-                <Link to="/forgot-password">
-                  <Text type="secondary">Forgot password?</Text>
-                </Link>
-              </div>
+            <Form.Item className="form-item">
+              <Form.Item name="remember" valuePropName="checked" noStyle>
+                <Checkbox>Remember me</Checkbox>
+              </Form.Item>
+              <Link to="/forgot-password">
+                <Text type="secondary">Forgot password?</Text>
+              </Link>
             </Form.Item>
-
             <Form.Item>
               <Button 
                 type="primary" 
@@ -156,21 +126,19 @@ const LoginPage = () => {
               </Button>
             </Form.Item>
           </Form>
-
           <Divider plain>or continue with</Divider>
-
           <Space direction="vertical" style={{ width: '100%' }}>
             <Button 
               block 
               size="large"
               onClick={handleDerivAuth}
               icon={<MailOutlined />}
-              style={{ backgroundColor: '#FF3D00', color: '#fff' }}
+              className="button-deriv"
             >
               Login with Deriv
             </Button>
           </Space>
-          <div style={{ textAlign: 'center', marginTop: 24 }}>
+          <div className="signup-text">
             <Text type="secondary">Don't have an account? </Text>
             <Link to="/register">
               <Text strong>Sign up</Text>
@@ -181,5 +149,4 @@ const LoginPage = () => {
     </Layout>
   );
 };
-
 export default LoginPage;
