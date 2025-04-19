@@ -27,13 +27,12 @@ import {
 import { useUser } from '../../context/AuthContext';
 import VolatilityMonitor from '../../components/VolatilityMonitor';
 import { ConfigProvider } from 'antd';
-
+import '../../assets/css/pages/dashboard/DashboardMainContent.css'; 
 const { Title, Text } = Typography;
 const { Content } = Layout;
-
 const DashboardMainContent = () => {
   const { user, balance, activeAccount, authLoading, sendAuthorizedRequest } = useUser();
-  const [transactions, setTransactions] = useState([]); // Store profit_table transactions
+  const [transactions, setTransactions] = useState([]);
   const [stats, setStats] = useState({
     totalProfitLoss: 0,
     totalPurchases: 0,
@@ -41,12 +40,9 @@ const DashboardMainContent = () => {
     numTransactions: 0,
   });
   const [error, setError] = useState(null);
-  const [loading,] = useState(false); // Re-enable loading state
-
+  const [loading] = useState(false);
   const accountId = activeAccount?.loginid;
   const isLoading = authLoading || loading;
-
-  // Format Unix timestamp to human-readable date
   const formatTimestamp = (timestamp) => {
     return new Date(timestamp * 1000).toLocaleString('en-US', {
       year: 'numeric',
@@ -56,10 +52,8 @@ const DashboardMainContent = () => {
       minute: '2-digit',
       second: '2-digit',
       hour12: true,
-    }); // e.g., "Apr 19, 2025, 12:34:56 PM"
+    });
   };
-
-  // Load cached data
   useEffect(() => {
     if (accountId) {
       const cachedProfitTable = localStorage.getItem(`profitTable_${accountId}`);
@@ -76,19 +70,13 @@ const DashboardMainContent = () => {
       }
     }
   }, [accountId]);
-
-  // Fetch profit table data for the last 30 days
   useEffect(() => {
     if (!accountId) return;
-
     const fetchProfitTable = async () => {
       setError(null);
-
-      // Set date range for the last 30 days using Unix timestamps
       const now = new Date();
       const dateTo = Math.floor(now.getTime() / 1000);
       const dateFrom = dateTo - 30 * 24 * 60 * 60;
-
       const payload = {
         profit_table: 1,
         description: 1,
@@ -97,30 +85,24 @@ const DashboardMainContent = () => {
         date_to: dateTo,
         limit: 100,
       };
-
       console.log('Sending profit_table payload:', payload);
-
       try {
         const response = await sendAuthorizedRequest(payload);
         console.log('Profit_table response:', response);
-
         if (response.error) {
           throw new Error(
             response.error.message || 'Failed to fetch profit table: Invalid input parameters'
           );
         }
-
         const profitTableData = response.profit_table?.transactions || [];
         setTransactions(profitTableData);
         localStorage.setItem(`profitTable_${accountId}`, JSON.stringify(response));
-
         setStats({
           totalProfitLoss: profitTableData.reduce((sum, tx) => sum + (tx.sell_price || 0), 0),
           totalPurchases: profitTableData.reduce((sum, tx) => sum + (tx.buy_price || 0), 0),
           totalPayouts: profitTableData.reduce((sum, tx) => sum + (tx.payout || 0), 0),
           numTransactions: profitTableData.length,
         });
-
         if (profitTableData.length === 0) {
           setError('No transactions found for the last 30 days.');
         }
@@ -129,24 +111,16 @@ const DashboardMainContent = () => {
         setError(err.message || 'Failed to load profit table data. Please try again.');
       }
     };
-
     fetchProfitTable();
-
-    // Poll every 30 seconds
     const interval = setInterval(fetchProfitTable, 30000);
-
     return () => clearInterval(interval);
   }, [accountId, sendAuthorizedRequest]);
-
-  // Find the most recent losing and winning trades
   const latestLosingTrade = transactions
     .filter((tx) => tx.sell_price === 0)
     .sort((a, b) => b.sell_time - a.sell_time)[0];
-
   const latestWinningTrade = transactions
     .filter((tx) => tx.sell_price > 0)
     .sort((a, b) => b.sell_time - a.sell_time)[0];
-
   if (!user || isLoading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -154,13 +128,10 @@ const DashboardMainContent = () => {
       </div>
     );
   }
-
   const percentageGrowth = stats.totalPurchases
     ? Math.min(((stats.totalProfitLoss / stats.totalPurchases) * 100).toFixed(2), 100)
     : 0;
-
   const readableSessionDuration = 'in the last 30 days';
-
   return (
     <ConfigProvider
       theme={{
@@ -176,21 +147,21 @@ const DashboardMainContent = () => {
         },
       }}
     >
-      <div style={{ background: '#f9f9f9', minHeight: '100vh' }}>
-        <Content style={{ margin: '24px 16px', padding: 24 }}>
+      <div className="dashboard-container">
+        <Content className="dashboard-content">
           {error && (
             <Alert
               message="Error"
               description={error}
               type="error"
               showIcon
-              style={{ marginBottom: 24 }}
+              className="error-alert"
             />
           )}
           <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
             <Col span={24}>
-              <Card bordered={false} style={{ background: 'transparent', boxShadow: 'none' }}>
-                <Title level={2} style={{ color: '#6C5CE7', marginBottom: 8 }}>
+              <Card className="welcome-card">
+                <Title level={2} className="welcome-title">
                   Welcome back, {user?.fullname || 'Trader'}!
                 </Title>
                 <Text type="secondary">Here's your trading overview for the last 30 days</Text>
@@ -201,10 +172,9 @@ const DashboardMainContent = () => {
             <Col xs={24} sm={12} md={6}>
               <Card
                 hoverable
+                className="statistic-card"
                 style={{
                   borderTop: '4px solid #6C5CE7',
-                  borderRadius: 16,
-                  boxShadow: '0 4px 12px rgba(108, 92, 231, 0.1)',
                 }}
               >
                 <Statistic
@@ -232,10 +202,9 @@ const DashboardMainContent = () => {
             <Col xs={24} sm={12} md={6}>
               <Card
                 hoverable
+                className="statistic-card"
                 style={{
                   borderTop: '4px solid #00CEFF',
-                  borderRadius: 16,
-                  boxShadow: '0 4px 12px rgba(0, 206, 255, 0.1)',
                 }}
               >
                 <Statistic
@@ -265,10 +234,9 @@ const DashboardMainContent = () => {
             <Col xs={24} sm={12} md={6}>
               <Card
                 hoverable
+                className="statistic-card"
                 style={{
                   borderTop: '4px solid #3f8600',
-                  borderRadius: 16,
-                  boxShadow: '0 4px 12px rgba(63, 134, 0, 0.1)',
                 }}
               >
                 <Statistic
@@ -298,10 +266,9 @@ const DashboardMainContent = () => {
             <Col xs={24} sm={12} md={6}>
               <Card
                 hoverable
+                className="statistic-card"
                 style={{
                   borderTop: '4px solid #FF7675',
-                  borderRadius: 16,
-                  boxShadow: '0 4px 12px rgba(255, 118, 117, 0.1)',
                 }}
               >
                 <Statistic
@@ -340,7 +307,7 @@ const DashboardMainContent = () => {
                     </Text>
                   </Space>
                 }
-                style={{ borderRadius: 16 }}
+                className="volatility-card"
                 extra={
                   <Space>
                     <Tag color="#6C5CE7">R_10</Tag>
@@ -354,16 +321,10 @@ const DashboardMainContent = () => {
                 <Divider />
                 <Row gutter={[24, 24]}>
                   <Col xs={24} md={12}>
-                    <Title level={5} style={{ color: '#6C5CE7' }}>
+                    <Title level={5} className="recent-trade-title">
                       <RiseOutlined /> Recent Winning Trade
                     </Title>
-                    <div
-                      style={{
-                        background: 'linear-gradient(90deg, #6C5CE710, #6C5CE705)',
-                        borderRadius: 8,
-                        padding: 16,
-                      }}
-                    >
+                    <div className="trade-description">
                       {latestWinningTrade ? (
                         <Descriptions column={1} size="small">
                           <Descriptions.Item label="Contract Type">
@@ -388,16 +349,10 @@ const DashboardMainContent = () => {
                     </div>
                   </Col>
                   <Col xs={24} md={12}>
-                    <Title level={5} style={{ color: '#FF7675' }}>
+                    <Title level={5} className="recent-trade-title">
                       <FallOutlined /> Recent Losing Trade
                     </Title>
-                    <div
-                      style={{
-                        background: 'linear-gradient(90deg, #FF767510, #FF767505)',
-                        borderRadius: 8,
-                        padding: 16,
-                      }}
-                    >
+                    <div className="trade-description">
                       {latestLosingTrade ? (
                         <Descriptions column={1} size="small">
                           <Descriptions.Item label="Contract Type">
@@ -429,18 +384,17 @@ const DashboardMainContent = () => {
             <Col xs={12} sm={6} md={6}>
               <Card
                 hoverable
+                className="card-hover"
                 style={{
-                  textAlign: 'center',
-                  borderRadius: 12,
                   border: '1px solid #6C5CE720',
                   background: '#6C5CE710',
                 }}
               >
                 <RiseOutlined style={{ fontSize: 24, color: '#6C5CE7' }} />
-                <Title level={5} style={{ marginTop: 8, fontSize: 14, color: '#6C5CE7' }}>
+                <Title level={5} className="card-title">
                   Rise/Fall
                 </Title>
-                <Text type="secondary" style={{ fontSize: 12 }}>
+                <Text type="secondary" className="card-text">
                   Predict market direction
                 </Text>
               </Card>
@@ -448,18 +402,17 @@ const DashboardMainContent = () => {
             <Col xs={12} sm={6} md={6}>
               <Card
                 hoverable
+                className="card-hover"
                 style={{
-                  textAlign: 'center',
-                  borderRadius: 12,
                   border: '1px solid #00CEFF20',
                   background: '#00CEFF10',
                 }}
               >
                 <NumberOutlined style={{ fontSize: 24, color: '#00CEFF' }} />
-                <Title level={5} style={{ marginTop: 8, fontSize: 14, color: '#00CEFF' }}>
+                <Title level={5} className="card-title">
                   Even/Odd
                 </Title>
-                <Text type="secondary" style={{ fontSize: 12 }}>
+                <Text type="secondary" className="card-text">
                   Bet on digit outcomes
                 </Text>
               </Card>
@@ -467,18 +420,17 @@ const DashboardMainContent = () => {
             <Col xs={12} sm={6} md={6}>
               <Card
                 hoverable
+                className="card-hover"
                 style={{
-                  textAlign: 'center',
-                  borderRadius: 12,
                   border: '1px solid #FF767520',
                   background: '#FF767510',
                 }}
               >
                 <ArrowUpOutlined style={{ fontSize: 24, color: '#FF7675' }} />
-                <Title level={5} style={{ marginTop: 8, fontSize: 14, color: '#FF7675' }}>
+                <Title level={5} className="card-title">
                   Over/Under
                 </Title>
-                <Text type="secondary" style={{ fontSize: 12 }}>
+                <Text type="secondary" className="card-text">
                   Set your price barriers
                 </Text>
               </Card>
@@ -486,18 +438,17 @@ const DashboardMainContent = () => {
             <Col xs={12} sm={6} md={6}>
               <Card
                 hoverable
+                className="card-hover"
                 style={{
-                  textAlign: 'center',
-                  borderRadius: 12,
                   border: '1px solid #3f860020',
                   background: '#3f860010',
                 }}
               >
                 <SwapOutlined style={{ fontSize: 24, color: '#3f8600' }} />
-                <Title level={5} style={{ marginTop: 8, fontSize: 14, color: '#3f8600' }}>
+                <Title level={5} className="card-title">
                   Matches/Differs
                 </Title>
-                <Text type="secondary" style={{ fontSize: 12 }}>
+                <Text type="secondary" className="card-text">
                   Predict the digit outcomes
                 </Text>
               </Card>
@@ -508,5 +459,4 @@ const DashboardMainContent = () => {
     </ConfigProvider>
   );
 };
-
 export default DashboardMainContent;

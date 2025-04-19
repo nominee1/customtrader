@@ -7,6 +7,7 @@ import TraderPage from './pages/trader/TraderPage';
 import WalletPage from './components/WalletPage';
 import UserProfile from './components/UserProfile';
 import SettingsPage from './components/SettingPage';
+import NotFoundPage from './pages/NotFoundPage';
 import { UserProvider } from './context/AuthContext';
 import { ContractsProvider } from './context/ContractsContext';
 
@@ -16,6 +17,7 @@ function AppRoutes() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="*" element={<NotFoundPage />} />
         <Route 
           path="/dashboard" 
           element={
