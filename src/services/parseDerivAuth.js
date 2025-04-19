@@ -3,7 +3,6 @@ export function parseDerivAuthTokens() {
     const urlParams = new URLSearchParams(window.location.search);
     const accounts = [];
 
-    // Parse up to 5 accounts from URL parameters
     for (let i = 1; i <= 5; i++) {
       const token = urlParams.get(`token${i}`);
       const loginid = urlParams.get(`acct${i}`);
@@ -15,11 +14,10 @@ export function parseDerivAuthTokens() {
     }
 
     if (accounts.length > 0) {
-      // Save valid tokens to sessionStorage
       sessionStorage.setItem('derivTokens', JSON.stringify(accounts));
       console.log('✅ Saved Deriv Tokens to sessionStorage:', accounts);
-      // Clear URL parameters to avoid exposing tokens
-      //window.history.replaceState({}, document.title, window.location.pathname);
+      window.history.replaceState({}, document.title, window.location.pathname);
+      
     }
 
     console.log('✅ Parsed Deriv Tokens:', accounts);
