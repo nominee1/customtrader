@@ -134,38 +134,40 @@ const RecentTrades = () => {
         loading={authLoading}
       >
         {sortedLiveContracts.length > 0 ? (
-          <Space direction="vertical" size={16} style={{ width: '100%' }}>
-            {sortedLiveContracts.map((contract) => (
-              <Card
-                key={contract.contract_id}
-                size="small"
-                style={{ borderLeft: '4px solid #1890ff', borderRadius: 8 }}
-              >
-                <Row justify="space-between">
-                  <Col>
-                    <Text strong>{contract.display_name || contract.underlying}</Text> <br />
-                    <Text type="secondary">Type: {contract.contract_type}</Text> <br />
-                    <Text type="secondary">Buy Price: {contract.buy_price} {contract.currency}</Text> <br />
-                    <Text type="secondary">Current Price: {contract.current_spot || 'N/A'}</Text> <br />
-                    <Text type="secondary">Profit: {contract.profit || 0} {contract.currency}</Text> <br />
-                    <Text type="secondary">Pay Out: {contract.payout || 0}{contract.currency}</Text> <br />
-                    <Text type="secondary">
-                      Duration: {contract.duration} {contract.duration_unit === 't' ? 'ticks' : 'minutes'}
-                    </Text> <br />
-                    <Progress
-                      percent={calculateProgress(contract)}
-                      size="small"
-                      status="active"
-                      style={{ width: 150 }}
-                    />
-                  </Col>
-                  <Col>
-                    <Tag color="blue">{contract.status?.toUpperCase()}</Tag>
-                  </Col>
-                </Row>
-              </Card>
-            ))}
-          </Space>
+          <div style={{ maxHeight: '360px', overflowY: 'auto' }}>
+            <Space direction="vertical" size={16} style={{ width: '100%' }}>
+              {sortedLiveContracts.map((contract) => (
+                <Card
+                  key={contract.contract_id}
+                  size="small"
+                  style={{ borderLeft: '4px solid #1890ff', borderRadius: 8 }}
+                >
+                  <Row justify="space-between">
+                    <Col>
+                      <Text strong>{contract.display_name || contract.underlying}</Text> <br />
+                      <Text type="secondary">Type: {contract.contract_type}</Text> <br />
+                      <Text type="secondary">Buy Price: {contract.buy_price} {contract.currency}</Text> <br />
+                      <Text type="secondary">Current Price: {contract.current_spot || 'N/A'}</Text> <br />
+                      <Text type="secondary">Profit: {contract.profit || 0} {contract.currency}</Text> <br />
+                      <Text type="secondary">Pay Out: {contract.payout || 0}{contract.currency}</Text> <br />
+                      <Text type="secondary">
+                        Duration: {contract.duration} {contract.duration_unit === 't' ? 'ticks' : 'minutes'}
+                      </Text> <br />
+                      <Progress
+                        percent={calculateProgress(contract)}
+                        size="small"
+                        status="active"
+                        style={{ width: 150 }}
+                      />
+                    </Col>
+                    <Col>
+                      <Tag color="blue">{contract.status?.toUpperCase()}</Tag>
+                    </Col>
+                  </Row>
+                </Card>
+              ))}
+            </Space>
+          </div>
         ) : (
           <Text type="secondary">No live contracts.</Text>
         )}
