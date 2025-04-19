@@ -197,15 +197,6 @@ const DashboardHeader = ({ collapsed, setCollapsed, isMobile }) => {
             </Button>
           )}
 
-          <Badge count={5} size="small" offset={[-5, 5]}>
-            <Button
-              type="text"
-              shape="circle"
-              icon={<BellOutlined style={{ fontSize: 18 }} />}
-              style={{ color: colorPrimary }}
-            />
-          </Badge>
-
           <Dropdown
             menu={{ items: userMenuItems }}
             placement="bottomRight"
