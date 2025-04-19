@@ -65,11 +65,13 @@ const DashboardHeader = ({ collapsed, setCollapsed, isMobile }) => {
       key: 'profile',
       icon: <UserOutlined style={{ color: colorPrimary }} />,
       label: 'My Profile',
+      onClick: () => navigate('/dashboard/account'),
     },
     {
       key: 'wallet',
       icon: <WalletOutlined style={{ color: colorPrimary }} />,
       label: 'Wallet',
+      onClick: () => navigate('/dashboard/wallet'),
     },
     {
       key: 'switch-real',
@@ -89,6 +91,7 @@ const DashboardHeader = ({ collapsed, setCollapsed, isMobile }) => {
       key: 'settings',
       icon: <SettingOutlined style={{ color: colorPrimary }} />,
       label: 'Settings',
+      onClick: () => navigate('/dashboard/settings'),
     },
     {
       type: 'divider',
