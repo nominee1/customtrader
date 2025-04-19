@@ -12,6 +12,7 @@ import {
   Divider,
   Tag,
   Alert,
+  Descriptions,
 } from 'antd';
 import {
   DollarOutlined,
@@ -32,18 +33,31 @@ const { Content } = Layout;
 
 const DashboardMainContent = () => {
   const { user, balance, activeAccount, authLoading, sendAuthorizedRequest } = useUser();
-  const [profitTable, setProfitTable] = useState([]);
+  const [transactions, setTransactions] = useState([]); // Store profit_table transactions
   const [stats, setStats] = useState({
     totalProfitLoss: 0,
     totalPurchases: 0,
     totalPayouts: 0,
     numTransactions: 0,
   });
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [loading,] = useState(false); // Re-enable loading state
 
   const accountId = activeAccount?.loginid;
   const isLoading = authLoading || loading;
+
+  // Format Unix timestamp to human-readable date
+  const formatTimestamp = (timestamp) => {
+    return new Date(timestamp * 1000).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
+    }); // e.g., "Apr 19, 2025, 12:34:56 PM"
+  };
 
   // Load cached data
   useEffect(() => {
@@ -51,8 +65,8 @@ const DashboardMainContent = () => {
       const cachedProfitTable = localStorage.getItem(`profitTable_${accountId}`);
       if (cachedProfitTable) {
         const parsedData = JSON.parse(cachedProfitTable);
-        setProfitTable(parsedData);
         const transactions = parsedData?.profit_table?.transactions || [];
+        setTransactions(transactions);
         setStats({
           totalProfitLoss: transactions.reduce((sum, tx) => sum + (tx.profit_loss || 0), 0),
           totalPurchases: transactions.reduce((sum, tx) => sum + (tx.buy_price || 0), 0),
@@ -72,15 +86,15 @@ const DashboardMainContent = () => {
 
       // Set date range for the last 30 days using Unix timestamps
       const now = new Date();
-      const dateTo = Math.floor(now.getTime() / 1000); // Current time in seconds (UTC)
-      const dateFrom = dateTo - 30 * 24 * 60 * 60; // 30 days ago in seconds
+      const dateTo = Math.floor(now.getTime() / 1000);
+      const dateFrom = dateTo - 30 * 24 * 60 * 60;
 
       const payload = {
         profit_table: 1,
         description: 1,
         sort: 'DESC',
-        date_from: dateFrom, // e.g., 1745088000 (30 days ago from April 19, 2025)
-        date_to: dateTo, // e.g., 1747670400 (April 19, 2025)
+        date_from: dateFrom,
+        date_to: dateTo,
         limit: 100,
       };
 
@@ -97,7 +111,7 @@ const DashboardMainContent = () => {
         }
 
         const profitTableData = response.profit_table?.transactions || [];
-        setProfitTable(response);
+        setTransactions(profitTableData);
         localStorage.setItem(`profitTable_${accountId}`, JSON.stringify(response));
 
         setStats({
@@ -113,7 +127,7 @@ const DashboardMainContent = () => {
       } catch (err) {
         console.error('Error fetching profit table:', err, err.stack);
         setError(err.message || 'Failed to load profit table data. Please try again.');
-      } 
+      }
     };
 
     fetchProfitTable();
@@ -123,6 +137,15 @@ const DashboardMainContent = () => {
 
     return () => clearInterval(interval);
   }, [accountId, sendAuthorizedRequest]);
+
+  // Find the most recent losing and winning trades
+  const latestLosingTrade = transactions
+    .filter((tx) => tx.sell_price === 0)
+    .sort((a, b) => b.sell_time - a.sell_time)[0];
+
+  const latestWinningTrade = transactions
+    .filter((tx) => tx.sell_price > 0)
+    .sort((a, b) => b.sell_time - a.sell_time)[0];
 
   if (!user || isLoading) {
     return (
@@ -332,36 +355,70 @@ const DashboardMainContent = () => {
                 <Row gutter={[24, 24]}>
                   <Col xs={24} md={12}>
                     <Title level={5} style={{ color: '#6C5CE7' }}>
-                      <RiseOutlined /> Recent Winning Trades
+                      <RiseOutlined /> Recent Winning Trade
                     </Title>
                     <div
                       style={{
-                        height: 150,
                         background: 'linear-gradient(90deg, #6C5CE710, #6C5CE705)',
                         borderRadius: 8,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        padding: 16,
                       }}
                     >
-                      <Text type="secondary">Winning trades chart (TBD)</Text>
+                      {latestWinningTrade ? (
+                        <Descriptions column={1} size="small">
+                          <Descriptions.Item label="Contract Type">
+                            {latestWinningTrade.contract_type}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Buying Price">
+                            ${latestWinningTrade.buy_price.toFixed(2)}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Description">
+                            {latestWinningTrade.longcode}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Payout">
+                            ${latestWinningTrade.payout.toFixed(2)}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Time">
+                            {formatTimestamp(latestWinningTrade.purchase_time)}
+                          </Descriptions.Item>
+                        </Descriptions>
+                      ) : (
+                        <Text type="secondary">No winning trades found.</Text>
+                      )}
                     </div>
                   </Col>
                   <Col xs={24} md={12}>
                     <Title level={5} style={{ color: '#FF7675' }}>
-                      <FallOutlined /> Recent Losing Trades
+                      <FallOutlined /> Recent Losing Trade
                     </Title>
                     <div
                       style={{
-                        height: 150,
                         background: 'linear-gradient(90deg, #FF767510, #FF767505)',
                         borderRadius: 8,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        padding: 16,
                       }}
                     >
-                      <Text type="secondary">Losing trades chart (TBD)</Text>
+                      {latestLosingTrade ? (
+                        <Descriptions column={1} size="small">
+                          <Descriptions.Item label="Contract Type">
+                            {latestLosingTrade.contract_type}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Buying Price">
+                            ${latestLosingTrade.buy_price.toFixed(2)}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Description">
+                            {latestLosingTrade.longcode}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Payout">
+                            ${latestLosingTrade.payout.toFixed(2)}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Time">
+                            {formatTimestamp(latestLosingTrade.purchase_time)}
+                          </Descriptions.Item>
+                        </Descriptions>
+                      ) : (
+                        <Text type="secondary">No losing trades found.</Text>
+                      )}
                     </div>
                   </Col>
                 </Row>

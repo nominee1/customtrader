@@ -1,5 +1,5 @@
-import React from 'react';
-import { Layout, Button, Space, Badge, Dropdown, Avatar, Typography, theme } from 'antd';
+import React, { useEffect } from 'react';
+import { Layout, Button, Space, Badge, Dropdown, Avatar, Typography, theme, message } from 'antd';
 import {
   BellOutlined,
   UserOutlined,
@@ -12,12 +12,50 @@ import {
 } from '@ant-design/icons';
 import { useUser } from '../../context/AuthContext';
 import { ConfigProvider } from 'antd';
+import { useNavigate } from 'react-router-dom';
 
 const { Header } = Layout;
 const { Text } = Typography;
 
 const DashboardHeader = ({ collapsed, setCollapsed, isMobile }) => {
-  const { user, balance, activeAccountType, switchAccount, accounts, loading } = useUser();
+  const { user, balance, activeAccountType, switchAccount, accounts, loading, activeAccount, sendAuthorizedRequest } = useUser();
+  const navigate = useNavigate();
+  
+  const accountId = activeAccount?.loginid;
+  const [error, setError] = React.useState(null);
+
+  const handleLogout = async () => {
+    setError(null);
+
+    try {
+      // Send logout request
+      const response = await sendAuthorizedRequest({ logout: 1 });
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to logout. Please try again.');
+      }
+
+      // Clear tokens from localStorage
+      localStorage.removeItem('activeAccountType');
+      localStorage.removeItem('activeAccount');
+      localStorage.removeItem('accounts');
+
+      // Show toast
+      message.success('Logged out successfully.');
+
+      // Redirect to login page
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout Error:', error);
+      setError(error.message || 'Logout failed. Please try again.');
+    }
+      message.error(error.message || 'Logout failed. Please try again.');
+  };
+
+  useEffect(() => {
+    if (!accountId) return;
+  }, [accountId]);
+
   const {
     token: { colorPrimary, colorBgContainer },
   } = theme.useToken();
@@ -60,6 +98,7 @@ const DashboardHeader = ({ collapsed, setCollapsed, isMobile }) => {
       icon: <LogoutOutlined style={{ color: '#FF7675' }} />,
       label: 'Logout',
       danger: true,
+      onClick: handleLogout
     },
   ];
 
