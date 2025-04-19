@@ -27,9 +27,9 @@ export const UserProvider = ({ children }) => {
   );
 
   useEffect(() => {
-    const savedLoginid = localStorage.getItem('activeAccountLoginid');
+    const savedLoginid = sessionStorage.getItem('activeAccountLoginid');
     if (savedLoginid) {
-      console.log('📌 Loaded active account loginid from localStorage:', savedLoginid);
+      console.log('📌 Loaded active account loginid from sessionStorage:', savedLoginid);
     }
   }, []);
 
@@ -69,25 +69,25 @@ export const UserProvider = ({ children }) => {
         let parsedAccounts = parseDerivAuthTokens();
         if (!parsedAccounts.length) {
           try {
-            const storedTokens = localStorage.getItem('derivTokens');
+            const storedTokens = sessionStorage.getItem('derivTokens');
             if (storedTokens) {
               parsedAccounts = JSON.parse(storedTokens);
               if (!Array.isArray(parsedAccounts)) {
-                throw new Error('Invalid token data in localStorage');
+                throw new Error('Invalid token data in sessionStorage');
               }
             }
           } catch (err) {
-            console.error('📌 Error retrieving tokens from localStorage:', err.message);
-            localStorage.removeItem('derivTokens');
+            console.error('📌 Error retrieving tokens from sessionStorage:', err.message);
+            sessionStorage.removeItem('derivTokens');
             parsedAccounts = [];
           }
         }
 
         if (!parsedAccounts.length) {
-          throw new Error('No valid tokens found in URL or localStorage');
+          throw new Error('No valid tokens found in URL or sessionStorage');
         }
 
-        localStorage.setItem('derivTokens', JSON.stringify(parsedAccounts));
+        sessionStorage.setItem('derivTokens', JSON.stringify(parsedAccounts));
 
         await connectWebSocket();
 
@@ -145,12 +145,12 @@ export const UserProvider = ({ children }) => {
         parsedAccounts.forEach((acc) => {
           tokenMap[acc.loginid] = acc.token;
         });
-        localStorage.setItem('derivLoginTokenMap', JSON.stringify(tokenMap));
+        sessionStorage.setItem('derivLoginTokenMap', JSON.stringify(tokenMap));
 
         setAccounts(newAccounts);
         setAccountData(initialAccountData);
 
-        const savedLoginid = localStorage.getItem('activeAccountLoginid');
+        const savedLoginid = sessionStorage.getItem('activeAccountLoginid');
         let defaultAccount = validAccounts.find((acc) => acc.loginid === savedLoginid);
         if (!defaultAccount) {
           defaultAccount =
@@ -161,7 +161,7 @@ export const UserProvider = ({ children }) => {
 
         if (defaultAccount) {
           setActiveAccount(defaultAccount);
-          localStorage.setItem('activeAccountLoginid', defaultAccount.loginid);
+          sessionStorage.setItem('activeAccountLoginid', defaultAccount.loginid);
 
           await new Promise((resolve, reject) => {
             const unsubscribe = derivWebSocket.subscribe((event, data) => {
@@ -185,8 +185,8 @@ export const UserProvider = ({ children }) => {
         console.error('📌 Error fetching user data:', err.message);
         setError(err.message);
         if (err.message.includes('Invalid token') || err.message.includes('Max WebSocket retries')) {
-          localStorage.removeItem('activeAccountLoginid');
-          localStorage.removeItem('derivTokens');
+          sessionStorage.removeItem('activeAccountLoginid');
+          sessionStorage.removeItem('derivTokens');
           setActiveAccount(null);
           setAccounts({ real: [], demo: [] });
           setIsAuthorized(false);
@@ -217,8 +217,8 @@ export const UserProvider = ({ children }) => {
         setError('Session expired. Please log in again.');
         setActiveAccount(null);
         setIsAuthorized(false);
-        localStorage.removeItem('activeAccountLoginid');
-        localStorage.removeItem('derivTokens');
+        sessionStorage.removeItem('activeAccountLoginid');
+        sessionStorage.removeItem('derivTokens');
         // Redirect to Deriv OAuth login
         // window.location.href = 'https://oauth.deriv.com/oauth2/authorize?app_id=36300&...';
       }
@@ -288,12 +288,12 @@ export const UserProvider = ({ children }) => {
       }
 
       const newActiveAccount = targetAccounts[0];
-      const loginTokenMap = JSON.parse(localStorage.getItem('derivLoginTokenMap') || '{}');
+      const loginTokenMap = JSON.parse(sessionStorage.getItem('derivLoginTokenMap') || '{}');
       const token = loginTokenMap[newActiveAccount.loginid];
       if (!token) throw new Error('Missing token for selected account.');
       setActiveAccount(newActiveAccount);
       setIsAuthorized(false); // Reset authorization state
-      localStorage.setItem('activeAccountLoginid', newActiveAccount.loginid);
+      sessionStorage.setItem('activeAccountLoginid', newActiveAccount.loginid);
 
       await new Promise((resolve, reject) => {
         const unsubscribe = derivWebSocket.subscribe((event, data) => {

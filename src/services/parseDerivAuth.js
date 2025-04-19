@@ -15,9 +15,9 @@ export function parseDerivAuthTokens() {
     }
 
     if (accounts.length > 0) {
-      // Save valid tokens to localStorage
-      localStorage.setItem('derivTokens', JSON.stringify(accounts));
-      console.log('✅ Saved Deriv Tokens to localStorage:', accounts);
+      // Save valid tokens to sessionStorage
+      sessionStorage.setItem('derivTokens', JSON.stringify(accounts));
+      console.log('✅ Saved Deriv Tokens to sessionStorage:', accounts);
       // Clear URL parameters to avoid exposing tokens
       //window.history.replaceState({}, document.title, window.location.pathname);
     }
