@@ -28,8 +28,11 @@ import { useUser } from '../../context/AuthContext';
 import VolatilityMonitor from '../../components/VolatilityMonitor';
 import { ConfigProvider } from 'antd';
 import '../../assets/css/pages/dashboard/DashboardMainContent.css'; 
+import Notification from '../../utils/Notification';
+
 const { Title, Text } = Typography;
 const { Content } = Layout;
+
 const DashboardMainContent = () => {
   const { user, balance, activeAccount, authLoading, sendAuthorizedRequest } = useUser();
   const [transactions, setTransactions] = useState([]);
@@ -40,6 +43,11 @@ const DashboardMainContent = () => {
     numTransactions: 0,
   });
   const [error, setError] = useState(null);
+  const [notification, setNotification] = useState({
+    type: '',
+    content: '',
+    trigger: false,
+  });
   const [loading] = useState(false);
   const accountId = activeAccount?.loginid;
   const isLoading = authLoading || loading;
@@ -53,6 +61,13 @@ const DashboardMainContent = () => {
       second: '2-digit',
       hour12: true,
     });
+  };
+
+  const showNotification = (type, content) => {
+    setNotification({ type, content, trigger: true });
+    setTimeout(() => {
+      setNotification((prev) => ({ ...prev, trigger: false }));
+    }, 500);
   };
   useEffect(() => {
     if (accountId) {
@@ -85,14 +100,11 @@ const DashboardMainContent = () => {
         date_to: dateTo,
         limit: 100,
       };
-      console.log('Sending profit_table payload:', payload);
       try {
         const response = await sendAuthorizedRequest(payload);
-        console.log('Profit_table response:', response);
         if (response.error) {
-          throw new Error(
-            response.error.message || 'Failed to fetch profit table: Invalid input parameters'
-          );
+          showNotification('error', response.error.message || 'Failed to fetch profit table');
+          throw new Error(response.error.message);
         }
         const profitTableData = response.profit_table?.transactions || [];
         setTransactions(profitTableData);
@@ -103,12 +115,12 @@ const DashboardMainContent = () => {
           totalPayouts: profitTableData.reduce((sum, tx) => sum + (tx.payout || 0), 0),
           numTransactions: profitTableData.length,
         });
+        showNotification('success', 'Profit table loaded successfully!');
         if (profitTableData.length === 0) {
-          setError('No transactions found for the last 30 days.');
+          showNotification('warning', 'No transactions found for the last 30 days.');
         }
       } catch (err) {
         console.error('Error fetching profit table:', err, err.stack);
-        setError(err.message || 'Failed to load profit table data. Please try again.');
       }
     };
     fetchProfitTable();
@@ -149,6 +161,11 @@ const DashboardMainContent = () => {
     >
       <div className="dashboard-container">
         <Content className="dashboard-content">
+          <Notification
+            type={notification.type}
+            content={notification.content}
+            trigger={notification.trigger}
+          />
           {error && (
             <Alert
               message="Error"

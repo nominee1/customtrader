@@ -1,6 +1,7 @@
 import { createContext, useState, useEffect, useContext, useMemo } from 'react';
 import { derivWebSocket } from '../services/websocket_client';
 import { parseDerivAuthTokens } from '../services/parseDerivAuth';
+import Notification from '../utils/Notification';
 
 const UserContext = createContext();
 
@@ -20,16 +21,28 @@ export const UserProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isAuthorized, setIsAuthorized] = useState(false); // Track authorization state
+  const [notification, setNotification] = useState({
+    type: '',
+    content: '',
+    trigger: false,
+  });
 
   const activeAccountType = useMemo(
     () => (activeAccount?.is_virtual ? 'demo' : 'real'),
     [activeAccount]
   );
 
+  const showNotification = (type, content) => {
+    setNotification({ type, content, trigger: true });
+    setTimeout(() => {
+      setNotification((prev) => ({ ...prev, trigger: false }));
+    }, 500);
+  };
+
   useEffect(() => {
     const savedLoginid = sessionStorage.getItem('activeAccountLoginid');
     if (savedLoginid) {
-      console.log('📌 Loaded active account loginid from sessionStorage:', savedLoginid);
+      console.log('Loaded active account loginid from sessionStorage:', savedLoginid);
     }
   }, []);
 
@@ -42,17 +55,15 @@ export const UserProvider = ({ children }) => {
     const connectWebSocket = async () => {
       try {
         if (!derivWebSocket.isConnected()) {
-          console.log('📌 Attempting WebSocket connection, attempt:', retryCount + 1);
           await derivWebSocket.connect();
         } else {
-          console.log('📌 WebSocket already open');
+          console.log('WebSocket already open');
         }
       } catch (err) {
-        console.error('📌 WebSocket connection failed:', err.message);
+        console.error('WebSocket connection failed:', err.message);
         if (retryCount < maxRetries) {
           retryCount++;
           const delay = baseRetryDelay * Math.pow(2, retryCount);
-          console.log(`📌 Retrying WebSocket connection in ${delay}ms...`);
           await new Promise((resolve) => setTimeout(resolve, delay));
           return connectWebSocket();
         }
@@ -77,7 +88,7 @@ export const UserProvider = ({ children }) => {
               }
             }
           } catch (err) {
-            console.error('📌 Error retrieving tokens from sessionStorage:', err.message);
+            console.error('Error retrieving tokens from sessionStorage:', err.message);
             sessionStorage.removeItem('derivTokens');
             parsedAccounts = [];
           }
@@ -112,7 +123,7 @@ export const UserProvider = ({ children }) => {
                   unsubscribe();
                   resolve(mappedAccounts);
                 } else if (event === 'message' && data.error) {
-                  console.error(`📌 Authorization failed for token ${acc.loginid}:`, data.error.message);
+                  console.error(`Authorization failed for token ${acc.loginid}:`, data.error.message);
                   unsubscribe();
                   resolve(null);
                 }
@@ -182,7 +193,8 @@ export const UserProvider = ({ children }) => {
           derivWebSocket.send({ balance: 1, account: account.loginid, subscribe: 1 });
         });
       } catch (err) {
-        console.error('📌 Error fetching user data:', err.message);
+        console.error('Error fetching user data:', err.message);
+        showNotification('error', err.message);
         setError(err.message);
         if (err.message.includes('Invalid token') || err.message.includes('Max WebSocket retries')) {
           sessionStorage.removeItem('activeAccountLoginid');
@@ -274,8 +286,6 @@ export const UserProvider = ({ children }) => {
           reject(data.error);
         }
       });
-
-      console.log('📌 Sending authorize for request:', activeAccount.loginid);
       derivWebSocket.send({ authorize: activeAccount.token });
     });
   };
@@ -292,7 +302,7 @@ export const UserProvider = ({ children }) => {
       const token = loginTokenMap[newActiveAccount.loginid];
       if (!token) throw new Error('Missing token for selected account.');
       setActiveAccount(newActiveAccount);
-      setIsAuthorized(false); // Reset authorization state
+      setIsAuthorized(false); 
       sessionStorage.setItem('activeAccountLoginid', newActiveAccount.loginid);
 
       await new Promise((resolve, reject) => {
@@ -311,16 +321,13 @@ export const UserProvider = ({ children }) => {
               unsubscribe();
               resolve();
             } else if (data.error) {
-              console.error('📌 Authorization error:', data.error);
+              console.error('Authorization error:', data.error);
               setIsAuthorized(false);
               unsubscribe();
               reject(new Error(data.error.message));
             }
           }
         });
-
-        console.log('📌 Switching to loginid:', newActiveAccount.loginid, 'with token:', token);
-        console.log('📌 Sending authorize for switch:', newActiveAccount.loginid);
         derivWebSocket.send({ authorize: token });
       });
 
@@ -329,12 +336,10 @@ export const UserProvider = ({ children }) => {
         account: newActiveAccount.loginid,
         subscribe: 1,
       });
-
-      console.log(`📌 Switched to ${accountType} account: ${newActiveAccount.loginid}`);
     } catch (error) {
-      console.error('📌 Error switching account:', error.message);
+      console.error('Error switching account:', error.message);
+      showNotification('error', `Failed to switch account: ${error.message}`);
       setError(`Failed to switch account: ${error.message}`);
-      alert(`Failed to switch account: ${error.message}`);
       throw error;
     }
   };
@@ -356,6 +361,11 @@ export const UserProvider = ({ children }) => {
 
   return (
     <UserContext.Provider value={contextValue}>
+      <Notification
+        type={notification.type}
+        content={notification.content}
+        trigger={notification.trigger}
+      />
       {children}
     </UserContext.Provider>
   );
