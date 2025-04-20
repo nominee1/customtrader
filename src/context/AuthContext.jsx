@@ -40,13 +40,6 @@ export const UserProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    const savedLoginid = sessionStorage.getItem('activeAccountLoginid');
-    if (savedLoginid) {
-      console.log('Loaded active account loginid from sessionStorage:', savedLoginid);
-    }
-  }, []);
-
-  useEffect(() => {
     let unsubscribers = [];
     let retryCount = 0;
     const maxRetries = 5;

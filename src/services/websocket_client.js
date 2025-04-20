@@ -1,12 +1,12 @@
 export class DerivWebSocket {
-  constructor(appId = '36300') {
+  constructor(appId = import.meta.env.VITE_DERIV_APP_ID) {
     this.appId = appId;
     this.socket = null;
     this.subscribers = new Set();
     this.reconnectInterval = 5000;
     this.heartbeatInterval = null;
-    this.isConnecting = false; // Track connection attempts
-    this.connectionPromise = null; // Track ongoing connection Promise
+    this.isConnecting = false; 
+    this.connectionPromise = null; 
   }
 
   connect() {
@@ -27,7 +27,6 @@ export class DerivWebSocket {
       this.socket = new WebSocket(`wss://ws.derivws.com/websockets/v3?app_id=${this.appId}`);
 
       this.socket.onopen = (event) => {
-        console.log('[open] Connection established');
         this.isConnecting = false;
         this.notifySubscribers('open', event);
         this.startHeartbeat();
@@ -40,7 +39,6 @@ export class DerivWebSocket {
           if (data.pong) {
             console.log('[heartbeat] Pong received');
           } else {
-            console.log('[message] Data received:', data);
             this.notifySubscribers('message', data);
           }
         } catch (error) {
@@ -54,7 +52,6 @@ export class DerivWebSocket {
         if (event.wasClean) {
           console.log(`[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`);
         } else {
-          console.log('[close] Connection died, attempting to reconnect...');
           this.reconnect();
         }
         this.notifySubscribers('close', event);
@@ -92,7 +89,6 @@ export class DerivWebSocket {
     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
       try {
         this.socket.send(JSON.stringify(data));
-        console.log('[send] Data sent:', data);
       } catch (error) {
         console.error('[send] Failed to send data:', error);
       }
@@ -108,7 +104,7 @@ export class DerivWebSocket {
       this.socket = null;
     }
     this.stopHeartbeat();
-    this.subscribers.clear(); // Clear all subscribers on manual close
+    this.subscribers.clear(); 
     this.isConnecting = false;
     this.connectionPromise = null;
   }
@@ -128,7 +124,6 @@ export class DerivWebSocket {
       if (this.socket && this.socket.readyState === WebSocket.OPEN) {
         try {
           this.send({ ping: 1 });
-          console.log('[heartbeat] Ping sent');
         } catch (error) {
           console.error('[heartbeat] Failed to send ping:', error);
         }

@@ -15,15 +15,12 @@ export function parseDerivAuthTokens() {
 
     if (accounts.length > 0) {
       sessionStorage.setItem('derivTokens', JSON.stringify(accounts));
-      console.log('✅ Saved Deriv Tokens to sessionStorage:', accounts);
       window.history.replaceState({}, document.title, window.location.pathname);
       
     }
-
-    console.log('✅ Parsed Deriv Tokens:', accounts);
     return accounts;
   } catch (error) {
-    console.error('📌 Error parsing Deriv tokens:', error.message);
+    console.error('Error parsing Deriv tokens:', error.message);
     return [];
   }
 }
