@@ -1,0 +1,48 @@
+/* WalletPage.css */
+
+/* Mobile styles (below 768px) */
+@media (max-width: 768px) {
+    .ant-table {
+      font-size: 12px !important;
+    }
+    .ant-table-cell {
+      padding: 8px !important;
+    }
+    .ant-table-thead > tr > th {
+      font-size: 12px !important;
+      padding: 8px !important;
+    }
+    .ant-card-body {
+      padding: 12px !important;
+    }
+    .ant-statistic-title {
+      font-size: 12px !important;
+    }
+    .ant-statistic-content {
+      font-size: 16px !important;
+    }
+    .ant-tabs-nav {
+      font-size: 14px !important;
+    }
+    .ant-input,
+    .ant-picker {
+      font-size: 12px !important;
+    }
+    .ant-checkbox-wrapper {
+      font-size: 12px !important;
+    }
+  }
+  
+  /* Sticky table header */
+  .ant-table-thead > tr > th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--color-fill-alter);
+  }
+  
+  /* Accessibility focus styles */
+  .ant-table-cell:focus {
+    outline: 2px solid var(--color-primary);
+    outline-offset: -1px;
+  }

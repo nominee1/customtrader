@@ -20,7 +20,6 @@ import {
   Badge,
   Tag,
   Spin,
-  App // For useApp hook
 } from 'antd';
 import { 
   ArrowUpOutlined,
@@ -38,6 +37,7 @@ import { useUser } from '../../../context/AuthContext';
 import { useContracts } from '../../../context/ContractsContext';
 import RecentTrades from '../../../components/RecentTrades';
 import RequestIdGenerator from '../../../services/uniqueIdGenerator'; 
+import Notification from '../../../utils/Notification';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -56,7 +56,18 @@ const RiseFallTrader = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [payout, setPayout] = useState(0);
   const [activeTab, setActiveTab] = useState('trade');
-  const [alert, setAlert] = useState({ type: '', message: '', description: '', visible: false });
+  const [notification, setNotification] = useState({
+    type: '',
+    content: '',
+    trigger: false,
+  });
+
+  const showNotification = (type, content) => {
+    setNotification({ type, content, trigger: true });
+    setTimeout(() => {
+      setNotification((prev) => ({ ...prev, trigger: false }));
+    }, 500);
+  };
 
   // Adjust amount when user changes (e.g., after account switch)
   useEffect(() => {
@@ -76,46 +87,22 @@ const RiseFallTrader = () => {
 
   const handleSubmit = async (contractType) => {
     if (!user || !isAuthorized || !user.token) {
-      setAlert({
-        type: 'error',
-        message: 'Authorization Error',
-        description: 'Please select an account and ensure it is authorized.',
-        visible: true,
-      });
-      setTimeout(() => setAlert({ ...alert, visible: false }), 5000);
+      showNotification('warning', 'Please select an account and ensure it is authorized.');
       return;
     }
   
     if (!amount || amount <= 0) {
-      setAlert({
-        type: 'error',
-        message: 'Invalid Amount',
-        description: 'Please enter a valid amount.',
-        visible: true,
-      });
-      setTimeout(() => setAlert({ ...alert, visible: false }), 5000);
+      showNotification('warning', 'Please enter a valid amount.');
       return;
     }
   
     if (durationType === 'ticks' && (duration < 1 || duration > 10)) {
-      setAlert({
-        type: 'error',
-        message: 'Invalid Duration',
-        description: 'Please select a tick duration between 1 and 10.',
-        visible: true,
-      });
-      setTimeout(() => setAlert({ ...alert, visible: false }), 5000);
+      showNotification('warning', 'Please select a tick duration between 1 and 10.');
       return;
     }
   
     if (durationType === 'minutes' && (minutes < 1 || minutes > 60)) {
-      setAlert({
-        type: 'error',
-        message: 'Invalid Duration',
-        description: 'Please select a minute duration between 1 and 60.',
-        visible: true,
-      });
-      setTimeout(() => setAlert({ ...alert, visible: false }), 5000);
+      showNotification('warning', 'Please select a minute duration between 1 and 60.');
       return;
     }
   
@@ -140,7 +127,6 @@ const RiseFallTrader = () => {
   
     try {
       const response = await sendAuthorizedRequest(contractData);
-      console.log('Contract purchased successfully:', response);
   
       const contractId = response?.buy?.contract_id;
       if (!contractId) {
@@ -163,26 +149,15 @@ const RiseFallTrader = () => {
   
       addLiveContract(contract);
   
-      setAlert({
-        type: 'success',
-        message: 'Contract Purchased',
-        description: `Successfully purchased ${contractType === 'rise' ? 'Rise' : 'Fall'} contract (ID: ${contractId}).`,
-        visible: true,
-      });
-      setTimeout(() => setAlert({ ...alert, visible: false }), 5000);
+      showNotification('success', `Successfully purchased ${contractType === 'rise' ? 'Rise' : 'Fall'} contract`);
     } catch (error) {
       console.error('Error purchasing contract:', error.message);
-      setAlert({
-        type: 'error',
-        message: 'Purchase Failed',
-        description: `Failed to purchase contract: ${error.message}`,
-        visible: true,
-      });
-      setTimeout(() => setAlert({ ...alert, visible: false }), 5000);
+      showNotification('error', `Failed to purchase contract: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
   };
+
   const volatilityOptions = [
     { value: 'R_10', label: 'Volatility 10 Index', payout: '95%' },
     { value: '1HZ10V', label: 'Volatility 10 (1s) Index', payout: '95%' },
@@ -211,6 +186,11 @@ const RiseFallTrader = () => {
       }}
     >
       <Row gutter={[24, 24]}>
+        <Notification
+          type={notification.type}
+          content={notification.content}
+          trigger={notification.trigger}
+        />
         <Col xs={24} md={16}>
           {loading ? (
             <Spin tip="Loading account details..." size="large" style={{ display: 'block', margin: '50px auto' }} />
@@ -238,18 +218,6 @@ const RiseFallTrader = () => {
               description="Your session has expired. Redirecting to login..."
               type="error"
               showIcon
-              style={{ marginBottom: 24 }}
-            />
-          )}
-
-          {alert.visible && (
-            <Alert
-              message={alert.message}
-              description={alert.description}
-              type={alert.type}
-              showIcon
-              closable
-              onClose={() => setAlert({ ...alert, visible: false })}
               style={{ marginBottom: 24 }}
             />
           )}

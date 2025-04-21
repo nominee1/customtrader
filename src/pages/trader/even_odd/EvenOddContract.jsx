@@ -33,6 +33,7 @@ import { useUser } from '../../../context/AuthContext';
 import { useContracts } from '../../../context/ContractsContext';
 import RecentTrades from '../../../components/RecentTrades';
 import RequestIdGenerator from '../../../services/uniqueIdGenerator'; 
+import Notification from '../../../utils/Notification';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -47,6 +48,18 @@ const EvenOddContract = () => {
   const [amount, setAmount] = useState(10);
   const [payout, setPayout] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [notification, setNotification] = useState({
+    type: '',
+    content: '',
+    trigger: false,
+  });
+
+  const showNotification = (type, content) => {
+    setNotification({ type, content, trigger: true });
+    setTimeout(() => {
+      setNotification((prev) => ({ ...prev, trigger: false }));
+    }, 500);
+  };
 
   // Calculate payout based on amount and symbol
   useEffect(() => {
@@ -59,13 +72,13 @@ const EvenOddContract = () => {
   const handleSubmit = async (contractType) => {
     if (!user || !isAuthorized) {
       console.error('User not authorized or no active account');
-      alert('Please select an account and ensure it is authorized.');
+      showNotification('warning', 'Please select an account and ensure it is authorized.');
       return;
     }
 
     if (!amount || amount <= 0) {
       console.error('Invalid amount');
-      alert('Please enter a valid amount.');
+      showNotification('warning', 'Please enter a valid amount.');
       return;
     }
 
@@ -91,7 +104,7 @@ const EvenOddContract = () => {
 
     try {
       const response = await sendAuthorizedRequest(contractData);
-      console.log('Contract purchased successfully:', response);
+
       const contractId = response?.buy?.contract_id;
       if(!contractId) {
         throw new Error('No contract_id returned form purchase');
@@ -110,10 +123,10 @@ const EvenOddContract = () => {
 
       addLiveContract(contract);
       
-      alert('Contract purchased successfully!');
+      showNotification('success', `Successfully purchased ${contractType === 'even' ? 'DIGITEVEN' : 'DIGITODD'} contract`);
     } catch (error) {
       console.error('Error purchasing contract:', error.message);
-      alert(`Failed to purchase contract: ${error.message}`);
+      showNotification('error', `Failed to purchase contract: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -147,6 +160,11 @@ const EvenOddContract = () => {
       }}
     >
       <Row gutter={[24, 24]}>
+        <Notification
+          type={notification.type}
+          content={notification.content}
+          trigger={notification.trigger}
+        />
         <Col xs={24} md={16}>
           {loading ? (
             <Spin tip="Loading account details..." size="large" style={{ display: 'block', margin: '50px auto' }} />

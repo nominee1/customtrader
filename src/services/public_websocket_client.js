@@ -1,6 +1,6 @@
 // services/public_websocket_client.js
 export class PublicWebSocket {
-    constructor(appId = '36300') {
+  constructor(appId = import.meta.env.VITE_DERIV_APP_ID) {
       this.appId = appId;
       this.socket = null;
       this.subscribers = new Set();

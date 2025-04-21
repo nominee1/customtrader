@@ -18,9 +18,7 @@ import {
   ConfigProvider,
   theme,
   Tag,
-  Spin,
-  notification,
-  App
+  Spin
 } from 'antd';
 import { 
   CheckOutlined,
@@ -39,6 +37,7 @@ import { useUser } from '../../../context/AuthContext';
 import { useContracts } from '../../../context/ContractsContext';
 import RecentTrades from '../../../components/RecentTrades';
 import RequestIdGenerator from '../../../services/uniqueIdGenerator'; 
+import Notification from '../../../utils/Notification';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -54,6 +53,18 @@ const MatchesDiffersTrader = () => {
   const [amount, setAmount] = useState(10);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [payout, setPayout] = useState(0);
+  const [notification, setNotification] = useState({
+    type: '',
+    content: '',
+    trigger: false,
+  });
+
+  const showNotification = (type, content) => {
+    setNotification({ type, content, trigger: true });
+    setTimeout(() => {
+      setNotification((prev) => ({ ...prev, trigger: false }));
+    }, 500);
+  };
 
   // Adjust amount when user changes (e.g., after account switch)
   useEffect(() => {
@@ -74,37 +85,25 @@ const MatchesDiffersTrader = () => {
   const handleSubmit = async (contractType) => {
     if (!user || !isAuthorized) {
       console.error('User not authorized or no active account');
-      notification.error({
-        message: 'Authorization Error',
-        description: 'Please select an account and ensure it is authorized.',
-      });
+      showNotification('warning', 'Please select an account and ensure it is authorized.');
       return;
     }
 
     if (!user.token) {
       console.error('No valid token for active account');
-      notification.error({
-        message: 'Token Error',
-        description: 'No valid token for the selected account. Please log in again.',
-      });
+      showNotification('error', 'No valid token for the selected account. Please log in again.');
       return;
     }
 
     if (!amount || amount <= 0) {
       console.error('Invalid amount');
-      notification.error({
-        message: 'Invalid Amount',
-        description: 'Please enter a valid amount.',
-      });
+      showNotification('warning', 'Please enter a valid amount.');
       return;
     }
 
     if (!selectedDigit || selectedDigit < 0 || selectedDigit > 9) {
       console.error('Invalid selected digit');
-      notification.error({
-        message: 'Invalid Digit',
-        description: 'Please select a digit between 0 and 9.',
-      });
+      showNotification('warning', 'Please select a digit between 0 and 9.');
       return;
     }
 
@@ -131,36 +130,29 @@ const MatchesDiffersTrader = () => {
 
     try {
       const response = await sendAuthorizedRequest(contractData);
-      console.log('Contract purchased successfully:', response);
 
       const contractId = response?.buy?.contract_id;
       if(!contractId) {
-        throw new Error('No contract_id returned form purchase');
+        throw new Error('No contract_id returned from purchase');
       }
 
       const contract = {
-        contract_id:contractId,
+        contract_id: contractId,
         type: contractType,
         symbol,
-        status:'open',
+        status: 'open',
         details: {
           amount,
-          currency:user.currency || 'USD'
+          currency: user.currency || 'USD'
         },
       };
 
       addLiveContract(contract);
       
-      notification.success({
-        message: 'Contract Purchased',
-        description: `Successfully purchased ${contractType === 'matches' ? 'Matches' : 'Differs'} contract for digit ${selectedDigit}.`,
-      });
+      showNotification('success', `Successfully purchased ${contractType === 'matches' ? 'Matches' : 'Differs'} contract`);
     } catch (error) {
       console.error('Error purchasing contract:', error.message);
-      notification.error({
-        message: 'Purchase Failed',
-        description: `Failed to purchase contract: ${error.message}`,
-      });
+      showNotification('error', `Failed to purchase contract: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -188,12 +180,17 @@ const MatchesDiffersTrader = () => {
           },
           Button: {
             colorPrimary: token.colorPrimary,
-            colorPrimaryHover: `${token.colorPrimary} DUTdd`,
+            colorPrimaryHover: `${token.colorPrimary}dd`,
           }
         }
       }}
     >
       <Row gutter={[24, 24]}>
+        <Notification
+          type={notification.type}
+          content={notification.content}
+          trigger={notification.trigger}
+        />
         <Col xs={24} md={16}>
           {loading ? (
             <Spin tip="Loading account details..." size="large" style={{ display: 'block', margin: '50px auto' }} />
