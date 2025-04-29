@@ -1,52 +1,79 @@
-import { Layout, Menu, Button, Row, Col, Typography, Space } from 'antd';
-import { Link, useNavigate } from 'react-router-dom';
-import { HomeOutlined, UserOutlined, DashboardOutlined, LoginOutlined, LogoutOutlined } from '@ant-design/icons';
+import React, { useState } from 'react';
+import { Layout, Button, Typography, Drawer } from 'antd';
+import { Link } from 'react-router-dom';
+import { MenuOutlined } from '@ant-design/icons';
+import '../assets/css/components/Header.css';
 
-const { Header: AntHeader } = Layout;
-const { Title } = Typography;
+const { Header } = Layout;
+const { Text } = Typography;
 
-function Header({ isAuthenticated = false, onLogout }) {
-  const navigate = useNavigate();
+const AppHeader = () => {
+  const [drawerVisible, setDrawerVisible] = useState(false);
 
-  const handleLogout = () => {
-    if (onLogout) onLogout();
-    navigate('/login');
+  const toggleDrawer = () => {
+    setDrawerVisible(!drawerVisible);
   };
 
-  return (
-    <AntHeader style={{ background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-      <Row justify="space-between" align="middle">
-        <Col>
-          <Link to="/">
-            <Title level={4} style={{ margin: 0 }}>
-              <Space>
-                <HomeOutlined />
-                My App
-              </Space>
-            </Title>
-          </Link>
-        </Col>
-        <Col>
-          <Menu mode="horizontal" selectedKeys={[]} style={{ borderBottom: 'none' }}>
-            {isAuthenticated ? (
-              <>
-                <Menu.Item key="dashboard" icon={<DashboardOutlined />}>
-                  <Link to="/dashboard">Dashboard</Link>
-                </Menu.Item>
-                <Menu.Item key="logout" icon={<LogoutOutlined />} onClick={handleLogout}>
-                  Logout
-                </Menu.Item>
-              </>
-            ) : (
-              <Menu.Item key="login" icon={<LoginOutlined />}>
-                <Link to="/login">Login</Link>
-              </Menu.Item>
-            )}
-          </Menu>
-        </Col>
-      </Row>
-    </AntHeader>
-  );
-}
+  // Optional: Enable this for menu toggle on mobile
+  const useMenuToggle = false; // Set to true to use drawer instead of buttons
 
-export default Header;
+  return (
+    <Header className="header">
+      <div className="header-container">
+        <div className="logo">
+          <Text className="logo-text">Mulla</Text>
+        </div>
+        {useMenuToggle && window.innerWidth <= 576 ? (
+          <>
+            <Button
+              type="text"
+              icon={<MenuOutlined />}
+              onClick={toggleDrawer}
+              className="menu-toggle"
+              style={{ fontSize: '20px', color: '#1890ff' }}
+              aria-label="Toggle menu"
+            />
+            <Drawer
+              placement="right"
+              closable={true}
+              onClose={toggleDrawer}
+              visible={drawerVisible}
+              width={200}
+              title="Menu"
+              styles={{
+                header: { padding: '16px', borderBottom: '1px solid #f0f0f0' },
+                body: { padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' },
+              }}
+            >
+              <Link to="/login" onClick={toggleDrawer}>
+                <Button className="header-button" block>
+                  Login
+                </Button>
+              </Link>
+              <Link to="/signup" onClick={toggleDrawer}>
+                <Button className="header-button" type="primary" block>
+                  Sign Up
+                </Button>
+              </Link>
+            </Drawer>
+          </>
+        ) : (
+          <div className="header-buttons">
+            <Link to="/login">
+              <Button className="header-button" variant="outlined">
+                Login
+              </Button>
+            </Link>
+            <Link to="/signup">
+              <Button className="header-button" type="primary">
+                Sign Up
+              </Button>
+            </Link>
+          </div>
+        )}
+      </div>
+    </Header>
+  );
+};
+
+export default AppHeader;

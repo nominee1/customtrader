@@ -1,13 +1,14 @@
-import AppRoutes from './Router';
-import './App.css';
+import AppRoutes from './Router'
+import './App.css'
 
-const App = () => {
+function App() {
+  
 
   return (
     <>
-      <AppRoutes />  
+      <AppRoutes />
     </>
   )
 }
 
-export default App;
+export default App

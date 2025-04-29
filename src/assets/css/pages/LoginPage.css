@@ -1,0 +1,42 @@
+/* LoginPage.css */
+.layout {
+    min-height: 100vh;
+    background: #f0f2f5;
+  }
+  .content {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 24px;
+  }
+  .card {
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border: none;
+  }
+  .card-body {
+    padding: 32px;
+  }
+  .logo {
+    height: 48px;
+    margin-bottom: 16px;
+  }
+  .title {
+    margin-bottom: 8px;
+  }
+  .error-alert {
+    margin-bottom: 24px;
+  }
+  .form-item {
+    display: flex;
+    justify-content: space-between;
+  }
+  .button-deriv {
+    background-color: #FF3D00;
+    color: #fff;
+  }
+  .signup-text {
+    text-align: center;
+    margin-top: 24px;
+  }
