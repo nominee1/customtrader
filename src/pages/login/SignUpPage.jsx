@@ -1,8 +1,7 @@
 import React from 'react';
 import { Form, Input, Button, Card, Typography, message } from 'antd';
 import { Link } from 'react-router-dom';
-import AppHeader from '../components/AppHeader'; // Adjust path as needed
-import '../assets/css/pages/SignUp.css';
+import '../../assets/css/pages/SignUp.css';
 
 const { Title, Text } = Typography;
 
@@ -24,7 +23,6 @@ const SignUpPage = () => {
 
   return (
     <div className="signup-page">
-      <AppHeader />
       <div className="signup-container">
         <Card className="signup-card">
           <Title level={3} className="signup-title">
