@@ -20,6 +20,8 @@ import {
 
 import { useNavigate, Link } from 'react-router-dom';
 import '../../assets/css/pages/LoginPage.css';
+import logo from '../../assets/images/logo.png';
+
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -58,8 +60,11 @@ const LoginPage = () => {
       <Content className="content">
         <Card className="card">
           <div style={{ textAlign: 'center', marginBottom: 24 }}>
-            <Title level={2} className='logo'>Mulla</Title>
-            <Divider ></Divider>
+            <img
+              src={logo} 
+              className="logo-img"
+              alt="Logo"
+            />
             <Title level={3} className="title">Sign in to your account</Title>
             <Text type="secondary">Connect with Deriv API to start trading</Text>
           </div>
@@ -140,7 +145,7 @@ const LoginPage = () => {
           </Space>
           <div className="signup-text">
             <Text type="secondary">Don't have an account? </Text>
-            <Link to="/register">
+            <Link to="/signup">
               <Text strong>Sign up</Text>
             </Link>
           </div>
