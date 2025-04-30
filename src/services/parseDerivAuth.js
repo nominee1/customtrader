@@ -16,7 +16,6 @@ export function parseDerivAuthTokens() {
     if (accounts.length > 0) {
       sessionStorage.setItem('derivTokens', JSON.stringify(accounts));
       window.history.replaceState({}, document.title, window.location.pathname);
-      
     }
     return accounts;
   } catch (error) {

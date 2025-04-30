@@ -1,6 +1,5 @@
 import { createContext, useState, useEffect, useContext, useMemo } from 'react';
 import { derivWebSocket } from '../services/websocket_client';
-import { parseDerivAuthTokens } from '../services/parseDerivAuth';
 import Notification from '../utils/Notification';
 
 const UserContext = createContext();
@@ -20,23 +19,14 @@ export const UserProvider = ({ children }) => {
   const [accountData, setAccountData] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isAuthorized, setIsAuthorized] = useState(false); // Track authorization state
-  const [notification, setNotification] = useState({
-    type: '',
-    content: '',
-    trigger: false,
-  });
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [notification, setNotification] = useState({ type: '', content: '', trigger: false });
 
-  const activeAccountType = useMemo(
-    () => (activeAccount?.is_virtual ? 'demo' : 'real'),
-    [activeAccount]
-  );
+  const activeAccountType = useMemo(() => (activeAccount?.is_virtual ? 'demo' : 'real'), [activeAccount]);
 
   const showNotification = (type, content) => {
     setNotification({ type, content, trigger: true });
-    setTimeout(() => {
-      setNotification((prev) => ({ ...prev, trigger: false }));
-    }, 500);
+    setTimeout(() => setNotification((prev) => ({ ...prev, trigger: false })), 3000);
   };
 
   useEffect(() => {
@@ -49,8 +39,6 @@ export const UserProvider = ({ children }) => {
       try {
         if (!derivWebSocket.isConnected()) {
           await derivWebSocket.connect();
-        } else {
-          console.log('WebSocket already open');
         }
       } catch (err) {
         console.error('WebSocket connection failed:', err.message);
@@ -70,28 +58,18 @@ export const UserProvider = ({ children }) => {
       setIsAuthorized(false);
 
       try {
-        let parsedAccounts = parseDerivAuthTokens();
-        if (!parsedAccounts.length) {
-          try {
-            const storedTokens = sessionStorage.getItem('derivTokens');
-            if (storedTokens) {
-              parsedAccounts = JSON.parse(storedTokens);
-              if (!Array.isArray(parsedAccounts)) {
-                throw new Error('Invalid token data in sessionStorage');
-              }
-            }
-          } catch (err) {
-            console.error('Error retrieving tokens from sessionStorage:', err.message);
-            sessionStorage.removeItem('derivTokens');
-            parsedAccounts = [];
-          }
-        }
+        const sessionToken = sessionStorage.getItem('sessionToken');
+        if (!sessionToken) throw new Error('Not authenticated');
 
-        if (!parsedAccounts.length) {
-          throw new Error('No valid tokens found in URL or sessionStorage');
-        }
+        // Fetch tokens from backend
+        const response = await fetch('/api/get-tokens', {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${sessionToken}` },
+        });
+        const data = await response.json();
+        if (!data.accounts || !data.accounts.length) throw new Error('No tokens found');
 
-        sessionStorage.setItem('derivTokens', JSON.stringify(parsedAccounts));
+        const parsedAccounts = data.accounts; // Array of { loginid, token, currency }
 
         await connectWebSocket();
 
@@ -102,7 +80,7 @@ export const UserProvider = ({ children }) => {
                 if (event === 'message' && data.authorize) {
                   const accountsFromList = data.authorize.account_list || [];
                   const mappedAccounts = accountsFromList.map((accInfo) => ({
-                    token: parsedAccounts.find((p) => p.loginid === accInfo.loginid)?.token || '',
+                    token: acc.token,
                     loginid: accInfo.loginid,
                     currency: accInfo.currency,
                     is_virtual: accInfo.is_virtual,
@@ -145,6 +123,7 @@ export const UserProvider = ({ children }) => {
             profile: account.raw,
           };
         });
+
         const tokenMap = {};
         parsedAccounts.forEach((acc) => {
           tokenMap[acc.loginid] = acc.token;
@@ -191,12 +170,10 @@ export const UserProvider = ({ children }) => {
         setError(err.message);
         if (err.message.includes('Invalid token') || err.message.includes('Max WebSocket retries')) {
           sessionStorage.removeItem('activeAccountLoginid');
-          sessionStorage.removeItem('derivTokens');
+          sessionStorage.removeItem('derivLoginTokenMap');
           setActiveAccount(null);
           setAccounts({ real: [], demo: [] });
           setIsAuthorized(false);
-          // Redirect to Deriv OAuth login
-          // window.location.href = 'https://oauth.deriv.com/oauth2/authorize?app_id=36300&...';
         }
       } finally {
         setLoading(false);
@@ -217,15 +194,13 @@ export const UserProvider = ({ children }) => {
 
   const handleWebSocketMessage = (data) => {
     if (data.error) {
-      console.error('📌 WebSocket error:', data.error);
-      if (data.error.code === 'Invalid fToken') {
+      console.error('WebSocket error:', data.error);
+      if (data.error.code === 'InvalidToken') {
         setError('Session expired. Please log in again.');
         setActiveAccount(null);
         setIsAuthorized(false);
         sessionStorage.removeItem('activeAccountLoginid');
-        sessionStorage.removeItem('derivTokens');
-        // Redirect to Deriv OAuth login
-        // window.location.href = 'https://oauth.deriv.com/oauth2/authorize?app_id=36300&...';
+        sessionStorage.removeItem('derivLoginTokenMap');
       }
       return;
     }
@@ -295,7 +270,7 @@ export const UserProvider = ({ children }) => {
       const token = loginTokenMap[newActiveAccount.loginid];
       if (!token) throw new Error('Missing token for selected account.');
       setActiveAccount(newActiveAccount);
-      setIsAuthorized(false); 
+      setIsAuthorized(false);
       sessionStorage.setItem('activeAccountLoginid', newActiveAccount.loginid);
 
       await new Promise((resolve, reject) => {
@@ -347,19 +322,17 @@ export const UserProvider = ({ children }) => {
     balance: activeAccount ? accountData[activeAccount.loginid]?.balance : 0,
     loading,
     error,
-    isAuthorized, // Expose authorization state
+    isAuthorized,
     realityChecks: activeAccount ? accountData[activeAccount.loginid]?.realityChecks : {},
     sendAuthorizedRequest,
   };
 
   return (
     <UserContext.Provider value={contextValue}>
-      <Notification
-        type={notification.type}
-        content={notification.content}
-        trigger={notification.trigger}
-      />
+      <Notification type={notification.type} content={notification.content} trigger={notification.trigger} />
       {children}
     </UserContext.Provider>
   );
 };
+
+export default UserProvider;
