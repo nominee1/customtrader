@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { derivWebSocket } from '../../services/websocket_client';
+import { registerUser } from '../../api/createUser';
 import CreatePassword from '../login/CreatePassword';
 import Notification from '../../utils/Notification';
 
@@ -8,6 +9,7 @@ const InitialSetup = () => {
   const [userInfo, setUserInfo] = useState(null);
   const [error, setError] = useState(null);
   const [notification, setNotification] = useState({ type: '', content: '', trigger: false });
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const showNotification = (type, content) => {
@@ -50,37 +52,36 @@ const InitialSetup = () => {
     fetchUserDetails();
   }, []);
 
-  // Handle password submission and backend registration
+  // Handle password submission
   const handlePasswordSubmit = async (password) => {
+    setLoading(true);
     try {
       const storedTokens = JSON.parse(sessionStorage.getItem('derivTokens'));
       if (!storedTokens) throw new Error('No tokens found');
 
-      const response = await fetch('/api/initial-setup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: userInfo.email,
-          fullName: userInfo.fullName,
-          accounts: storedTokens,
-          password,
-        }),
+      console.log('Sending to backend:', { fullName: userInfo.fullName, email: userInfo.email, password, accounts: storedTokens }); // Debug
+
+      const response = await registerUser({
+        full_name: userInfo.fullName,
+        email: userInfo.email,
+        password,
+        accounts: storedTokens,
       });
 
-      if (!response.ok) throw new Error('Failed to register user');
-
-      // Clear temporary tokens
       sessionStorage.removeItem('derivTokens');
 
-      // Set a session token (example)
-      const data = await response.json();
-      sessionStorage.setItem('sessionToken', data.sessionToken || 'temp-token');
+      if (!response.success || !response.sessionToken) {
+        throw new Error(response.error || 'Registration failed');
+      }
 
+      sessionStorage.setItem('sessionToken', response.sessionToken);
       showNotification('success', 'Account setup successful!');
       navigate('/dashboard');
     } catch (err) {
       setError(err.message);
       showNotification('error', err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -89,7 +90,7 @@ const InitialSetup = () => {
 
   return (
     <>
-      <CreatePassword onSubmit={handlePasswordSubmit} />
+      <CreatePassword onSubmit={handlePasswordSubmit} loading={loading} />
       <Notification type={notification.type} content={notification.content} trigger={notification.trigger} />
     </>
   );

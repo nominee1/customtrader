@@ -3,16 +3,16 @@ import { Form, Input, Button, Alert, Progress, Row, Col, Tooltip } from 'antd';
 import { LockOutlined, EyeInvisibleOutlined, EyeTwoTone, InfoCircleOutlined } from '@ant-design/icons';
 import Notification from '../../utils/Notification';
 
-const CreatePassword = ({ onSubmit }) => {
+const CreatePassword = ({ onSubmit, loading }) => {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false)
+  const [formLoading, setFormLoading] = useState(false);
   const [error, setError] = useState(null);
   const [password, setPassword] = useState('');
   const [notification, setNotification] = useState({ type: '', content: '', trigger: false });
 
-  // Password strength calculator
   const calculateStrength = (pass) => {
-    if (!pass) return 0;    let strength = 0;
+    if (!pass) return 0;
+    let strength = 0;
     if (pass.length > 5) strength += 20;
     if (pass.length > 8) strength += 20;
     if (/[A-Z]/.test(pass)) strength += 20;
@@ -35,7 +35,7 @@ const CreatePassword = ({ onSubmit }) => {
   };
 
   const handleSubmit = async (values) => {
-    setLoading(true);
+    setFormLoading(true);
     setError(null);
     try {
       await onSubmit(values.password);
@@ -45,18 +45,14 @@ const CreatePassword = ({ onSubmit }) => {
       setError(err.message || 'Failed to create password');
       setNotification({ type: 'error', content: err.message || 'Failed to create password', trigger: true });
     } finally {
-      setLoading(false);
+      setFormLoading(false);
     }
   };
 
   return (
     <div style={{ maxWidth: 400, margin: '40px auto', padding: '20px' }}>
-      <h2>Create  Password</h2>
-
-      <p>
-        Create a strong password to secure your account. 
-        This is the password that you will use to access your Derara account. 
-      </p>
+      <h2>Create New Password</h2>
+      <p>Create a strong password to secure your account</p>
       {error && <Alert message={error} type="error" showIcon closable onClose={() => setError(null)} />}
       <Form form={form} name="createPassword" onFinish={handleSubmit} layout="vertical">
         <Form.Item
@@ -115,7 +111,7 @@ const CreatePassword = ({ onSubmit }) => {
           />
         </Form.Item>
         <Form.Item>
-          <Button type="primary" htmlType="submit" block size="large" loading={loading}>
+          <Button type="primary" htmlType="submit" block size="large" loading={formLoading || loading}>
             Set Password
           </Button>
         </Form.Item>
