@@ -1,6 +1,7 @@
 import { createContext, useState, useEffect, useContext, useMemo } from 'react';
 import { derivWebSocket } from '../services/websocket_client';
 import Notification from '../utils/Notification';
+import { getTokens } from '../api/getTokens';
 
 const UserContext = createContext();
 
@@ -38,13 +39,16 @@ export const UserProvider = ({ children }) => {
     const connectWebSocket = async () => {
       try {
         if (!derivWebSocket.isConnected()) {
+          console.log('Connecting to Deriv WebSocket...');
           await derivWebSocket.connect();
+          console.log('WebSocket connected.');
         }
       } catch (err) {
         console.error('WebSocket connection failed:', err.message);
         if (retryCount < maxRetries) {
           retryCount++;
           const delay = baseRetryDelay * Math.pow(2, retryCount);
+          console.log(`Retrying WebSocket connection in ${delay}ms...`);
           await new Promise((resolve) => setTimeout(resolve, delay));
           return connectWebSocket();
         }
@@ -61,12 +65,11 @@ export const UserProvider = ({ children }) => {
         const sessionToken = sessionStorage.getItem('sessionToken');
         if (!sessionToken) throw new Error('Not authenticated');
 
-        // Fetch tokens from backend
-        const response = await fetch('/api/get-tokens', {
-          method: 'GET',
-          headers: { 'Authorization': `Bearer ${sessionToken}` },
-        });
+        console.log('Fetching tokens with sessionToken:', sessionToken);
+        const response = await getTokens();
         const data = await response.json();
+        console.log('Tokens fetched:', data);
+
         if (!data.accounts || !data.accounts.length) throw new Error('No tokens found');
 
         const parsedAccounts = data.accounts; // Array of { loginid, token, currency }
@@ -76,8 +79,10 @@ export const UserProvider = ({ children }) => {
         const accountAuthArrays = await Promise.all(
           parsedAccounts.map((acc) => {
             return new Promise((resolve) => {
+              console.log(`Authorizing token for loginid: ${acc.loginid}`);
               const unsubscribe = derivWebSocket.subscribe((event, data) => {
                 if (event === 'message' && data.authorize) {
+                  console.log(`Authorization successful for ${acc.loginid}:`, data.authorize);
                   const accountsFromList = data.authorize.account_list || [];
                   const mappedAccounts = accountsFromList.map((accInfo) => ({
                     token: acc.token,
@@ -149,10 +154,12 @@ export const UserProvider = ({ children }) => {
           await new Promise((resolve, reject) => {
             const unsubscribe = derivWebSocket.subscribe((event, data) => {
               if (event === 'message' && data.authorize) {
+                console.log(`Default account authorized: ${defaultAccount.loginid}`);
                 setIsAuthorized(true);
                 unsubscribe();
                 resolve();
               } else if (event === 'message' && data.error) {
+                console.error('Default account authorization error:', data.error);
                 unsubscribe();
                 reject(new Error(data.error.message));
               }
@@ -162,6 +169,7 @@ export const UserProvider = ({ children }) => {
         }
 
         validAccounts.forEach((account) => {
+          console.log(`Subscribing to balance for ${account.loginid}`);
           derivWebSocket.send({ balance: 1, account: account.loginid, subscribe: 1 });
         });
       } catch (err) {

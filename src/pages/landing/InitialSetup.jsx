@@ -59,7 +59,6 @@ const InitialSetup = () => {
       const storedTokens = JSON.parse(sessionStorage.getItem('derivTokens'));
       if (!storedTokens) throw new Error('No tokens found');
 
-      console.log('Sending to backend:', { fullName: userInfo.fullName, email: userInfo.email, password, accounts: storedTokens }); // Debug
 
       const response = await registerUser({
         full_name: userInfo.fullName,

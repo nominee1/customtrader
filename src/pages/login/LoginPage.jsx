@@ -5,6 +5,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import Notification from '../../utils/Notification';
 import '../../assets/css/pages/LoginPage.css';
 import logo from '../../assets/images/logo.png';
+import { login } from '../../api/login';
+import { checkUser } from '../../api/checkUser';
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -26,33 +28,21 @@ const LoginPage = () => {
     setError(null);
     try {
       // Check if user exists
-      const checkResponse = await fetch('/api/check-user', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: values.email }),
-      });
-      const checkData = await checkResponse.json();
-
-      if (!checkData.exists) {
+      const checkResponse = await checkUser({ email: values.email });
+      if (!checkResponse.exists) {
         showNotification('warning', 'No account found. Please log in with Deriv first.');
         handleDerivAuth();
         return;
       }
 
       // Attempt login
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: values.email, password: values.password }),
-      });
-      const data = await response.json();
-
-      if (data.success) {
-        sessionStorage.setItem('sessionToken', data.sessionToken || 'temp-token');
+      const response = await login({ email: values.email, password: values.password });
+      if (response.success) {
+        sessionStorage.setItem('sessionToken', response.sessionToken || 'temp-token');
         showNotification('success', 'Login successful!');
         navigate('/dashboard');
       } else {
-        throw new Error(data.error || 'Invalid credentials');
+        throw new Error(response.error || 'Invalid credentials');
       }
     } catch (err) {
       setError(err.message || 'Failed to login');
