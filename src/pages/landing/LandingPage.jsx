@@ -1,40 +1,35 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Layout, message } from 'antd';
-import { useNavigate } from 'react-router-dom';
 import AppHeader from '../../components/Header';
 import MainSection from './MainSection';
 import AppFooter from '../../components/Footer';
-import { parseDerivAuthTokens } from '../../services/parseDerivAuth'; 
+import InitialSetup from './InitialSetup';
+import { parseDerivAuthTokens } from '../../services/parseDerivAuth';
 
 const { Content } = Layout;
 
 const LandingPage = () => {
-  const navigate = useNavigate();
   const [messageApi, contextHolder] = message.useMessage();
+  const [hasAccounts, setHasAccounts] = useState(false);
 
   useEffect(() => {
     const accounts = parseDerivAuthTokens();
-
     if (accounts.length > 0) {
-      // Store the accounts in localStorage for later use
-      localStorage.setItem('accounts', JSON.stringify(accounts));
-
-      // Display success message
+      setHasAccounts(true);
       messageApi.open({
         type: 'success',
-        content: 'Login successful!',
+        content: 'Deriv login successful! Please set a password.',
       });
-
-      navigate('/dashboard');
     }
-  }, [navigate, messageApi]);
+  }, [messageApi]);
 
+  // Render InitialSetup if accounts are present, otherwise show landing page
   return (
     <Layout className="layout" style={{ minHeight: '100vh' }}>
-      {contextHolder} {/* Add contextHolder to render the message */}
+      {contextHolder}
       <AppHeader />
       <Content style={{ marginTop: 64 }}>
-        <MainSection />
+        {hasAccounts ? <InitialSetup /> : <MainSection />}
       </Content>
       <AppFooter />
     </Layout>

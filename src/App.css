@@ -1,0 +1,124 @@
+/* ===== Light Mode ===== */
+:root {
+    --background-color: #f2f2f2;
+    --background-card: #ffffff;
+    --primary-color: #0b1d51;
+    --primary-hover-color: #142d71;
+    --secondary-color: #c9a227;
+    --secondary-hover-color: #b88f1f;
+    --text-primary-color: #111111;
+    --text-secondary-color: #6b6b6b;
+    --border-color: #d4d4d4;
+  
+    --success-color: #2e7d32;
+    --success-hover-color: #388e3c;
+    --danger-color: #c62828;
+    --danger-hover-color: #d32f2f;
+    --info-color: #2196f3;
+    --warning-color: #ffa000;
+  
+    --tab-hover-background: #e0e0e0;
+    --card-hover-background: #ffffff;
+  
+    --focus-ring-color: #0b1d51;
+    --active-button-color: #071639;
+  
+    --transition-speed: 0.3s;
+  }
+  
+  /* ===== Dark Mode ===== */
+  [data-theme="dark"] {
+    --background-color: #0d1117;
+    --background-card: #111827;
+    --primary-color: #1e40af;
+    --primary-hover-color: #3657d6;
+    --secondary-color: #f4c430;
+    --secondary-hover-color: #d4aa23;
+    --text-primary-color: #e5e5e5;
+    --text-secondary-color: #8a8a8a;
+    --border-color: #1f2937;
+  
+    --success-color: #00e676;
+    --success-hover-color: #00ff87;
+    --danger-color: #ff1744;
+    --danger-hover-color: #ff4569;
+    --info-color: #64b5f6;
+    --warning-color: #ffb300;
+  
+    --tab-hover-background: #1a1f2c;
+    --card-hover-background: #111827;
+  
+    --focus-ring-color: #3657d6;
+    --active-button-color: #15358a;
+  
+    --transition-speed: 0.3s;
+}
+  
+  /* ===== General Reset ===== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+  }
+  
+  /* ===== General Styles ===== */
+  body {
+    background-color: var(--background-color);
+    color: var(--text-primary-color);
+    transition: background-color var(--transition-speed), color var(--transition-speed);
+  }
+  
+  /* ===== Headings ===== */
+h1, h2, h3, h4 {
+    font-family: 'Ubuntu', system-ui, sans-serif;
+}
+
+
+  
+/* ===== Buttons ===== */
+button {
+    background-color: var(--secondary-color);
+    color: var(--text-primary-color);
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color var(--transition-speed), color var(--transition-speed);
+}
+  
+button:hover {
+    background-color: var(--secondary-hover-color);
+}
+  
+  /* ===== Inputs ===== */
+input, textarea, select {
+    background-color: var(--background-card);
+    color: var(--text-primary-color);
+    border: 1px solid var(--border-color);
+    padding: 8px;
+    border-radius: 5px;
+    transition: background-color var(--transition-speed), border-color var(--transition-speed), color var(--transition-speed);
+}
+  
+input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+  
+  /* ===== Cards (Optional) ===== */
+  .card {
+    background-color: var(--background-card);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    transition: background-color var(--transition-speed);
+  }
+  .card:hover {
+    background-color: var(--card-hover-background);
+  }
+  
+  /* ===== Tab Hover ===== */
+  .tab:hover {
+    background-color: var(--tab-hover-background);
+  }
