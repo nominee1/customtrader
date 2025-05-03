@@ -18,7 +18,8 @@ import {
   ConfigProvider,
   theme,
   Tag,
-  Spin
+  Spin,
+  Tabs, // Added Tabs import
 } from 'antd';
 import { 
   NumberOutlined,
@@ -27,7 +28,7 @@ import {
   InfoCircleOutlined,
   ArrowUpOutlined,
   ArrowDownOutlined,
-  HistoryOutlined
+  HistoryOutlined,
 } from '@ant-design/icons';
 import { useUser } from '../../../context/AuthContext';
 import { useContracts } from '../../../context/ContractsContext';
@@ -37,6 +38,7 @@ import Notification from '../../../utils/Notification';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
+const { TabPane } = Tabs; // Added TabPane import
 
 const EvenOddContract = () => {
   const { user, sendAuthorizedRequest, isAuthorized, loading, error } = useUser(); 
@@ -48,6 +50,7 @@ const EvenOddContract = () => {
   const [amount, setAmount] = useState(10);
   const [payout, setPayout] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState('trade'); // Added state for active tab
   const [notification, setNotification] = useState({
     type: '',
     content: '',
@@ -98,7 +101,7 @@ const EvenOddContract = () => {
         duration_unit: 't',
         symbol: symbol,
       },
-      loginid: user.loginid, // Ensured to be the activeAccount's loginid
+      loginid: user.loginid,
       req_id: req_id,
     };
 
@@ -107,17 +110,17 @@ const EvenOddContract = () => {
 
       const contractId = response?.buy?.contract_id;
       if(!contractId) {
-        throw new Error('No contract_id returned form purchase');
+        throw new Error('No contract_id returned from purchase');
       }
 
       const contract = {
-        contract_id:contractId,
+        contract_id: contractId,
         type: contractType,
         symbol,
-        status:'open',
+        status: 'open',
         details: {
           amount,
-          currency:user.currency || 'USD'
+          currency: user.currency || 'USD'
         },
       };
 
@@ -203,177 +206,197 @@ const EvenOddContract = () => {
               </Tooltip>
             }
           >
-            <Space direction="vertical" size={24} style={{ width: '100%' }}>
-              {/* Symbol Selector */}
-              <div>
-                <Text strong style={{ display: 'block', marginBottom: 8 }}>Volatility Index</Text>
-                <Select
-                  value={symbol}
-                  onChange={setSymbol}
-                  style={{ width: '100%' }}
-                  placeholder="Select a volatility index"
-                  optionLabelProp="label"
-                >
-                  {volatilityOptions.map(option => (
-                    <Option 
-                      key={option.value} 
-                      value={option.value}
-                      label={
-                        <Space>
-                          <span>{option.label}</span>
-                          <Tag color={token.colorPrimary}>{option.payout} payout</Tag>
-                        </Space>
-                      }
+            <Tabs activeKey={activeTab} onChange={setActiveTab}>
+              <TabPane tab="Trade" key="trade">
+                <Space direction="vertical" size={24} style={{ width: '100%', marginTop: 16 }}>
+                  {/* Symbol Selector */}
+                  <div>
+                    <Text strong style={{ display: 'block', marginBottom: 8 }}>Volatility Index</Text>
+                    <Select
+                      value={symbol}
+                      onChange={setSymbol}
+                      style={{ width: '100%' }}
+                      placeholder="Select a volatility index"
+                      optionLabelProp="label"
                     >
-                      <Space>
-                        <span>{option.label}</span>
-                        <Tag color={token.colorPrimary} style={{ marginLeft: 'auto' }}>
-                          {option.payout} payout
-                        </Tag>
-                      </Space>
-                    </Option>
-                  ))}
-                </Select>
-              </div>
+                      {volatilityOptions.map(option => (
+                        <Option 
+                          key={option.value} 
+                          value={option.value}
+                          label={
+                            <Space>
+                              <span>{option.label}</span>
+                              <Tag color={token.colorPrimary}>{option.payout} payout</Tag>
+                            </Space>
+                          }
+                        >
+                          <Space>
+                            <span>{option.label}</span>
+                            <Tag color={token.colorPrimary} style={{ marginLeft: 'auto' }}>
+                              {option.payout} payout
+                            </Tag>
+                          </Space>
+                        </Option>
+                      ))}
+                    </Select>
+                  </div>
 
-              {/* Tick Duration Selector */}
-              <div>
-                <Text strong style={{ display: 'block', marginBottom: 8 }}>
-                  Duration (Ticks)
-                </Text>
-                <Row justify="space-between" style={{ padding: '0 10px' }}>
-                  {[...Array(10)].map((_, i) => {
-                    const tick = i + 1;
-                    const isActive = tick === duration;
-                    const IconComponent = isActive ? CheckCircleOutlined : CloseCircleOutlined;
+                  {/* Tick Duration Selector */}
+                  <div>
+                    <Text strong style={{ display: 'block', marginBottom: 8 }}>
+                      Duration (Ticks)
+                    </Text>
+                    <Row justify="space-between" style={{ padding: '0 10px' }}>
+                      {[...Array(10)].map((_, i) => {
+                        const tick = i + 1;
+                        const isActive = tick === duration;
+                        const IconComponent = isActive ? CheckCircleOutlined : CloseCircleOutlined;
 
-                    return (
-                      <Col key={tick}>
-                        <Tooltip title={`${tick} tick${tick > 1 ? 's' : ''}`}>
-                          <IconComponent
-                            style={{
-                              fontSize: 24,
-                              color: isActive ? token.colorPrimary : token.colorBorder,
-                              cursor: 'pointer',
-                            }}
-                            onClick={() => setDuration(tick)}
-                          />
-                        </Tooltip>
-                      </Col>
-                    );
-                  })}
-                </Row>
-                <Text type="secondary" style={{ display: 'block', textAlign: 'center', marginTop: 8 }}>
-                  Selected: {duration} tick{duration > 1 ? 's' : ''}
-                </Text>
-              </div>
+                        return (
+                          <Col key={tick}>
+                            <Tooltip title={`${tick} tick${tick > 1 ? 's' : ''}`}>
+                              <IconComponent
+                                style={{
+                                  fontSize: 24,
+                                  color: isActive ? token.colorPrimary : token.colorBorder,
+                                  cursor: 'pointer',
+                                }}
+                                onClick={() => setDuration(tick)}
+                              />
+                            </Tooltip>
+                          </Col>
+                        );
+                      })}
+                    </Row>
+                    <Text type="secondary" style={{ display: 'block', textAlign: 'center', marginTop: 8 }}>
+                      Selected: {duration} tick{duration > 1 ? 's' : ''}
+                    </Text>
+                  </div>
 
-              {/* Basis Selection */}
-              <div>
-                <Text strong style={{ display: 'block', marginBottom: 8 }}>
-                  Basis
-                </Text>
-                <Radio.Group 
-                  value={basis} 
-                  onChange={(e) => setBasis(e.target.value)} 
-                  buttonStyle="solid"
-                  style={{ width: '100%' }}
-                >
-                  <Radio.Button value="stake" style={{ width: '50%', textAlign: 'center' }}>
-                    Stake
-                  </Radio.Button>
-                  <Radio.Button value="payout" style={{ width: '50%', textAlign: 'center' }}>
-                    Payout
-                  </Radio.Button>
-                </Radio.Group>
-              </div>
+                  {/* Basis Selection */}
+                  <div>
+                    <Text strong style={{ display: 'block', marginBottom: 8 }}>
+                      Basis
+                    </Text>
+                    <Radio.Group 
+                      value={basis} 
+                      onChange={(e) => setBasis(e.target.value)} 
+                      buttonStyle="solid"
+                      style={{ width: '100%' }}
+                    >
+                      <Radio.Button value="stake" style={{ width: '50%', textAlign: 'center' }}>
+                        Stake
+                      </Radio.Button>
+                      <Radio.Button value="payout" style={{ width: '50%', textAlign: 'center' }}>
+                        Payout
+                      </Radio.Button>
+                    </Radio.Group>
+                  </div>
 
-              {/* Amount Input */}
-              <div>
-                <Text strong style={{ display: 'block', marginBottom: 8 }}>
-                  Amount ({user?.currency || 'USD'})
-                </Text>
-                <InputNumber
-                  min={1}
-                  max={user?.balance || 1000}
-                  value={amount}
-                  onChange={setAmount}
-                  style={{ width: '100%' }}
-                  precision={2}
-                  prefix="$"
-                  step={5}
-                  disabled={!user || !isAuthorized}
-                />
-                <Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
-                  Available balance: {(user?.balance || 0).toFixed(2)} {user?.currency || 'USD'}
-                </Text>
-              </div>
-
-              {/* Payout Information */}
-              <div>
-                <Row gutter={16}>
-                  <Col span={12}>
-                    <Statistic
-                      title="Potential Payout"
-                      value={payout}
-                      precision={2}
-                      prefix={<ArrowUpOutlined style={{ color: token.colorSuccess }} />}
-                      valueStyle={{ color: token.colorSuccess }}
-                    />
-                  </Col>
-                  <Col span={12}>
-                    <Statistic
-                      title="Potential Loss"
+                  {/* Amount Input */}
+                  <div>
+                    <Text strong style={{ display: 'block', marginBottom: 8 }}>
+                      Amount ({user?.currency || 'USD'})
+                    </Text>
+                    <InputNumber
+                      min={1}
+                      max={user?.balance || 1000}
                       value={amount}
+                      onChange={setAmount}
+                      style={{ width: '100%' }}
                       precision={2}
-                      prefix={<ArrowDownOutlined style={{ color: token.colorError }} />}
-                      valueStyle={{ color: token.colorError }}
+                      prefix="$"
+                      step={5}
+                      disabled={!user || !isAuthorized}
                     />
-                  </Col>
-                </Row>
-                <Progress
-                  percent={((payout - amount) / amount * 100).toFixed(0)}
-                  strokeColor={token.colorSuccess}
-                  trailColor={token.colorError}
-                  format={percent => `${percent}% return`}
-                  style={{ marginTop: 16 }}
-                />
-              </div>
+                    <Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
+                      Available balance: {(user?.balance || 0).toFixed(2)} {user?.currency || 'USD'}
+                    </Text>
+                  </div>
 
-              {/* Action Buttons */}
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Button
-                    type="primary"
-                    size="large"
-                    block
-                    style={{ 
-                      background: '#722ed1',
-                      borderColor: '#722ed1',
-                      height: 48
+                  {/* Payout Information */}
+                  <div>
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <Statistic
+                          title="Potential Payout"
+                          value={payout}
+                          precision={2}
+                          prefix={<ArrowUpOutlined style={{ color: token.colorSuccess }} />}
+                          valueStyle={{ color: token.colorSuccess }}
+                        />
+                      </Col>
+                      <Col span={12}>
+                        <Statistic
+                          title="Potential Loss"
+                          value={amount}
+                          precision={2}
+                          prefix={<ArrowDownOutlined style={{ color: token.colorError }} />}
+                          valueStyle={{ color: token.colorError }}
+                        />
+                      </Col>
+                    </Row>
+                    <Progress
+                      percent={((payout - amount) / amount * 100).toFixed(0)}
+                      strokeColor={token.colorSuccess}
+                      trailColor={token.colorError}
+                      format={percent => `${percent}% return`}
+                      style={{ marginTop: 16 }}
+                    />
+                  </div>
+
+                  {/* Action Buttons */}
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <Button
+                        type="primary"
+                        size="large"
+                        block
+                        style={{ 
+                          background: '#722ed1',
+                          borderColor: '#722ed1',
+                          height: 48
+                        }}
+                        onClick={() => handleSubmit('odd')}
+                        loading={isSubmitting}
+                        disabled={isSubmitting || !user || !isAuthorized}
+                      >
+                        ODD
+                      </Button>
+                    </Col>
+                    <Col span={12}>
+                      <Button
+                        type="primary"
+                        size="large"
+                        block
+                        style={{ height: 48 }}
+                        onClick={() => handleSubmit('even')}
+                        loading={isSubmitting}
+                        disabled={isSubmitting || !user || !isAuthorized}
+                      >
+                        EVEN
+                      </Button>
+                    </Col>
+                  </Row>
+                </Space>
+              </TabPane>
+              <TabPane tab="Analysis" key="stats">
+                <div style={{ padding: '16px 0' }}>
+                  <Text strong>Digit Probability Analysis</Text>
+                  <Divider style={{ margin: '12px 0' }} />
+                  <iframe
+                    src="https://eveen.vercel.app/"
+                    style={{
+                      width: '100%',
+                      height: window.innerWidth <= 576 ? '80vh' : '100vh',
+                      border: 'none',
+                      borderRadius: '8px',
                     }}
-                    onClick={() => handleSubmit('odd')}
-                    loading={isSubmitting}
-                    disabled={isSubmitting || !user || !isAuthorized}
-                  >
-                    ODD
-                  </Button>
-                </Col>
-                <Col span={12}>
-                  <Button
-                    type="primary"
-                    size="large"
-                    block
-                    style={{ height: 48 }}
-                    onClick={() => handleSubmit('even')}
-                    loading={isSubmitting}
-                    disabled={isSubmitting || !user || !isAuthorized}
-                  >
-                    EVEN
-                  </Button>
-                </Col>
-              </Row>
-            </Space>
+                    title="Even/Odd Market Analysis"
+                  />
+                </div>
+              </TabPane>
+            </Tabs>
           </Card>
         </Col>
 

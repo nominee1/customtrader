@@ -452,11 +452,20 @@ const OverUnderTrader = () => {
                   </Row>
                 </Space>
               </TabPane>
-              <TabPane tab="Statistics" key="stats">
+              <TabPane tab="Analysis" key="stats">
                 <div style={{ padding: '16px 0' }}>
                   <Text strong>Digit Probability Analysis</Text>
                   <Divider style={{ margin: '12px 0' }} />
-                  <Text type="secondary">Coming soon - historical performance of each digit</Text>
+                    <iframe
+                      src="https://over-smoky.vercel.app"
+                      style={{
+                        width: '100%',
+                        height: window.innerWidth <= 576 ? '80vh' : '100vh',
+                        border: 'none',
+                        borderRadius: '8px',
+                      }}
+                      title="Even/Odd Market Analysis"
+                    />
                 </div>
               </TabPane>
             </Tabs>

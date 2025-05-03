@@ -43,18 +43,18 @@ const features = [
     icon: <NumberOutlined />,
     title: 'Even/Odd',
     description: 'Bet on digit outcomes',
-    path: '/trade/even-odd'
+    path: '/even-odd'
   },
   {
     icon: <ArrowUpOutlined />,
     title: 'Over/Under',
     description: 'Set your price barriers',
-    path: '/trade/over-under'
+    path: '/over-under'
   },
   {
     icon: <BarChartOutlined />,
-    title: 'Market Analysis',
-    description: 'Real-time insights',
+    title: 'Matches/Differs',
+    description: 'Predict the digit outcomes',
     path: '/analysis'
   }
 ];
