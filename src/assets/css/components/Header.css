@@ -40,23 +40,16 @@
 
 .header-buttons {
   display: flex;
-  gap: 8px;
+  gap: 10px;
 }
 
 .header-button {
-  font-size: 14px;
-  background-color: var(--secondary-color);
-  color: var(--text-primary-color);
-  border: none;
-  padding: 8px 12px;
+  font-size: 16px;
   border-radius: 5px;
   cursor: pointer;
   transition: background-color var(--transition-speed), color var(--transition-speed);
 }
 
-.header-button:hover {
-  background-color: var(--secondary-hover-color);
-}
 
 /* Responsive styles */
 @media (max-width: 768px) {

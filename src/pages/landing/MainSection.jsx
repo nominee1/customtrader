@@ -101,6 +101,21 @@ const MainSection = () => {
   const [isHovering, setIsHovering] = useState(null);
 
 
+  const handleDerivAuth = async () => {
+    const appId = import.meta.env.VITE_DERIV_APP_ID;
+    const redirectUri = `${window.location.origin}/`; 
+    window.location.href = `https://oauth.deriv.com/oauth2/authorize?app_id=${appId}&response_type=token&scope=read&redirect_uri=${encodeURIComponent(redirectUri)}`;
+    console.log('Redirecting to Deriv authentication...');
+  };
+
+  const handleDbot = async () => {
+    window.location.href = `https://denarapro.com/`;
+  }
+
+  const handleSignup = async () => {
+    window.location.href = 'https://hub.deriv.com/tradershub/signup?sidc=7E33F70B-5C69-47FB-85A3-B48BBFD63AA5&utm_campaign=dynamicworks&utm_medium=affiliate&utm_source=CU13613';
+  }
+
   return (
     <ConfigProvider
       theme={{
@@ -167,11 +182,12 @@ const MainSection = () => {
                     padding: '0 32px'
                   }}
                   icon={<RocketOutlined />}
+                  onClick={handleDerivAuth}
                                 
                 >
-                  Start Tradin
+                  Start Trading
                 </Button>
-                <Link to="/login">
+                <Link>
                   <Button 
                     size="large"
                     style={{
@@ -182,8 +198,9 @@ const MainSection = () => {
                       padding: '0 32px',
                       background: 'rgba(255,255,255,0.1)'
                     }}
+                    onClick={handleDbot}
                   >
-                    Live Demo
+                    DBot
                   </Button>
                 </Link>
               </Space>
@@ -402,6 +419,7 @@ const MainSection = () => {
                 fontWeight: 600,
                 fontSize: 16
               }}
+              onClick={handleSignup}
             >
               Create Free Account
             </Button>
@@ -431,7 +449,7 @@ const MainSection = () => {
                 marginBottom: 16
               }} />
               <Title level={4} style={{ marginBottom: 8 }}>Phone Support</Title>
-              <Text strong style={{ fontSize: 16 }}>+254 713 975 073</Text>
+              <Text strong style={{ fontSize: 16 }}>+254 719 343 802</Text>
               <Paragraph type="secondary" style={{ marginTop: 8 }}>
                 24/7 dedicated support
               </Paragraph>
@@ -455,7 +473,7 @@ const MainSection = () => {
                 marginBottom: 16
               }} />
               <Title level={4} style={{ marginBottom: 8 }}>Email Us</Title>
-              <Text strong style={{ fontSize: 16 }}>info@mullake.com</Text>
+              <Text strong style={{ fontSize: 16 }}>support@denaradigitpro.com</Text>
               <Paragraph type="secondary" style={{ marginTop: 8 }}>
                 Typically responds within 1 hour
               </Paragraph>
@@ -481,7 +499,7 @@ const MainSection = () => {
                 </Space>
               </div>
               <Title level={4} style={{ marginBottom: 8 }}>Social Media</Title>
-              <Text strong style={{ fontSize: 16 }}>@mulla_ke</Text>
+              <Text strong style={{ fontSize: 16 }}>@denaradigitpro</Text>
               <Paragraph type="secondary" style={{ marginTop: 8 }}>
                 Follow us for updates
               </Paragraph>
