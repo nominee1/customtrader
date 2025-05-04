@@ -1,18 +1,23 @@
 /* General styles for the header */
 .header {
   position: fixed;
-  z-index: 1;
+  top: 0;
+  z-index: 10;
   width: 100%;
-  background: #fff;
+  background-color: var(--background-card);
+  color: var(--text-primary-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: background-color var(--transition-speed), color var(--transition-speed);
 }
 
 .header-container {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 16px;
+  padding: 10px 16px;
 }
 
 .logo {
@@ -21,36 +26,46 @@
   margin: 0;
 }
 
+.logo-img {
+  height: 80px;
+  width: auto;
+}
+
 .logo-text {
-  color: #1890ff;
+  color: var(--primary-color);
   font-size: 18px;
   font-weight: bold;
+  transition: color var(--transition-speed);
 }
 
 .header-buttons {
   display: flex;
-  gap: 8px;
+  gap: 10px;
 }
 
 .header-button {
-  font-size: 14px;
+  font-size: 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color var(--transition-speed), color var(--transition-speed);
 }
+
 
 /* Responsive styles */
 @media (max-width: 768px) {
   .header-container {
-    display: flex;
-    justify-content: space-between;
-  }
-  
-  .header-buttons {
-    margin-top: 8px;
-    text-align: center;
+    padding: 8px 12px;
   }
 
-  .header-button {
-    display: inline-block; 
-    width: auto; 
-    text-align: center;
+  .header-buttons {
+    gap: 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  .logo-img {
+    height: 50px;
+    padding: 0;
+    margin-left: 0;
   }
 }

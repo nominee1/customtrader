@@ -6,14 +6,15 @@ import {
   LineChartOutlined,
   WalletOutlined,
   UserOutlined,
-  SettingOutlined
+  SettingOutlined,
+  ExclamationCircleOutlined
 } from '@ant-design/icons';
 
 const DashboardSidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Extract the current route path
+  // Extract the current route path (last segment after /dashboard)
   const currentPath = location.pathname.split('/').pop() || 'home';
 
   const menuItems = [
@@ -46,6 +47,12 @@ const DashboardSidebar = () => {
       icon: <SettingOutlined />,
       label: 'Settings',
       onClick: () => navigate('/dashboard/settings')
+    },
+    {
+      key: 'risk',
+      icon: <ExclamationCircleOutlined />,
+      label: 'Risk',
+      onClick: () => navigate('/dashboard/risk')
     }
   ];
 

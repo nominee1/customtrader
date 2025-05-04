@@ -18,7 +18,6 @@ import {
   ConfigProvider,
   theme,
   Tabs,
-  Tag,
   Spin,
 } from 'antd';
 import { 
@@ -28,9 +27,8 @@ import {
   LineChartOutlined,
   NumberOutlined,
   InfoCircleOutlined,
-  HistoryOutlined,
   CheckCircleOutlined,
-  CloseCircleOutlined
+  CloseCircleOutlined,
 } from '@ant-design/icons';
 import { useUser } from '../../../context/AuthContext';
 import { useContracts } from '../../../context/ContractsContext';
@@ -42,17 +40,46 @@ const { Option } = Select;
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
 
+// Payout multipliers for Over and Under contracts
+const PAYOUT_MULTIPLIERS = {
+  over: {
+    0: 0.062,  // 10.62 for amount = 10
+    1: 0.188,  // 11.88
+    2: 0.348,  // 13.48
+    3: 0.558,  // 15.58
+    4: 0.845,  // 18.45 
+    5: 1.262,  // 22.62
+    6: 1.924,  // 29.24
+    7: 3.132,  // 41.32
+    8: 6.042,  // 70.42
+    9: null,   // Invalid
+  },
+  under: {
+    0: null,   // Invalid
+    1: 6.042,  // 70.42
+    2: 3.132,  // 41.32
+    3: 1.924,  // 29.24
+    4: 1.262,  // 22.62 
+    5: 0.845,  // 18.45
+    6: 0.558,  // 15.58
+    7: 0.348,  // 13.48
+    8: 0.188,  // 11.88
+    9: 0.062,  // 10.62
+  },
+};
+
 const OverUnderTrader = () => {
-  const { user, sendAuthorizedRequest, isAuthorized, loading, error } = useUser(); 
+  const { user, sendAuthorizedRequest, isAuthorized, loading, error, balance } = useUser(); 
   const { addLiveContract } = useContracts();
   const { token } = theme.useToken();
   const [duration, setDuration] = useState(5);
-  const [selectedDigit, setSelectedDigit] = useState(5);
+  const [selectedDigit, setSelectedDigit] = useState(1); // Default to 1
   const [basis, setBasis] = useState('stake');
   const [symbol, setSymbol] = useState('R_10');
   const [amount, setAmount] = useState(10);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [contractType, setContractType] = useState('over');
   const [payout, setPayout] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState('trade');
   const [notification, setNotification] = useState({
     type: '',
@@ -69,56 +96,57 @@ const OverUnderTrader = () => {
 
   // Adjust amount when user changes (e.g., after account switch)
   useEffect(() => {
-    if (user && user.balance) {
-      setAmount(Math.min(amount, user.balance || 1000)); // Ensure amount doesn’t exceed balance
+    if (user && balance) {
+      setAmount(Math.min(amount, balance || 1000)); // Ensure amount doesn’t exceed balance
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  // Calculate payout based on amount and symbol
+  // Calculate payout based on contract type and selected digit
   useEffect(() => {
-    const payoutMultiplier = symbol.includes('10') ? 0.95 : 
-                          symbol.includes('25') ? 0.92 :
-                          symbol.includes('50') ? 0.89 : 0.85;
-    setPayout((amount * (1 + payoutMultiplier)).toFixed(2));
-  }, [amount, symbol]);
+    const multiplier = PAYOUT_MULTIPLIERS[contractType][selectedDigit];
+    setPayout(multiplier !== null ? amount * (1 + multiplier) : 0);
+  }, [amount, contractType, selectedDigit]);
 
-  const handleSubmit = async (contractType) => {
-    if (!user || !isAuthorized) {
-      console.error('User not authorized or no active account');
+  const isValidContract = (type, digit) => {
+    return PAYOUT_MULTIPLIERS[type][digit] !== null;
+  };
+
+  const handleSubmit = async (type) => {
+    if (!user || !isAuthorized || !user.token) {
       showNotification('warning', 'Please select an account and ensure it is authorized.');
       return;
     }
 
-    if (!user.token) {
-      console.error('No valid token for active account');
-      showNotification('warning', 'No valid token for the selected account. Please log in again.');
-      return;
-    }
-
     if (!amount || amount <= 0) {
-      console.error('Invalid amount');
       showNotification('warning', 'Please enter a valid amount.');
       return;
     }
 
+    if (duration < 1 || duration > 10) {
+      showNotification('warning', 'Please select a tick duration between 1 and 10.');
+      return;
+    }
+
     if (selectedDigit < 0 || selectedDigit > 9) {
-      console.error('Invalid selected digit');
       showNotification('warning', 'Please select a digit between 0 and 9.');
+      return;
+    }
+
+    if (!isValidContract(type, selectedDigit)) {
+      showNotification('error', `Invalid contract: ${type === 'over' ? 'Over 9' : 'Under 0'} is not allowed.`);
       return;
     }
 
     setIsSubmitting(true);
 
     const req_id = RequestIdGenerator.generateContractId();
-
     const contractData = {
       buy: 1,
       price: amount,
       parameters: {
         amount: amount,
         basis: basis,
-        contract_type: contractType === 'over' ? 'DIGITOVER' : 'DIGITUNDER',
+        contract_type: type === 'over' ? 'DIGITOVER' : 'DIGITUNDER',
         currency: user.currency || 'USD',
         duration: duration,
         duration_unit: 't',
@@ -131,7 +159,6 @@ const OverUnderTrader = () => {
 
     try {
       const response = await sendAuthorizedRequest(contractData);
-
       const contractId = response?.buy?.contract_id;
       if (!contractId) {
         throw new Error('No contract_id returned from purchase');
@@ -139,18 +166,21 @@ const OverUnderTrader = () => {
 
       const contract = {
         contract_id: contractId,
-        type: contractType,
+        type: type,
         symbol,
         status: 'open',
         details: {
           amount,
-          currency: user.currency || 'USD'
+          currency: user.currency || 'USD',
+          contract_type: type === 'over' ? 'DIGITOVER' : 'DIGITUNDER',
+          duration: duration,
+          duration_unit: 't',
+          barrier: selectedDigit.toString(),
         },
       };
 
       addLiveContract(contract);
-      
-      showNotification('success', `Successfully purchased ${contractType === 'over' ? 'Over' : 'Under'} contract`);
+      showNotification('success', `Successfully purchased ${type === 'over' ? 'Over' : 'Under'} contract`);
     } catch (error) {
       console.error('Error purchasing contract:', error.message);
       showNotification('error', `Failed to purchase contract: ${error.message}`);
@@ -160,16 +190,16 @@ const OverUnderTrader = () => {
   };
 
   const volatilityOptions = [
-    { value: 'R_10', label: 'Volatility 10 Index', payout: '95%' },
-    { value: '1HZ10V', label: 'Volatility 10 (1s) Index', payout: '95%' },
-    { value: 'R_25', label: 'Volatility 25 Index', payout: '92%' },
-    { value: '1HZ25V', label: 'Volatility 25 (1s) Index', payout: '92%' },
-    { value: 'R_50', label: 'Volatility 50 Index', payout: '89%' },
-    { value: '1HZ50V', label: 'Volatility 50 (1s) Index', payout: '89%' },
-    { value: 'R_75', label: 'Volatility 75 Index', payout: '87%' },
-    { value: '1HZ75V', label: 'Volatility 75 (1s) Index', payout: '87%' },
-    { value: 'R_100', label: 'Volatility 100 Index', payout: '85%' },
-    { value: '1HZ100V', label: 'Volatility 100 (1s) Index', payout: '85%' }
+    { value: 'R_10', label: 'Volatility 10 Index' },
+    { value: '1HZ10V', label: 'Volatility 10 (1s) Index' },
+    { value: 'R_25', label: 'Volatility 25 Index' },
+    { value: '1HZ25V', label: 'Volatility 25 (1s) Index' },
+    { value: 'R_50', label: 'Volatility 50 Index' },
+    { value: '1HZ50V', label: 'Volatility 50 (1s) Index' },
+    { value: 'R_75', label: 'Volatility 75 Index' },
+    { value: '1HZ75V', label: 'Volatility 75 (1s) Index' },
+    { value: 'R_100', label: 'Volatility 100 Index' },
+    { value: '1HZ100V', label: 'Volatility 100 (1s) Index' },
   ];
 
   return (
@@ -226,7 +256,6 @@ const OverUnderTrader = () => {
           <Card
             title={
               <Space>
-                <NumberOutlined style={{ color: token.colorPrimary }} />
                 <Title level={4} style={{ margin: 0, color: token.colorPrimary }}>Over/Under Contract</Title>
               </Space>
             }
@@ -258,19 +287,9 @@ const OverUnderTrader = () => {
                         <Option 
                           key={option.value} 
                           value={option.value}
-                          label={
-                            <Space>
-                              <span>{option.label}</span>
-                              <Tag color={token.colorPrimary}>{option.payout} payout</Tag>
-                            </Space>
-                          }
+                          label={<span>{option.label}</span>}
                         >
-                          <Space>
-                            <span>{option.label}</span>
-                            <Tag color={token.colorPrimary} style={{ marginLeft: 'auto' }}>
-                              {option.payout} payout
-                            </Tag>
-                          </Space>
+                          <span>{option.label}</span>
                         </Option>
                       ))}
                     </Select>
@@ -278,9 +297,7 @@ const OverUnderTrader = () => {
 
                   {/* Tick Duration Selector */}
                   <div>
-                    <Text strong style={{ display: 'block', marginBottom: 8 }}>
-                      Duration (Ticks)
-                    </Text>
+                    <Text strong style={{ display: 'block', marginBottom: 8 }}>Duration (Ticks)</Text>
                     <Row justify="space-between" style={{ padding: '0 10px' }}>
                       {[...Array(10)].map((_, i) => {
                         const tick = i + 1;
@@ -310,27 +327,25 @@ const OverUnderTrader = () => {
 
                   {/* Digit Selection */}
                   <div>
-                    <Text strong style={{ display: 'block', marginBottom: 8 }}>
-                      Select Digit (0-9)
-                    </Text>
+                    <Text strong style={{ display: 'block', marginBottom: 8 }}>Select Digit (0-9)</Text>
                     <Row justify="space-between" style={{ padding: '0 5px' }}>
-                      {[...Array(10)].map((_, i) => (
-                        <Col key={i}>
+                      {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(digit => (
+                        <Col key={digit}>
                           <Badge
-                            count={i}
+                            count={digit}
                             style={{
-                              backgroundColor: selectedDigit === i ? token.colorPrimary : token.colorFillAlter,
-                              color: selectedDigit === i ? '#fff' : token.colorText,
+                              backgroundColor: selectedDigit === digit ? token.colorPrimary : token.colorFillAlter,
+                              color: selectedDigit === digit ? '#fff' : token.colorText,
                               fontSize: 16,
                               width: 32,
                               height: 32,
                               lineHeight: '32px',
                               borderRadius: '50%',
                               cursor: user && isAuthorized ? 'pointer' : 'not-allowed',
-                              boxShadow: selectedDigit === i ? `0 0 0 2px ${token.colorPrimary}` : 'none',
+                              boxShadow: selectedDigit === digit ? `0 0 0 2px ${token.colorPrimary}` : 'none',
                               transition: 'all 0.3s'
                             }}
-                            onClick={() => user && isAuthorized && setSelectedDigit(i)}
+                            onClick={() => user && isAuthorized && setSelectedDigit(digit)}
                           />
                         </Col>
                       ))}
@@ -342,9 +357,7 @@ const OverUnderTrader = () => {
 
                   {/* Basis Selection */}
                   <div>
-                    <Text strong style={{ display: 'block', marginBottom: 8 }}>
-                      Basis
-                    </Text>
+                    <Text strong style={{ display: 'block', marginBottom: 8 }}>Basis</Text>
                     <Radio.Group 
                       value={basis} 
                       onChange={(e) => setBasis(e.target.value)} 
@@ -380,7 +393,7 @@ const OverUnderTrader = () => {
                       disabled={!user || !isAuthorized}
                     />
                     <Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
-                      Available balance: {(user?.balance || 0).toFixed(2)} {user?.currency || 'USD'}
+                      Available balance: {(balance || 0).toFixed(2)} {user?.currency || 'USD'}
                     </Text>
                   </div>
 
@@ -389,8 +402,15 @@ const OverUnderTrader = () => {
                     <Row gutter={16}>
                       <Col span={12}>
                         <Statistic
-                          title="Potential Payout"
-                          value={payout}
+                          title={
+                            <Space>
+                              Potential Payout (Over)
+                              <Tooltip title={`Over ${selectedDigit} yields a ${(PAYOUT_MULTIPLIERS.over[selectedDigit] * 100).toFixed(1)}% return for valid digits (0-8)`}>
+                                <InfoCircleOutlined />
+                              </Tooltip>
+                            </Space>
+                          }
+                          value={contractType === 'over' ? payout : (PAYOUT_MULTIPLIERS.over[selectedDigit] !== null ? amount * (1 + PAYOUT_MULTIPLIERS.over[selectedDigit]) : 0)}
                           precision={2}
                           prefix={<ArrowUpOutlined style={{ color: token.colorSuccess }} />}
                           valueStyle={{ color: token.colorSuccess }}
@@ -398,21 +418,21 @@ const OverUnderTrader = () => {
                       </Col>
                       <Col span={12}>
                         <Statistic
-                          title="Potential Loss"
-                          value={amount}
+                          title={
+                            <Space>
+                              Potential Payout (Under)
+                              <Tooltip title={`Under ${selectedDigit} yields a ${(PAYOUT_MULTIPLIERS.under[selectedDigit] * 100).toFixed(1)}% return for valid digits (1-9)`}>
+                                <InfoCircleOutlined />
+                              </Tooltip>
+                            </Space>
+                          }
+                          value={contractType === 'under' ? payout : (PAYOUT_MULTIPLIERS.under[selectedDigit] !== null ? amount * (1 + PAYOUT_MULTIPLIERS.under[selectedDigit]) : 0)}
                           precision={2}
-                          prefix={<ArrowDownOutlined style={{ color: token.colorError }} />}
-                          valueStyle={{ color: token.colorError }}
+                          prefix={<ArrowUpOutlined style={{ color: token.colorSuccess }} />}
+                          valueStyle={{ color: token.colorSuccess }}
                         />
                       </Col>
                     </Row>
-                    <Progress
-                      percent={((payout - amount) / amount * 100).toFixed(0)}
-                      strokeColor={token.colorSuccess}
-                      trailColor={token.colorError}
-                      format={percent => `${percent}% return`}
-                      style={{ marginTop: 16 }}
-                    />
                   </div>
 
                   {/* Action Buttons */}
@@ -422,17 +442,19 @@ const OverUnderTrader = () => {
                         type="primary"
                         size="large"
                         block
-                        icon={<ArrowUpOutlined />}
                         style={{ 
                           background: '#722ed1',
                           borderColor: '#722ed1',
                           height: 48
                         }}
-                        onClick={() => handleSubmit('over')}
-                        loading={isSubmitting}
-                        disabled={isSubmitting || !user || !isAuthorized}
+                        onClick={() => {
+                          setContractType('over');
+                          handleSubmit('over');
+                        }}
+                        loading={isSubmitting && contractType === 'over'}
+                        disabled={isSubmitting || !user || !isAuthorized || !isValidContract('over', selectedDigit)}
                       >
-                        Over ({selectedDigit}+)
+                        Over {selectedDigit}
                       </Button>
                     </Col>
                     <Col span={12}>
@@ -440,23 +462,34 @@ const OverUnderTrader = () => {
                         type="primary"
                         size="large"
                         block
-                        icon={<ArrowDownOutlined />}
                         style={{ height: 48 }}
-                        onClick={() => handleSubmit('under')}
-                        loading={isSubmitting}
-                        disabled={isSubmitting || !user || !isAuthorized}
+                        onClick={() => {
+                          setContractType('under');
+                          handleSubmit('under');
+                        }}
+                        loading={isSubmitting && contractType === 'under'}
+                        disabled={isSubmitting || !user || !isAuthorized || !isValidContract('under', selectedDigit)}
                       >
-                        Under ({selectedDigit}-)
+                        Under {selectedDigit}
                       </Button>
                     </Col>
                   </Row>
                 </Space>
               </TabPane>
-              <TabPane tab="Statistics" key="stats">
+              <TabPane tab="Analysis" key="stats">
                 <div style={{ padding: '16px 0' }}>
                   <Text strong>Digit Probability Analysis</Text>
                   <Divider style={{ margin: '12px 0' }} />
-                  <Text type="secondary">Coming soon - historical performance of each digit</Text>
+                  <iframe
+                    src="https://over-smoky.vercel.app"
+                    style={{
+                      width: '100%',
+                      height: window.innerWidth <= 576 ? '80vh' : '100vh',
+                      border: 'none',
+                      borderRadius: '8px',
+                    }}
+                    title="Over/Under Market Analysis"
+                  />
                 </div>
               </TabPane>
             </Tabs>

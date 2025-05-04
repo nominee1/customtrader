@@ -10,6 +10,9 @@ import SettingsPage from './components/SettingPage';
 import NotFoundPage from './pages/NotFoundPage';
 import { UserProvider } from './context/AuthContext';
 import { ContractsProvider } from './context/ContractsContext';
+import OverUnderAnalysis from './pages/analysis/OverUnderAnalysis';
+import EvenOddAnalysis from './pages/analysis/EvenOddAnalysis';
+import RiskDisclosure from './components/RiskDisclosure';
 
 function AppRoutes() {
   return (
@@ -17,9 +20,10 @@ function AppRoutes() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="*" element={<NotFoundPage />} />
-        <Route 
-          path="/dashboard" 
+        <Route path="/over-under" element={<OverUnderAnalysis />} />
+        <Route path="/even-odd" element={<EvenOddAnalysis />} />
+        <Route
+          path="/dashboard"
           element={
             <UserProvider>
               <ContractsProvider>
@@ -34,7 +38,9 @@ function AppRoutes() {
           <Route path="wallet" element={<WalletPage />} />
           <Route path="account" element={<UserProfile />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="risk" element={<RiskDisclosure />} />
         </Route>
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Router>
   );

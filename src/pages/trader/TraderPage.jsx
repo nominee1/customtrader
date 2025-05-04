@@ -53,7 +53,7 @@ const TraderPage = () => {
     }, [features]);
 
     return (
-        <Layout style={{ padding: '24px' }}>
+        <Layout style={{ padding: '16px' }}>
             <Layout.Content>
                 {/* Chart at the top */}
                 <VolatilityComparisonChart />
@@ -75,7 +75,7 @@ const TraderPage = () => {
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     borderRadius: 8,
-                                    padding: '10px 16px',
+                                    padding: '8px 10px',
                                     minWidth: 150,
                                     textAlign: 'center',
                                 }}
@@ -93,7 +93,7 @@ const TraderPage = () => {
                 <Divider orientation="center">
                     <Title level={2}>Trading Contract</Title>  
                 </Divider>
-                <div style={{ marginTop: 24 }}>
+                <div style={{ marginTop: 10 }}>
                     {selectedFeature ? (
                         selectedFeature.component || <Text>No contract available for this option.</Text>
                     ) : (

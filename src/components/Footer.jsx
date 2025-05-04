@@ -10,7 +10,7 @@ const AppFooter = () => {
       <Row gutter={[24, 24]}>
         <Col span={24}>
           <Text>
-            © {new Date().getFullYear()} Mulla. Your trading made easier.
+            © {new Date().getFullYear()} Denara. Your trading made easier.
           </Text>
         </Col>
       </Row>

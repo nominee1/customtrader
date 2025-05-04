@@ -69,7 +69,8 @@ const DashboardPage = () => {
         <Content
           style={{
             marginLeft: collapsed ? 0 : window.innerWidth > 576 ? 250 : 0,
-            padding: '24px',
+            padding: '0',
+            marginTop:'64px',
             transition: 'margin-left 0.2s',
             minHeight: 'calc(100vh - 64px)', // Adjust for header
             overflowY: 'auto',
