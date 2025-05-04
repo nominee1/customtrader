@@ -40,7 +40,7 @@ const DashboardHeader = ({ collapsed, setCollapsed, toggleDrawer }) => {
       localStorage.removeItem('activeAccount');
       localStorage.removeItem('accounts');
       message.success('Logged out successfully.');
-      navigate('/login');
+      navigate('/');
     } catch (error) {
       console.error('Logout Error:', error);
       message.error(error.message || 'Logout failed. Please try again.');
