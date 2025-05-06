@@ -6,7 +6,7 @@ function analyzeSMACrossover(ticks, symbol, fastPeriod = 5, slowPeriod = 10) {
     return {
       signal: 'neutral',
       strength: 0,
-      details: 'Insufficient tick data for SMA analysis',
+      details: `Insufficient ticked data (need ${slowPeriod + 1}, got ${ticks.length})`,
     };
   }
 
@@ -20,11 +20,12 @@ function analyzeSMACrossover(ticks, symbol, fastPeriod = 5, slowPeriod = 10) {
     };
   }
 
-  const avgDigit = fastSMA;
+  const isEven = Math.round(fastSMA) % 2 === 0;
   return {
-    signal: avgDigit > 5 ? 'odd' : 'even',
-    strength: Math.abs(avgDigit - 5) / 5,
-    details: `Digit SMA (${fastSMA.toFixed(1)}) suggests ${avgDigit > 5 ? 'odd' : 'even'}`,
+    signal: isEven ? 'even' : 'odd',
+    strength: Math.abs(fastSMA - slowSMA) > 0.5 ? 0.6 : 0.3,
+    details: `Digit SMA (${fastSMA.toFixed(1)}) predicts ${isEven ? 'even' : 'odd'}`,
+    rawData: { fastSMA, slowSMA },
   };
 }
 
@@ -35,7 +36,7 @@ function analyzeStochastic(ticks, symbol) {
     return {
       signal: 'neutral',
       strength: 0,
-      details: 'Insufficient tick data for Stochastic analysis',
+      details: `Insufficient data (need ${kPeriod}, got ${ticks.length})`,
     };
   }
 
@@ -43,12 +44,15 @@ function analyzeStochastic(ticks, symbol) {
   ticks.slice(-kPeriod).forEach((tick) => {
     digitCounts[getLastDigit(tick.price)]++;
   });
-  const maxDigit = digitCounts.indexOf(Math.max(...digitCounts));
+
+  const evenCount = digitCounts[0] + digitCounts[2] + digitCounts[4] + digitCounts[6] + digitCounts[8];
+  const oddCount = digitCounts[1] + digitCounts[3] + digitCounts[5] + digitCounts[7] + digitCounts[9];
 
   return {
-    signal: maxDigit % 2 === 0 ? 'odd' : 'even',
-    strength: digitCounts[maxDigit] / kPeriod,
-    details: `Frequent digit ${maxDigit} suggests ${maxDigit % 2 === 0 ? 'odd' : 'even'}`,
+    signal: evenCount > oddCount ? 'even' : 'odd',
+    strength: Math.abs(evenCount - oddCount) / kPeriod,
+    details: `Even: ${evenCount}, Odd: ${oddCount} in last ${kPeriod} ticks`,
+    rawData: { maxDigit: evenCount > oddCount ? 0 : 1, digitCounts },
   };
 }
 
@@ -58,22 +62,17 @@ function analyzeTickStreak(ticks, symbol) {
     return {
       signal: 'neutral',
       strength: 0,
-      details: 'Insufficient tick data for analysis',
+      details: 'Need at least 2 ticks for analysis',
     };
   }
 
   const getStreakThreshold = (sym) => {
     const thresholds = {
-      R_10: 8,
-      '1HZ10V': 6,
-      R_25: 8,
-      '1HZ25V': 6,
-      R_50: 7,
-      '1HZ50V': 5,
-      R_75: 7,
-      '1HZ75V': 5,
-      R_100: 6,
-      '1HZ100V': 4,
+      R_10: 8, '1HZ10V': 6,
+      R_25: 8, '1HZ25V': 6,
+      R_50: 7, '1HZ50V': 5,
+      R_75: 7, '1HZ75V': 5,
+      R_100: 6, '1HZ100V': 4,
     };
     return thresholds[sym] || 5;
   };
@@ -108,7 +107,7 @@ function analyzeTickStreak(ticks, symbol) {
     return {
       signal: direction === 'even' ? 'odd' : 'even',
       strength: Math.min(0.9, (streak / streakThreshold) * 0.9),
-      details: `${streak}-tick ${direction} streak in last digits (Even/Odd)`,
+      details: `${streak}-tick ${direction} streak (Threshold: ${streakThreshold})`,
       rawData: results,
     };
   }
@@ -116,7 +115,7 @@ function analyzeTickStreak(ticks, symbol) {
   return {
     signal: 'neutral',
     strength: 0,
-    details: `No significant streak (current: ${streak} ${direction || 'flat'})`,
+    details: `No significant streak (current: ${streak} ${direction || 'neutral'})`,
     rawData: results,
   };
 }
@@ -127,7 +126,7 @@ function analyzeVolatilitySpike(ticks) {
     return {
       signal: 'normal',
       strength: 0,
-      details: 'Insufficient tick data for volatility analysis',
+      details: 'Need at least 21 ticks for volatility analysis',
     };
   }
 
@@ -147,7 +146,7 @@ function analyzeVolatilitySpike(ticks) {
     return {
       signal: 'warning',
       strength: 1,
-      details: `Volatility spike detected (${currentVol.toFixed(2)} vs ${prevVol.toFixed(2)})`,
+      details: `Volatility spike! (${currentVol.toFixed(2)} vs ${prevVol.toFixed(2)})`,
     };
   }
   return {
@@ -159,13 +158,13 @@ function analyzeVolatilitySpike(ticks) {
 
 // Risk Analysis
 function analyzeRisk(balance, indexSymbol, volatilityScore = 50) {
-  const payout = 90; // Mock; fetch via Deriv API
+  const payout = 10; // Mock; fetch via Deriv API
   const risk = calculateRiskStake(balance, 1, payout, volatilityScore);
 
   return {
     signal: 'info',
     strength: 0,
-    details: `Stake $${risk.stake} to risk 1% ($${risk.maxLoss}). Potential profit: $${risk.potentialProfit}`,
+    details: `Recommended stake: $${risk.stake} (Risk: 1% = $${risk.maxLoss})`,
   };
 }
 
@@ -206,18 +205,16 @@ function combineSignals(ticks, symbol, balance) {
   );
   if (signalCounts[strongestSignal] >= 1.5) {
     signal = strongestSignal;
-    confidence = Math.min(signalCounts[strongestSignal] / 3, 1);
-    details = `Strong ${signal.toUpperCase()} predicted for Even/Odd based on ${signals.length} indicators`;
+    confidence = Math.min(1, signalCounts[strongestSignal] / 3);
+    details = `Strong ${strongestSignal.toUpperCase()} signal (Confidence: ${(confidence * 100).toFixed(0)}%)`;
   } else {
-    signal = 'neutral';
-    confidence = 0;
-    details = 'Mixed or weak signals; wait for clearer pattern';
+    details = 'Weak/mixed signals';
   }
 
   if (volatility.signal === 'warning') {
     signal = 'hold';
     confidence = 0;
-    details = `Volatility spike detected—avoid trading Even/Odd now`;
+    details = 'High volatility - avoid trading';
   }
 
   return {

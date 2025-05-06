@@ -6,7 +6,7 @@ import MainSection from './MainSection';
 import AppFooter from '../../components/Footer';
 import { parseDerivAuthTokens } from '../../services/parseDerivAuth'; 
 import OverUnderMarketAnalysis from '../analysis/overUnder/OverUnderMarketAnalysis'
-import RiseFallMarketAnalysis from '../analysis/riseFall/RiseFallMarketAnalysis'
+import EvenOddMarketAnalysis from '../analysis/eveOdd/EvenOddMarketAnalysis'
 
 const { Content } = Layout;
 
@@ -38,7 +38,7 @@ const LandingPage = () => {
       <Content style={{ marginTop: 64 }}>
         <MainSection />
       </Content>
-      <RiseFallMarketAnalysis />
+      <EvenOddMarketAnalysis />
       <AppFooter />
     </Layout>
   );
