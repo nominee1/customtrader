@@ -38,6 +38,7 @@ import { useContracts } from '../../../context/ContractsContext';
 import RecentTrades from '../../../components/RecentTrades';
 import RequestIdGenerator from '../../../services/uniqueIdGenerator'; 
 import Notification from '../../../utils/Notification';
+import RiseFallMarketAnalysis from '../../analysis/riseFall/RiseFallMarketAnalysis';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -446,9 +447,7 @@ const RiseFallTrader = () => {
               </TabPane>
               <TabPane tab="Analysis" key="analysis">
                 <div style={{ padding: '16px 0' }}>
-                  <Text strong>Market Analysis</Text>
-                  <Divider style={{ margin: '12px 0' }} />
-                  <Text type="secondary">Coming soon - historical performance and trends</Text>
+                  <RiseFallMarketAnalysis />
                 </div>
               </TabPane>
             </Tabs>

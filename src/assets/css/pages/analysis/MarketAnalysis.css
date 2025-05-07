@@ -1,0 +1,62 @@
+.market-analysis-container {
+    padding: 16px;
+    background: #fff;
+    min-height: calc(100vh - 64px); /* Adjust for fixed header */
+  }
+  
+  .market-analysis-card {
+    max-width: 800px;
+    width: 100%;
+    margin: 0 auto;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+  }
+  
+  .market-analysis-card .ant-card-head-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .market-analysis-card .ant-tabs-nav {
+    margin-bottom: 16px;
+  }
+  
+  .market-analysis-card .ant-tabs-tab {
+    font-size: 14px;
+  }
+  
+  .market-analysis-card .ant-progress {
+    margin-top: 8px;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 576px) {
+    .market-analysis-container {
+      padding: 8px;
+    }
+  
+    .market-analysis-card {
+      margin-bottom: 16px;
+    }
+  
+    .market-analysis-card .ant-card-head {
+      padding: 0 16px;
+    }
+  
+    .market-analysis-card .ant-card-body {
+      padding: 16px;
+    }
+  
+    .market-analysis-card .ant-typography h4 {
+      font-size: 16px;
+    }
+  
+    .market-analysis-card .ant-typography p {
+      font-size: 14px;
+    }
+  
+    .market-analysis-card .ant-select {
+      width: 100%;
+    }
+  }

@@ -37,6 +37,7 @@ import { useContracts } from '../../../context/ContractsContext';
 import RecentTrades from '../../../components/RecentTrades';
 import RequestIdGenerator from '../../../services/uniqueIdGenerator'; 
 import Notification from '../../../utils/Notification';
+import MatchesDiffersMarketAnalysis from '../../analysis/matchesDiffers/MatchesDiffersMarketAnalysis';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -447,9 +448,7 @@ const MatchesDiffersTrader = () => {
               </TabPane>
               <TabPane tab="Analysis" key="analysis">
                 <div style={{ padding: '16px 0' }}>
-                  <Text strong>Market Analysis</Text>
-                  <Divider style={{ margin: '12px 0' }} />
-                  <Text type="secondary">Coming soon - historical performance and trends</Text>
+                  <MatchesDiffersMarketAnalysis />
                 </div>
               </TabPane>
             </Tabs>

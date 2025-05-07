@@ -6,6 +6,7 @@ import MainSection from './MainSection';
 import AppFooter from '../../components/Footer';
 import { parseDerivAuthTokens } from '../../services/parseDerivAuth'; 
 
+
 const { Content } = Layout;
 
 const LandingPage = () => {
