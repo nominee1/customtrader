@@ -1,39 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Card,
-  Select,
-  Tabs,
-  Spin,
-  Progress,
-  Typography,
-  Collapse,
-  Space,
-  Row,
-  Col,
-  Statistic,
-  Tooltip,
-  Alert,
-  Badge,
-  Switch,
+  Card, Select, Tabs, Spin, Progress, Typography, Collapse, Space, Row, Col, Statistic, Tooltip, Alert, Badge, Switch,
 } from 'antd';
 import {
-  LineChartOutlined,
-  QuestionCircleOutlined,
-  NumberOutlined,
-  PauseOutlined,
-  WarningOutlined,
-  InfoCircleOutlined,
-  BellOutlined,
+  LineChartOutlined, QuestionCircleOutlined, NumberOutlined, PauseOutlined, WarningOutlined, InfoCircleOutlined, BellOutlined,
 } from '@ant-design/icons';
 import { publicWebSocket } from '../../../services/public_websocket_client';
 import {
-  analyzeSMACrossover,
-  analyzeStochastic,
-  analyzeTickStreak,
-  analyzeVolatilitySpike,
-  analyzeRisk,
-  combineSignals,
+  analyzeSMACrossover, analyzeStochastic, analyzeTickStreak, analyzeVolatilitySpike, analyzeRisk, combineSignals,
 } from './evenOddAnalysis';
+import CandlestickChart from './CandlestickChart';
 import '../../../assets/css/pages/analysis/MarketAnalysis.css';
 
 const { Option } = Select;
@@ -54,14 +30,13 @@ const volatilityOptions = [
   { value: '1HZ100V', label: 'Volatility 100 (1s) Index' },
 ];
 
-// DigitHistoryChart (reused from MatchesDiffers)
-const DigitHistoryChart = ({ digits, isEven }) => {
+// Unchanged components: DigitHistoryChart, EvenOddIndicator, SignalIndicator, AnalysisExplanation
+const DigitHistoryChart = ({ digits }) => {
   const chunkSize = 5;
   const digitGroups = [];
   for (let i = 0; i < digits.length; i += chunkSize) {
     digitGroups.push(digits.slice(i, i + chunkSize));
   }
-
   return (
     <Card size="small" title="Recent Digits History">
       <Space direction="vertical" style={{ width: '100%' }}>
@@ -71,16 +46,8 @@ const DigitHistoryChart = ({ digits, isEven }) => {
               <div
                 key={`${groupIndex}-${index}`}
                 style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: '50%',
-                  backgroundColor: digit % 2 === 0 ? '#52c41a' : '#f5222d',
-                  color: 'white',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: 4,
-                  fontWeight: 'bold',
+                  width: 32, height: 32, borderRadius: '50%', backgroundColor: digit % 2 === 0 ? '#52c41a' : '#f5222d',
+                  color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: 4, fontWeight: 'bold',
                 }}
               >
                 {digit}
@@ -93,115 +60,56 @@ const DigitHistoryChart = ({ digits, isEven }) => {
   );
 };
 
-// EvenOddIndicator (new, inspired by DigitBarIndicator)
 const EvenOddIndicator = ({ digit }) => {
   const isEven = digit % 2 === 0;
-  const strength = isEven ? 80 : 20; // Fixed strength for visualization
-
+  const strength = isEven ? 80 : 20;
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 0' }}>
       <Text strong style={{ width: 24 }}>{digit}</Text>
       <Progress
-        percent={strength}
-        strokeColor={isEven ? '#52c41a' : '#f5222d'}
-        showInfo={false}
-        strokeWidth={10}
-        trailColor="#f0f0f0"
+        percent={strength} strokeColor={isEven ? '#52c41a' : '#f5222d'} showInfo={false} strokeWidth={10} trailColor="#f0f0f0"
       />
       <Text type={isEven ? 'success' : 'danger'}>{isEven ? 'EVEN' : 'ODD'}</Text>
     </div>
   );
 };
 
-// SignalIndicator (aligned with RiseFall)
 const SignalIndicator = ({ signal, strength, size = 'default', showAlert = false }) => {
   const signalConfig = {
-    even: {
-      color: '#52c41a',
-      icon: <NumberOutlined />,
-      label: 'EVEN',
-      explanation: 'The last digit is likely to be even',
-    },
-    odd: {
-      color: '#f5222d',
-      icon: <NumberOutlined />,
-      label: 'ODD',
-      explanation: 'The last digit is likely to be odd',
-    },
-    neutral: {
-      color: '#faad14',
-      icon: <PauseOutlined />,
-      label: 'NEUTRAL',
-      explanation: 'No clear prediction for even/odd',
-    },
-    warning: {
-      color: '#fa541c',
-      icon: <WarningOutlined />,
-      label: 'WARNING',
-      explanation: 'High volatility detected - trade with caution',
-    },
-    hold: {
-      color: '#1890ff',
-      icon: <InfoCircleOutlined />,
-      label: 'HOLD',
-      explanation: 'Not recommended to trade at this time',
-    },
+    even: { color: '#52c41a', icon: <NumberOutlined />, label: 'EVEN', explanation: 'The last digit is likely to be even' },
+    odd: { color: '#f5222d', icon: <NumberOutlined />, label: 'ODD', explanation: 'The last digit is likely to be odd' },
+    neutral: { color: '#faad14', icon: <PauseOutlined />, label: 'NEUTRAL', explanation: 'No clear prediction for even/odd' },
+    warning: { color: '#fa541c', icon: <WarningOutlined />, label: 'WARNING', explanation: 'High volatility detected - trade with caution' },
+    hold: { color: '#1890ff', icon: <InfoCircleOutlined />, label: 'HOLD', explanation: 'Not recommended to trade at this time' },
   };
-
   const config = signalConfig[signal] || signalConfig.neutral;
   const isSmall = size === 'small';
-
   return (
     <Tooltip title={config.explanation}>
       <div
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          padding: isSmall ? '4px 8px' : '8px 12px',
-          backgroundColor: isSmall ? 'transparent' : '#fafafa',
-          borderRadius: 8,
-          border: isSmall ? 'none' : `1px solid ${config.color}`,
+          display: 'flex', alignItems: 'center', gap: 8, padding: isSmall ? '4px 8px' : '8px 12px',
+          backgroundColor: isSmall ? 'transparent' : '#fafafa', borderRadius: 8, border: isSmall ? 'none' : `1px solid ${config.color}`,
           position: 'relative',
         }}
       >
         {showAlert && strength > 0.7 && (
-          <div
-            style={{
-              position: 'absolute',
-              left: -12,
-              top: -4,
-              color: config.color,
-              animation: 'pulse 1.5s infinite',
-            }}
-          >
+          <div style={{ position: 'absolute', left: -12, top: -4, color: config.color, animation: 'pulse 1.5s infinite' }}>
             <BellOutlined />
           </div>
         )}
         <Badge
           color={config.color}
           text={
-            <span
-              style={{
-                color: isSmall ? config.color : 'inherit',
-                fontWeight: 'bold',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-              }}
-            >
+            <span style={{ color: isSmall ? config.color : 'inherit', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 4 }}>
               {config.icon} {!isSmall && config.label}
             </span>
           }
         />
         {strength > 0 && (
           <Progress
-            percent={Math.round(strength * 100)}
-            strokeColor={config.color}
-            size={isSmall ? 'small' : 'default'}
-            showInfo={!isSmall}
-            format={isSmall ? () => `${Math.round(strength * 100)}%` : null}
-            style={{ width: isSmall ? 60 : 120 }}
+            percent={Math.round(strength * 100)} strokeColor={config.color} size={isSmall ? 'small' : 'default'}
+            showInfo={!isSmall} format={isSmall ? () => `${Math.round(strength * 100)}%` : null} style={{ width: isSmall ? 60 : 120 }}
           />
         )}
       </div>
@@ -209,43 +117,32 @@ const SignalIndicator = ({ signal, strength, size = 'default', showAlert = false
   );
 };
 
-// AnalysisExplanation (reused from RiseFall)
 const AnalysisExplanation = ({ title, content }) => (
-  <Tooltip
-    title={
-      <div style={{ padding: 8 }}>
-        <Text strong>{title}</Text>
-        <div style={{ marginTop: 4 }}>{content}</div>
-      </div>
-    }
-    overlayStyle={{ maxWidth: 300 }}
-    placement="right"
-  >
+  <Tooltip title={<div style={{ padding: 8 }}><Text strong>{title}</Text><div style={{ marginTop: 4 }}>{content}</div></div>} overlayStyle={{ maxWidth: 300 }} placement="right">
     <QuestionCircleOutlined style={{ color: '#1890ff', marginLeft: 8 }} />
   </Tooltip>
 );
 
 const EvenOddMarketAnalysis = () => {
   const [symbol, setSymbol] = useState('R_10');
-  const [ticks, setTicks] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [tickData, setTickData] = useState({}); // Initialize as empty object
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [simpleMode, setSimpleMode] = useState(false);
   const [showAlert, setShowAlert] = useState(true);
   const balance = 1000;
 
   // Memoized combined signal
-  const combinedSignal = useMemo(() => combineSignals(ticks, symbol, balance), [ticks, symbol, balance]);
+  const combinedSignal = useMemo(() => combineSignals(tickData[symbol] || [], symbol, balance), [tickData, symbol, balance]);
 
   // Get last digits
   const lastDigits = useMemo(() => {
-    return ticks
-      .map((tick) => {
-        const priceStr = tick.price.toString();
-        return parseInt(priceStr[priceStr.length - 1]);
-      })
-      .reverse();
-  }, [ticks]);
+    const ticks = tickData[symbol] || [];
+    return ticks.map((tick) => {
+      const priceStr = tick.price.toString();
+      return parseInt(priceStr[priceStr.length - 1]);
+    }).reverse();
+  }, [tickData, symbol]);
 
   // Get last digit
   const lastDigit = useMemo(() => {
@@ -253,97 +150,108 @@ const EvenOddMarketAnalysis = () => {
     return lastDigits[0];
   }, [lastDigits]);
 
-  // WebSocket subscription
+  // WebSocket subscription for all symbols
   useEffect(() => {
-    let unsubscribe;
+    let unsubscribers = [];
     let isMounted = true;
 
-    const subscribeToTicks = async () => {
+    const subscribeToAllSymbols = async () => {
       setLoading(true);
       setError(null);
       try {
         await publicWebSocket.connect();
         if (!isMounted) return;
 
-        unsubscribe = publicWebSocket.subscribe((event, data) => {
-          if (event === 'message' && data.tick) {
-            setTicks((prev) => {
-              const newTicks = [...prev, { price: data.tick.quote, timestamp: data.tick.epoch }];
-              return newTicks.slice(-30);
-            });
+        // Initialize tickData for all symbols
+        setTickData((prev) => {
+          const updated = { ...prev };
+          volatilityOptions.forEach((option) => {
+            if (!updated[option.value]) updated[option.value] = [];
+          });
+          return updated;
+        });
+
+        // Handle WebSocket messages
+        const handleTick = (event, data) => {
+          if (!isMounted) return;
+          if (event === 'message' && data.msg_type === 'tick') {
+            const { symbol: tickSymbol, quote, epoch } = data.tick;
+            setTickData((prev) => ({
+              ...prev,
+              [tickSymbol]: [...(prev[tickSymbol] || []), { price: quote, timestamp: epoch }].slice(-60),
+            }));
+          } else if (event === 'message' && data.msg_type === 'history') {
+            const { ticks_history: symbol, prices, times } = data.echo_req;
+            if (prices && times) {
+              const historicalTicks = prices.map((price, index) => ({
+                price,
+                timestamp: times[index],
+              }));
+              setTickData((prev) => ({
+                ...prev,
+                [symbol]: historicalTicks.slice(-60),
+              }));
+            }
             setLoading(false);
           } else if (event === 'error') {
             setError('WebSocket error occurred');
             setLoading(false);
           }
+        };
+
+        // Subscribe to all symbols
+        volatilityOptions.forEach((option) => {
+          const unsubscribe = publicWebSocket.subscribe(handleTick);
+          unsubscribers.push(unsubscribe);
+          publicWebSocket.subscribeToTicks(option.value);
         });
 
-        publicWebSocket.send({ ticks: symbol, subscribe: 1 });
+        // Fetch historical ticks with batching
+        const fetchHistorical = async () => {
+          const batchSize = 5;
+          for (let i = 0; i < volatilityOptions.length; i += batchSize) {
+            if (!isMounted) return;
+            const batch = volatilityOptions.slice(i, i + batchSize);
+            await Promise.all(
+              batch.map((option) => publicWebSocket.fetchHistoricalTicks(option.value, 60))
+            );
+            await new Promise((resolve) => setTimeout(resolve, 1000)); // 1s delay to avoid rate limits
+          }
+        };
+
+        await fetchHistorical();
       } catch (err) {
-        console.error('Websocket Error:', err);
+        console.error('WebSocket Error:', err);
         if (isMounted) {
-          setError('Failed to connect to WebSocket');
+          setError('Failed to connect to WebSocket. Please check your network or app ID.');
           setLoading(false);
         }
       }
     };
 
-    subscribeToTicks();
+    subscribeToAllSymbols();
 
     return () => {
       isMounted = false;
-      if (unsubscribe) unsubscribe();
-      if (publicWebSocket.ws && publicWebSocket.ws.readyState === WebSocket.OPEN) {
-        publicWebSocket.send({ forget: symbol });
-      }
+      unsubscribers.forEach((unsub) => unsub());
+      volatilityOptions.forEach((option) => publicWebSocket.unsubscribe(option.value));
+      publicWebSocket.close();
     };
-  }, [symbol]);
+  }, []);
 
   // Analysis functions with explanations
   const analyses = [
-    {
-      key: 'sma',
-      name: 'SMA',
-      func: () => analyzeSMACrossover(ticks, symbol),
-      explanation: 'Moving averages of last digits predict if the next digit will be even or odd.',
-    },
-    {
-      key: 'stochastic',
-      name: 'Stochastic',
-      func: () => analyzeStochastic(ticks, symbol),
-      explanation: 'Analyzes digit frequency to identify even/odd clustering patterns.',
-    },
-    {
-      key: 'streak',
-      name: 'Streak',
-      func: () => analyzeTickStreak(ticks, symbol),
-      explanation: 'Identifies consecutive even/odd sequences. Long streaks often reverse.',
-    },
-    {
-      key: 'volatility',
-      name: 'Volatility',
-      func: () => analyzeVolatilitySpike(ticks),
-      explanation: 'Measures digit fluctuation speed. High volatility means unpredictable digits.',
-    },
-    {
-      key: 'risk',
-      name: 'Risk',
-      func: () => analyzeRisk(balance, symbol),
-      explanation: 'Calculates optimal stake size based on your balance and market conditions.',
-    },
-    {
-      key: 'combined',
-      name: 'Summary',
-      func: () => combinedSignal,
-      explanation: 'Combines all indicators to provide the overall trading recommendation.',
-    },
+    { key: 'sma', name: 'SMA', func: () => analyzeSMACrossover(tickData[symbol] || [], symbol), explanation: 'Moving averages of last digits predict if the next digit will be even or odd.' },
+    { key: 'stochastic', name: 'Stochastic', func: () => analyzeStochastic(tickData[symbol] || [], symbol), explanation: 'Analyzes digit frequency to identify even/odd clustering patterns.' },
+    { key: 'streak', name: 'Streak', func: () => analyzeTickStreak(tickData[symbol] || [], symbol), explanation: 'Identifies consecutive even/odd sequences. Long streaks often reverse.' },
+    { key: 'volatility', name: 'Volatility', func: () => analyzeVolatilitySpike(tickData[symbol] || []), explanation: 'Measures digit fluctuation speed. High volatility means unpredictable digits.' },
+    { key: 'risk', name: 'Risk', func: () => analyzeRisk(balance, symbol), explanation: 'Calculates optimal stake size based on your balance and market conditions.' },
+    { key: 'combined', name: 'Summary', func: () => combinedSignal, explanation: 'Combines all indicators to provide the overall trading recommendation.' },
   ];
 
   // Render analysis result
   const renderAnalysis = (analysis) => {
-    if (!analysis) {
-      return <Text>No data available for analysis.</Text>;
-    }
+    if (!analysis) return <Text>No data available for analysis.</Text>;
 
     const result = analysis.func();
     if (!result) return null;
@@ -356,22 +264,17 @@ const EvenOddMarketAnalysis = () => {
             message={
               <Space>
                 <Text strong>Recommendation:</Text>
-                <SignalIndicator
-                  signal={signal}
-                  strength={confidence}
-                  showAlert={showAlert && confidence > 0.7}
-                />
+                <SignalIndicator signal={signal} strength={confidence} showAlert={showAlert && confidence > 0.7} />
               </Space>
             }
             description={details}
-            type={
-              signal === 'even' ? 'success' :
-              signal === 'odd' ? 'error' :
-              signal === 'warning' ? 'warning' : 'info'
-            }
+            type={signal === 'even' ? 'success' : signal === 'odd' ? 'error' : signal === 'warning' ? 'warning' : 'info'}
             showIcon
           />
           <Row gutter={[16, 16]}>
+            <Col span={24}>
+              <CandlestickChart ticks={tickData[symbol] || []} simpleMode={simpleMode} symbol={symbol} />
+            </Col>
             <Col span={24}>
               <DigitHistoryChart digits={lastDigits} />
             </Col>
@@ -386,10 +289,7 @@ const EvenOddMarketAnalysis = () => {
                       title={
                         <Space>
                           <Text>{key.toUpperCase()}</Text>
-                          <AnalysisExplanation
-                            title={analyses.find((a) => a.key === key)?.name}
-                            content={analyses.find((a) => a.key === key)?.explanation}
-                          />
+                          <AnalysisExplanation title={analyses.find((a) => a.key === key)?.name} content={analyses.find((a) => a.key === key)?.explanation} />
                         </Space>
                       }
                     >
@@ -397,9 +297,7 @@ const EvenOddMarketAnalysis = () => {
                         <SignalIndicator signal={res?.signal} strength={res?.strength} size="small" />
                         <Text type="secondary">{res?.details || 'No details'}</Text>
                         {(key === 'sma' || key === 'stochastic') && res?.rawData && (
-                          <EvenOddIndicator
-                            digit={key === 'stochastic' ? res.rawData.maxDigit : Math.round(res.rawData.fastSMA)}
-                          />
+                          <EvenOddIndicator digit={key === 'stochastic' ? res.rawData.maxDigit : Math.round(res.rawData.fastSMA)} />
                         )}
                       </Space>
                     </Card>
@@ -422,14 +320,10 @@ const EvenOddMarketAnalysis = () => {
           </Space>
           <Text>{details}</Text>
           {(analysis.key === 'sma' || analysis.key === 'stochastic') && rawData && (
-            <EvenOddIndicator
-              digit={analysis.key === 'stochastic' ? rawData.maxDigit : Math.round(rawData.fastSMA)}
-            />
+            <EvenOddIndicator digit={analysis.key === 'stochastic' ? rawData.maxDigit : Math.round(rawData.fastSMA)} />
           )}
           {analysis.key === 'streak' && rawData && (
-            <DigitHistoryChart
-              digits={rawData.slice(0, 10).map((item) => item.digit)}
-            />
+            <DigitHistoryChart digits={rawData.slice(0, 10).map((item) => item.digit)} />
           )}
         </Space>
       </Card>
@@ -497,7 +391,7 @@ const EvenOddMarketAnalysis = () => {
                   <Col span={12}>
                     <Statistic
                       title="Current Price"
-                      value={ticks.length > 0 ? ticks[ticks.length - 1].price : '--'}
+                      value={tickData[symbol]?.length > 0 ? tickData[symbol][tickData[symbol].length - 1].price : '--'}
                       precision={2}
                     />
                   </Col>
@@ -506,65 +400,43 @@ const EvenOddMarketAnalysis = () => {
                       title="Last Digit"
                       value={lastDigit !== null ? lastDigit : '--'}
                       prefix={<NumberOutlined />}
-                      valueStyle={{
-                        color: lastDigit !== null ? (lastDigit % 2 === 0 ? '#52c41a' : '#f5222d') : 'inherit',
-                      }}
+                      valueStyle={{ color: lastDigit !== null ? (lastDigit % 2 === 0 ? '#52c41a' : '#f5222d') : 'inherit' }}
                     />
                   </Col>
                 </Row>
               </Card>
             </Col>
           </Row>
-
           <Card size="small" title="Alert Configuration">
             <Space>
               <Text>Visual Alerts:</Text>
               <Switch size="small" checked={showAlert} onChange={setShowAlert} />
             </Space>
           </Card>
-
           {error && <Alert message={error} type="error" showIcon />}
-
           <Spin spinning={loading} tip="Loading market data...">
             {simpleMode ? (
               <Space direction="vertical" size="middle" style={{ width: '100%' }}>
                 <Card>
                   <Space direction="vertical" size="large" style={{ width: '100%' }}>
-                    <SignalIndicator
-                      signal={combinedSignal.signal}
-                      strength={combinedSignal.confidence}
-                      showAlert={showAlert && combinedSignal.confidence > 0.7}
-                    />
+                    <SignalIndicator signal={combinedSignal.signal} strength={combinedSignal.confidence} showAlert={showAlert && combinedSignal.confidence > 0.7} />
                     {lastDigit !== null && <EvenOddIndicator digit={lastDigit} />}
                     <Text>{combinedSignal.details}</Text>
-                    <Text type="secondary">
-                      <small>Based on {ticks.length} recent ticks</small>
-                    </Text>
+                    <Text type="secondary"><small>Based on {(tickData[symbol] || []).length} recent ticks</small></Text>
                   </Space>
                 </Card>
+                <CandlestickChart ticks={tickData[symbol] || []} simpleMode={simpleMode} symbol={symbol} />
                 <DigitHistoryChart digits={lastDigits.slice(0, 10)} />
               </Space>
             ) : (
-              <Tabs
-                defaultActiveKey="combined"
-                size="small"
-                tabPosition="top"
-                type="line"
-                style={{ marginTop: 8 }}
-              >
+              <Tabs defaultActiveKey="combined" size="small" tabPosition="top" type="line" style={{ marginTop: 8 }}>
                 {analyses.map((analysis) => (
                   <TabPane
                     tab={
                       <Space size={4}>
                         <span>{analysis.name}</span>
                         {analysis.key === 'combined' && (
-                          <Badge
-                            dot
-                            color={
-                              combinedSignal.signal === 'even' ? '#52c41a' :
-                              combinedSignal.signal === 'odd' ? '#f5222d' : '#faad14'
-                            }
-                          />
+                          <Badge dot color={combinedSignal.signal === 'even' ? '#52c41a' : combinedSignal.signal === 'odd' ? '#f5222d' : '#faad14'} />
                         )}
                       </Space>
                     }

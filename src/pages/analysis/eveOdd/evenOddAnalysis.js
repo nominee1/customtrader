@@ -1,4 +1,13 @@
-import { calculateSMA, calculateStochastic, calculateVolatility, calculateRiskStake, getLastDigit } from '../sharedAnalysis';
+import { calculateStochastic, calculateVolatility, calculateRiskStake, getLastDigit } from '../sharedAnalysis';
+
+// Calculate SMA for last digits
+const calculateSMA = (ticks, period, useLastDigit = false) => {
+  if (!ticks || ticks.length < period) return null;
+
+  const values = ticks.map((tick) => (useLastDigit ? getLastDigit(tick.price) : tick.price));
+  const sum = values.slice(-period).reduce((acc, val) => acc + val, 0);
+  return sum / period;
+};
 
 // SMA Crossover
 function analyzeSMACrossover(ticks, symbol, fastPeriod = 5, slowPeriod = 10) {
@@ -6,7 +15,7 @@ function analyzeSMACrossover(ticks, symbol, fastPeriod = 5, slowPeriod = 10) {
     return {
       signal: 'neutral',
       strength: 0,
-      details: `Insufficient ticked data (need ${slowPeriod + 1}, got ${ticks.length})`,
+      details: `Insufficient tick data (need ${slowPeriod + 1}, got ${ticks.length})`,
     };
   }
 
@@ -158,7 +167,7 @@ function analyzeVolatilitySpike(ticks) {
 
 // Risk Analysis
 function analyzeRisk(balance, indexSymbol, volatilityScore = 50) {
-  const payout = 10; // Mock; fetch via Deriv API
+  const payout = 10;
   const risk = calculateRiskStake(balance, 1, payout, volatilityScore);
 
   return {
