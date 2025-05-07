@@ -35,6 +35,7 @@ import { useContracts } from '../../../context/ContractsContext';
 import RecentTrades from '../../../components/RecentTrades';
 import RequestIdGenerator from '../../../services/uniqueIdGenerator'; 
 import Notification from '../../../utils/Notification';
+import OverUnderMarketAnalysis from '../../analysis/overUnder/OverUnderMarketAnalysis'
 
 const { Option } = Select;
 const { Title, Text } = Typography;
@@ -478,18 +479,7 @@ const OverUnderTrader = () => {
               </TabPane>
               <TabPane tab="Analysis" key="stats">
                 <div style={{ padding: '16px 0' }}>
-                  <Text strong>Digit Probability Analysis</Text>
-                  <Divider style={{ margin: '12px 0' }} />
-                  <iframe
-                    src="https://over-smoky.vercel.app"
-                    style={{
-                      width: '100%',
-                      height: window.innerWidth <= 576 ? '80vh' : '100vh',
-                      border: 'none',
-                      borderRadius: '8px',
-                    }}
-                    title="Over/Under Market Analysis"
-                  />
+                  <OverUnderMarketAnalysis />
                 </div>
               </TabPane>
             </Tabs>

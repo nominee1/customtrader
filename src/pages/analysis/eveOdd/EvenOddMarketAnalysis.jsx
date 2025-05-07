@@ -9,8 +9,9 @@ import { publicWebSocket } from '../../../services/public_websocket_client';
 import {
   analyzeSMACrossover, analyzeStochastic, analyzeTickStreak, analyzeVolatilitySpike, analyzeRisk, combineSignals,
 } from './evenOddAnalysis';
-import CandlestickChart from './CandlestickChart';
+import CandlestickChart from './EvenOddCandlestickChart';
 import '../../../assets/css/pages/analysis/MarketAnalysis.css';
+import { useUser } from '../../../context/AuthContext';
 
 const { Option } = Select;
 const { TabPane } = Tabs;
@@ -124,16 +125,17 @@ const AnalysisExplanation = ({ title, content }) => (
 );
 
 const EvenOddMarketAnalysis = () => {
+  const { balance } = useUser();
   const [symbol, setSymbol] = useState('R_10');
   const [tickData, setTickData] = useState({}); // Initialize as empty object
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [simpleMode, setSimpleMode] = useState(false);
   const [showAlert, setShowAlert] = useState(true);
-  const balance = 1000;
+  const userBalance = balance;
 
   // Memoized combined signal
-  const combinedSignal = useMemo(() => combineSignals(tickData[symbol] || [], symbol, balance), [tickData, symbol, balance]);
+  const combinedSignal = useMemo(() => combineSignals(tickData[symbol] || [], symbol, userBalance), [tickData, symbol, userBalance]);
 
   // Get last digits
   const lastDigits = useMemo(() => {
@@ -342,7 +344,6 @@ const EvenOddMarketAnalysis = () => {
       <Card
         title={
           <Space>
-            <LineChartOutlined style={{ color: '#1890ff', fontSize: '20px' }} />
             <span>Even/Odd Market Analysis</span>
           </Space>
         }

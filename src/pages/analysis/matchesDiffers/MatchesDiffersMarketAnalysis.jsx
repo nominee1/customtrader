@@ -38,8 +38,9 @@ import {
   analyzeRisk,
   combineSignals,
 } from './matchesDiffersAnalysis';
-import CandlestickChart from './CandlestickChart'; // Assuming CandlestickChart is in the same directory
+import CandlestickChart from './MatcheDiffersCandlestickChart'; 
 import '../../../assets/css/pages/analysis/MarketAnalysis.css';
+import { useUser } from '../../../context/AuthContext';
 
 const { Option } = Select;
 const { TabPane } = Tabs;
@@ -224,6 +225,7 @@ const AnalysisExplanation = ({ title, content }) => (
 );
 
 const MatchesDiffersMarketAnalysis = () => {
+  const { balance } = useUser();
   const [symbol, setSymbol] = useState('R_10');
   const [tickData, setTickData] = useState({});
   const [loading, setLoading] = useState(true);
@@ -231,7 +233,7 @@ const MatchesDiffersMarketAnalysis = () => {
   const [simpleMode, setSimpleMode] = useState(false);
   const [targetDigit, setTargetDigit] = useState(5);
   const [showAlert, setShowAlert] = useState(true);
-  const balance = 1000;
+  const userBalance = balance;
 
   useEffect(() => {
     let unsubscribers = [];
@@ -331,12 +333,12 @@ const MatchesDiffersMarketAnalysis = () => {
   }, [lastDigits]);
 
   const combinedSignal = useMemo(() => {
-    const signal = combineSignals(tickData[symbol] || [], symbol, balance, targetDigit);
+    const signal = combineSignals(tickData[symbol] || [], symbol, userBalance, targetDigit);
     if (signal.details) {
       signal.details = signal.details.replace(/target \d+/, `target ${targetDigit}`);
     }
     return signal;
-  }, [tickData, symbol, balance, targetDigit]);
+  }, [tickData, symbol, userBalance, targetDigit]);
 
   const analyses = [
     {
@@ -366,7 +368,7 @@ const MatchesDiffersMarketAnalysis = () => {
     {
       key: 'risk',
       name: 'Risk',
-      func: () => analyzeRisk(balance, symbol),
+      func: () => analyzeRisk(userBalance, symbol),
       explanation: 'Calculates optimal stake size based on your balance and market conditions.',
     },
     {
@@ -503,7 +505,6 @@ const MatchesDiffersMarketAnalysis = () => {
       <Card
         title={
           <Space>
-            <NumberOutlined style={{ color: '#1890ff', fontSize: '20px' }} />
             <span>Matches/Differs Market Analysis</span>
           </Space>
         }

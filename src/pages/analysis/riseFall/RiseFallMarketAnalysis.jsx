@@ -12,6 +12,7 @@ import {
 import RiseFallCandlestickChart from './RiseFallCandlestickChart';
 import PriceMovementChart from './PriceMovementChart';
 import '../../../assets/css/pages/analysis/MarketAnalysis.css';
+import { useUser } from '../../../context/AuthContext';
 
 const { Option } = Select;
 const { TabPane } = Tabs;
@@ -92,16 +93,17 @@ const AnalysisExplanation = ({ title, content }) => (
 );
 
 const RiseFallMarketAnalysis = () => {
+  const { balance } = useUser();
   const [symbol, setSymbol] = useState('R_10');
   const [tickData, setTickData] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [simpleMode, setSimpleMode] = useState(false);
   const [showAlert, setShowAlert] = useState(true);
-  const balance = 1000;
+  const userBalance = balance;
 
   // Memoized combined signal
-  const combinedSignal = useMemo(() => combineSignals(tickData[symbol] || [], symbol, balance), [tickData, symbol, balance]);
+  const combinedSignal = useMemo(() => combineSignals(tickData[symbol] || [], symbol, userBalance), [tickData, symbol, userBalance]);
 
   // Get price movements
   const priceMovements = useMemo(() => {
@@ -208,7 +210,7 @@ const RiseFallMarketAnalysis = () => {
     { key: 'stochastic', name: 'Stochastic', func: () => analyzeStochastic(tickData[symbol] || [], symbol), explanation: 'Measures momentum by comparing closing prices to recent price ranges. Overbought/oversold levels may signal reversals.' },
     { key: 'streak', name: 'Streak', func: () => analyzeTickStreak(tickData[symbol] || [], symbol), explanation: 'Tracks consecutive price movements in one direction. Extended streaks often precede reversals.' },
     { key: 'volatility', name: 'Volatility', func: () => analyzeVolatilitySpike(tickData[symbol] || []), explanation: 'Measures price fluctuation intensity. High volatility indicates larger price swings and higher risk.' },
-    { key: 'risk', name: 'Risk', func: () => analyzeRisk(balance, symbol), explanation: 'Calculates optimal stake size based on account balance and market conditions.' },
+    { key: 'risk', name: 'Risk', func: () => analyzeRisk(userBalance, symbol), explanation: 'Calculates optimal stake size based on account balance and market conditions.' },
     { key: 'combined', name: 'Summary', func: () => combinedSignal, explanation: 'Aggregates all indicators to provide a comprehensive trading recommendation.' },
   ];
 
@@ -305,7 +307,6 @@ const RiseFallMarketAnalysis = () => {
       <Card
         title={
           <Space>
-            <LineChartOutlined style={{ color: '#1890ff', fontSize: '20px' }} />
             <span>Rise/Fall Market Analysis</span>
           </Space>
         }

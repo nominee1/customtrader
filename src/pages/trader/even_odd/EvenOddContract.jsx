@@ -34,6 +34,7 @@ import { useContracts } from '../../../context/ContractsContext';
 import RecentTrades from '../../../components/RecentTrades';
 import RequestIdGenerator from '../../../services/uniqueIdGenerator'; 
 import Notification from '../../../utils/Notification';
+import EvenOddMarketAnalysis from '../../analysis/eveOdd/EvenOddMarketAnalysis';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -392,19 +393,8 @@ const EvenOddContract = () => {
                 </Space>
               </TabPane>
               <TabPane tab="Analysis" key="stats">
-                <div style={{ padding: '16px 0' }}>
-                  <Text strong>Digit Probability Analysis</Text>
-                  <Divider style={{ margin: '12px 0' }} />
-                  <iframe
-                    src="https://eveen.vercel.app/"
-                    style={{
-                      width: '100%',
-                      height: window.innerWidth <= 576 ? '80vh' : '100vh',
-                      border: 'none',
-                      borderRadius: '8px',
-                    }}
-                    title="Even/Odd Market Analysis"
-                  />
+                <div style={{ padding: '6px 0' }}>
+                  <EvenOddMarketAnalysis />
                 </div>
               </TabPane>
             </Tabs>

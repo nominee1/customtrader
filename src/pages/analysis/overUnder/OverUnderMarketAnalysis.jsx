@@ -38,8 +38,9 @@ import {
   analyzeRisk,
   combineSignals,
 } from './overUnderAnalysis';
-import CandlestickChart from './CandlestickChart';
+import CandlestickChart from './OverUnderCandlestickChart';
 import '../../../assets/css/pages/analysis/MarketAnalysis.css';
+import { useUser } from '../../../context/AuthContext';
 
 const { Option } = Select;
 const { TabPane } = Tabs;
@@ -222,6 +223,7 @@ const AnalysisExplanation = ({ title, content }) => (
 );
 
 const OverUnderMarketAnalysis = () => {
+  const { balance } = useUser();
   const [symbol, setSymbol] = useState('R_10');
   const [tickData, setTickData] = useState({});
   const [loading, setLoading] = useState(true);
@@ -229,7 +231,7 @@ const OverUnderMarketAnalysis = () => {
   const [simpleMode, setSimpleMode] = useState(false);
   const [barrier, setBarrier] = useState(4);
   const [showAlert, setShowAlert] = useState(true);
-  const balance = 1000;
+  const userBalance = balance;
 
   useEffect(() => {
     let unsubscribers = [];
@@ -329,12 +331,12 @@ const OverUnderMarketAnalysis = () => {
   }, [lastDigits]);
 
   const combinedSignal = useMemo(() => {
-    const signal = combineSignals(tickData[symbol] || [], symbol, balance, barrier);
+    const signal = combineSignals(tickData[symbol] || [], symbol, userBalance, barrier);
     if (signal.details) {
       signal.details = signal.details.replace(/barrier \d+/, `barrier ${barrier}`);
     }
     return signal;
-  }, [tickData, symbol, balance, barrier]);
+  }, [tickData, symbol, userBalance, barrier]);
 
   const analyses = [
     {
@@ -364,7 +366,7 @@ const OverUnderMarketAnalysis = () => {
     {
       key: 'risk',
       name: 'Risk',
-      func: () => analyzeRisk(balance, symbol),
+      func: () => analyzeRisk(userBalance, symbol),
       explanation: 'Calculates optimal stake size based on your balance and market conditions.',
     },
     {
@@ -485,7 +487,6 @@ const OverUnderMarketAnalysis = () => {
       <Card
         title={
           <Space>
-            <NumberOutlined style={{ color: '#1890ff', fontSize: '20px' }} />
             <span>Over/Under Market Analysis</span>
           </Space>
         }
