@@ -1,4 +1,4 @@
-import { calculateSMA, calculateStochastic, calculateVolatility, calculateRiskStake, getLastDigit } from '../sharedAnalysis';
+import { calculateSMA, calculateStochastic, calculateVolatility, calculateRiskStake } from '../sharedAnalysis';
 
 // SMA Crossover
 function analyzeSMACrossover(ticks, symbol, fastPeriod = 5, slowPeriod = 10) {
@@ -6,7 +6,7 @@ function analyzeSMACrossover(ticks, symbol, fastPeriod = 5, slowPeriod = 10) {
     return {
       signal: 'neutral',
       strength: 0,
-      details: 'Insufficient tick data for SMA analysis',
+      details: `Insufficient tick data (need ${slowPeriod + 1}, got ${ticks.length})`,
     };
   }
 
@@ -30,20 +30,22 @@ function analyzeSMACrossover(ticks, symbol, fastPeriod = 5, slowPeriod = 10) {
       signal: 'rise',
       strength: 0.7,
       details: `Fast SMA (${fastSMA.toFixed(2)}) crossed above Slow SMA (${slowSMA.toFixed(2)})`,
+      rawData: { fastSMA, slowSMA },
     };
   } else if (prevFastSMA >= prevSlowSMA && fastSMA < slowSMA && momentum < 0) {
     return {
       signal: 'fall',
       strength: 0.7,
       details: `Fast SMA (${fastSMA.toFixed(2)}) crossed below Slow SMA (${slowSMA.toFixed(2)})`,
-    };
-  } else {
-    return {
-      signal: 'neutral',
-      strength: 0,
-      details: `No SMA crossover detected`,
+      rawData: { fastSMA, slowSMA },
     };
   }
+  return {
+    signal: 'neutral',
+    strength: 0,
+    details: 'No SMA crossover detected',
+    rawData: { fastSMA, slowSMA },
+  };
 }
 
 // Stochastic Oscillator
@@ -54,7 +56,7 @@ function analyzeStochastic(ticks, symbol) {
     return {
       signal: 'neutral',
       strength: 0,
-      details: 'Insufficient tick data for Stochastic analysis',
+      details: `Insufficient tick data (need ${kPeriod}, got ${ticks.length})`,
     };
   }
 
@@ -64,20 +66,22 @@ function analyzeStochastic(ticks, symbol) {
       signal: 'rise',
       strength: k < 10 ? 0.9 : 0.6,
       details: `Stochastic oversold (K=${k.toFixed(2)})`,
+      rawData: { k },
     };
   } else if (k > 80) {
     return {
       signal: 'fall',
       strength: k > 90 ? 0.9 : 0.6,
       details: `Stochastic overbought (K=${k.toFixed(2)})`,
-    };
-  } else {
-    return {
-      signal: 'neutral',
-      strength: 0,
-      details: `Stochastic neutral (K=${k.toFixed(2)})`,
+      rawData: { k },
     };
   }
+  return {
+    signal: 'neutral',
+    strength: 0,
+    details: `Stochastic neutral (K=${k.toFixed(2)})`,
+    rawData: { k },
+  };
 }
 
 // Tick Streak
@@ -86,22 +90,17 @@ function analyzeTickStreak(ticks, symbol) {
     return {
       signal: 'neutral',
       strength: 0,
-      details: 'Insufficient tick data for analysis',
+      details: 'Need at least 2 ticks for analysis',
     };
   }
 
   const getStreakThreshold = (sym) => {
     const thresholds = {
-      R_10: 8,
-      '1HZ10V': 6,
-      R_25: 8,
-      '1HZ25V': 6,
-      R_50: 7,
-      '1HZ50V': 5,
-      R_75: 7,
-      '1HZ75V': 5,
-      R_100: 6,
-      '1HZ100V': 4,
+      R_10: 8, '1HZ10V': 6,
+      R_25: 8, '1HZ25V': 6,
+      R_50: 7, '1HZ50V': 5,
+      R_75: 7, '1HZ75V': 5,
+      R_100: 6, '1HZ100V': 4,
     };
     return thresholds[sym] || 5;
   };
@@ -116,19 +115,16 @@ function analyzeTickStreak(ticks, symbol) {
     const currentPrice = parseFloat(ticks[i].price);
 
     if (lastPrice !== null) {
-      const currentDirection =
-        currentPrice > lastPrice ? 'up' : currentPrice < lastPrice ? 'down' : 'flat';
+      const currentDirection = currentPrice > lastPrice ? 'up' : currentPrice < lastPrice ? 'down' : 'flat';
 
       if (currentDirection === direction && currentDirection !== 'flat') {
         streak++;
+      } else if (currentDirection !== 'flat') {
+        direction = currentDirection;
+        streak = 1;
       } else {
-        if (currentDirection !== 'flat') {
-          direction = currentDirection;
-          streak = 1;
-        } else {
-          direction = null;
-          streak = 0;
-        }
+        direction = null;
+        streak = 0;
       }
 
       results.push({
@@ -146,7 +142,7 @@ function analyzeTickStreak(ticks, symbol) {
     return {
       signal: direction === 'up' ? 'fall' : 'rise',
       strength: Math.min(0.9, (streak / streakThreshold) * 0.9),
-      details: `Strong ${direction} streak of ${streak} ticks (Threshold: ${streakThreshold})`,
+      details: `${streak}-tick ${direction} streak (Threshold: ${streakThreshold})`,
       rawData: results,
     };
   }
@@ -154,7 +150,7 @@ function analyzeTickStreak(ticks, symbol) {
   return {
     signal: 'neutral',
     strength: 0,
-    details: `No significant streak (current: ${streak} ${direction || 'flat'})`,
+    details: `No significant streak (current: ${streak} ${direction || 'neutral'})`,
     rawData: results,
   };
 }
@@ -165,7 +161,7 @@ function analyzeVolatilitySpike(ticks) {
     return {
       signal: 'normal',
       strength: 0,
-      details: 'Insufficient tick data for volatility analysis',
+      details: 'Need at least 21 ticks for volatility analysis',
     };
   }
 
@@ -180,12 +176,12 @@ function analyzeVolatilitySpike(ticks) {
     };
   }
 
-  const spikeThreshold = 2;
+  const spikeThreshold = 1.5;
   if (currentVol > prevVol * spikeThreshold) {
     return {
       signal: 'warning',
       strength: 1,
-      details: `Volatility spike detected (${currentVol.toFixed(2)} vs ${prevVol.toFixed(2)})`,
+      details: `Volatility spike! (${currentVol.toFixed(2)} vs ${prevVol.toFixed(2)})`,
     };
   }
   return {
@@ -198,16 +194,11 @@ function analyzeVolatilitySpike(ticks) {
 // Risk Analysis
 function analyzeRisk(balance, indexSymbol, volatilityScore = 50) {
   const payoutMap = {
-    R_10: 95,
-    '1HZ10V': 95,
-    R_25: 92,
-    '1HZ25V': 92,
-    R_50: 89,
-    '1HZ50V': 89,
-    R_75: 87,
-    '1HZ75V': 87,
-    R_100: 85,
-    '1HZ100V': 85,
+    R_10: 95, '1HZ10V': 95,
+    R_25: 92, '1HZ25V': 92,
+    R_50: 89, '1HZ50V': 89,
+    R_75: 87, '1HZ75V': 87,
+    R_100: 85, '1HZ100V': 85,
   };
   const payout = payoutMap[indexSymbol] || 90;
   const risk = calculateRiskStake(balance, 1, payout, volatilityScore);
@@ -215,7 +206,7 @@ function analyzeRisk(balance, indexSymbol, volatilityScore = 50) {
   return {
     signal: 'info',
     strength: 0,
-    details: `Stake $${risk.stake} to risk 1% ($${risk.maxLoss}). Potential profit: $${risk.potentialProfit}`,
+    details: `Recommended stake: $${risk.stake} (Risk: 1% = $${risk.maxLoss})`,
   };
 }
 
@@ -256,18 +247,16 @@ function combineSignals(ticks, symbol, balance) {
   );
   if (signalCounts[strongestSignal] >= 1.5) {
     signal = strongestSignal;
-    confidence = Math.min(signalCounts[strongestSignal] / 3, 1);
-    details = `Strong ${signal.toUpperCase()} predicted for Rise/Fall based on ${signals.length} indicators`;
+    confidence = Math.min(1, signalCounts[strongestSignal] / 3);
+    details = `Strong ${strongestSignal.toUpperCase()} signal (Confidence: ${(confidence * 100).toFixed(0)}%)`;
   } else {
-    signal = 'neutral';
-    confidence = 0;
-    details = 'Mixed or weak signals; wait for clearer pattern';
+    details = 'Weak/mixed signals';
   }
 
   if (volatility.signal === 'warning') {
     signal = 'hold';
     confidence = 0;
-    details = `Volatility spike detected—avoid trading Rise/Fall now`;
+    details = 'High volatility - avoid trading';
   }
 
   return {
