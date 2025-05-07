@@ -1,4 +1,4 @@
-import { calculateSMA, calculateStochastic, calculateVolatility, calculateRiskStake, getLastDigit } from '../sharedAnalysis';
+import { calculateSMA, calculateVolatility, calculateRiskStake, getLastDigit } from '../sharedAnalysis';
 
 // SMA Crossover with dynamic barrier
 function analyzeSMACrossover(ticks, symbol, fastPeriod = 5, slowPeriod = 10, barrier = 4) {
@@ -21,10 +21,10 @@ function analyzeSMACrossover(ticks, symbol, fastPeriod = 5, slowPeriod = 10, bar
   }
 
   return {
-    signal: fastSMA > barrier ? `over_${barrier}` : `under_${barrier}`,
+    signal: fastSMA > barrier ? 'over' : 'under',
     strength: Math.min(0.9, Math.abs(fastSMA - barrier) / 5),
     details: `Digit SMA (${fastSMA.toFixed(1)}) vs barrier ${barrier}`,
-    rawData: { fastSMA, slowSMA, barrier }
+    rawData: { fastSMA, slowSMA, barrier },
   };
 }
 
@@ -47,10 +47,10 @@ function analyzeStochastic(ticks, symbol, barrier = 4) {
   const maxCount = Math.max(...digitCounts);
 
   return {
-    signal: maxDigit > barrier ? `over_${barrier}` : `under_${barrier}`,
+    signal: maxDigit > barrier ? 'over' : 'under',
     strength: Math.min(0.9, maxCount / kPeriod),
     details: `Digit ${maxDigit} appeared ${maxCount}/${kPeriod} times (Barrier: ${barrier})`,
-    rawData: { maxDigit, digitCounts, barrier }
+    rawData: { maxDigit, digitCounts, barrier },
   };
 }
 
@@ -103,7 +103,7 @@ function analyzeTickStreak(ticks, symbol, barrier = 4) {
 
   if (streak >= streakThreshold) {
     return {
-      signal: direction === 'over' ? `under_${barrier}` : `over_${barrier}`,
+      signal: direction === 'over' ? 'under' : 'over',
       strength: Math.min(0.9, (streak / streakThreshold) * 0.9),
       details: `${streak}-tick ${direction} streak (Barrier: ${barrier}, Threshold: ${streakThreshold})`,
       rawData: results,
@@ -118,7 +118,7 @@ function analyzeTickStreak(ticks, symbol, barrier = 4) {
   };
 }
 
-// Volatility Spike (unchanged)
+// Volatility Spike
 function analyzeVolatilitySpike(ticks) {
   if (ticks.length < 21) {
     return {
@@ -154,7 +154,7 @@ function analyzeVolatilitySpike(ticks) {
   };
 }
 
-// Risk Analysis (unchanged)
+// Risk Analysis
 function analyzeRisk(balance, indexSymbol, volatilityScore = 50) {
   const payout = 85; // Mock; fetch via Deriv API
   const risk = calculateRiskStake(balance, 1, payout, volatilityScore);
@@ -167,7 +167,7 @@ function analyzeRisk(balance, indexSymbol, volatilityScore = 50) {
 }
 
 // Combine Signals with dynamic barrier
-function combineSignals(ticks, symbol, balance, barrier = 5) {
+function combineSignals(ticks, symbol, balance, barrier = 4) {
   const sma = analyzeSMACrossover(ticks, symbol, 5, 10, barrier);
   const stochastic = analyzeStochastic(ticks, symbol, barrier);
   const streak = analyzeTickStreak(ticks, symbol, barrier);
@@ -189,8 +189,7 @@ function combineSignals(ticks, symbol, balance, barrier = 5) {
   let totalStrength = 0;
 
   signals.forEach((s) => {
-    const baseSignal = s.signal.split('_')[0];
-    signalCounts[baseSignal] = (signalCounts[baseSignal] || 0) + s.strength;
+    signalCounts[s.signal] = (signalCounts[s.signal] || 0) + s.strength;
     totalStrength += s.strength;
   });
 
@@ -204,15 +203,16 @@ function combineSignals(ticks, symbol, balance, barrier = 5) {
   );
   
   if (signalCounts[strongestSignal] >= 1.5) {
-    signal = `${strongestSignal}_${barrier}`;
+    signal = strongestSignal;
     confidence = Math.min(1, signalCounts[strongestSignal] / 3);
-    details = `Strong ${strongestSignal.toUpperCase()} signal (Barrier: ${barrier}, Confidence: ${(confidence*100).toFixed(0)}%)`;
+    details = `Strong ${strongestSignal.toUpperCase()} signal (Barrier: ${barrier}, Confidence: ${(confidence * 100).toFixed(0)}%)`;
   } else {
     details = `Weak/mixed signals (Barrier: ${barrier})`;
   }
 
   if (volatility.signal === 'warning') {
     signal = 'hold';
+    confidence = 0;
     details = `High volatility - avoid trading (Barrier: ${barrier})`;
   }
 

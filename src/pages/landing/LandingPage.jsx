@@ -5,9 +5,7 @@ import AppHeader from '../../components/Header';
 import MainSection from './MainSection';
 import AppFooter from '../../components/Footer';
 import { parseDerivAuthTokens } from '../../services/parseDerivAuth'; 
-import OverUnderMarketAnalysis from '../analysis/overUnder/OverUnderMarketAnalysis';
-import EvenOddMarketAnalysis from '../analysis/eveOdd/EvenOddMarketAnalysis';
-import RiseFallCandlestickChart from '../analysis/riseFall/RiseFallMarketAnalysis';
+
 
 const { Content } = Layout;
 
@@ -39,7 +37,6 @@ const LandingPage = () => {
       <Content style={{ marginTop: 64 }}>
         <MainSection />
       </Content>
-      <RiseFallCandlestickChart />
       <AppFooter />
     </Layout>
   );

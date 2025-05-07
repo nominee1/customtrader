@@ -38,11 +38,12 @@ import {
   analyzeRisk,
   combineSignals,
 } from './matchesDiffersAnalysis';
+import CandlestickChart from './CandlestickChart'; // Assuming CandlestickChart is in the same directory
 import '../../../assets/css/pages/analysis/MarketAnalysis.css';
 
 const { Option } = Select;
 const { TabPane } = Tabs;
-const { Text, Title } = Typography;
+const { Text } = Typography;
 const { Panel } = Collapse;
 
 const volatilityOptions = [
@@ -58,7 +59,6 @@ const volatilityOptions = [
   { value: '1HZ100V', label: 'Volatility 100 (1s) Index' },
 ];
 
-// Reuse DigitHistoryChart from OverUnderMarketAnalysis
 const DigitHistoryChart = ({ digits, targetDigit }) => {
   const chunkSize = 5;
   const digitGroups = [];
@@ -69,6 +69,10 @@ const DigitHistoryChart = ({ digits, targetDigit }) => {
   return (
     <Card size="small" title="Recent Digits History">
       <Space direction="vertical" style={{ width: '100%' }}>
+        <Text>
+          Recent digits: {digits.slice(0, 10).filter(d => d === targetDigit).length}/10 match target,{' '}
+          {digits.slice(0, 10).filter(d => d !== targetDigit).length}/10 differ from target
+        </Text>
         {digitGroups.map((group, groupIndex) => (
           <div key={groupIndex} style={{ display: 'flex', justifyContent: 'center' }}>
             {group.map((digit, index) => (
@@ -78,7 +82,7 @@ const DigitHistoryChart = ({ digits, targetDigit }) => {
                   width: 32,
                   height: 32,
                   borderRadius: '50%',
-                  backgroundColor: digit === targetDigit ? '#52c41a' : '#1890ff',
+                  backgroundColor: digit === targetDigit ? '#52c41a' : '#f5222d',
                   color: 'white',
                   display: 'flex',
                   alignItems: 'center',
@@ -97,16 +101,16 @@ const DigitHistoryChart = ({ digits, targetDigit }) => {
   );
 };
 
-// Modified DigitBarIndicator for Matches/Differs
 const DigitBarIndicator = ({ digit, targetDigit }) => {
   const isMatch = digit === targetDigit;
-  const strength = isMatch ? 80 : 20; // Fixed visualization strength
+  const distance = Math.abs(digit - targetDigit);
+  const percentage = isMatch ? 80 : Math.min(100, distance * 20);
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 0' }}>
       <Text strong style={{ width: 24 }}>{digit}</Text>
       <Progress
-        percent={strength}
+        percent={percentage}
         strokeColor={isMatch ? '#52c41a' : '#f5222d'}
         showInfo={false}
         strokeWidth={10}
@@ -118,20 +122,19 @@ const DigitBarIndicator = ({ digit, targetDigit }) => {
   );
 };
 
-// Modified SignalIndicator for Matches/Differs
-const SignalIndicator = ({ signal, strength, size = 'default', showAlert = false }) => {
+const SignalIndicator = ({ signal, strength, targetDigit, size = 'default', showAlert = false }) => {
   const signalConfig = {
     matches: {
       color: '#52c41a',
       icon: <CheckCircleOutlined />,
-      label: 'MATCHES',
-      explanation: 'The last digit is likely to match the target digit',
+      label: `MATCHES ${targetDigit}`,
+      explanation: `The last digit is likely to match ${targetDigit}`,
     },
     differs: {
       color: '#f5222d',
       icon: <CloseCircleOutlined />,
-      label: 'DIFFERS',
-      explanation: 'The last digit is likely to differ from the target digit',
+      label: `DIFFERS ${targetDigit}`,
+      explanation: `The last digit is likely to differ from ${targetDigit}`,
     },
     neutral: {
       color: '#faad14',
@@ -153,8 +156,7 @@ const SignalIndicator = ({ signal, strength, size = 'default', showAlert = false
     },
   };
 
-  const baseSignal = signal?.split('_')[0] || 'neutral';
-  const config = signalConfig[baseSignal] || signalConfig.neutral;
+  const config = signalConfig[signal] || signalConfig.neutral;
   const isSmall = size === 'small';
 
   return (
@@ -215,111 +217,150 @@ const SignalIndicator = ({ signal, strength, size = 'default', showAlert = false
   );
 };
 
+const AnalysisExplanation = ({ title, content }) => (
+  <Tooltip title={<div style={{ padding: 8 }}><Text strong>{title}</Text><div style={{ marginTop: 4 }}>{content}</div></div>} overlayStyle={{ maxWidth: 300 }} placement="right">
+    <QuestionCircleOutlined style={{ color: '#1890ff', marginLeft: 8 }} />
+  </Tooltip>
+);
+
 const MatchesDiffersMarketAnalysis = () => {
   const [symbol, setSymbol] = useState('R_10');
-  const [ticks, setTicks] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [tickData, setTickData] = useState({});
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [simpleMode, setSimpleMode] = useState(false);
   const [targetDigit, setTargetDigit] = useState(5);
   const [showAlert, setShowAlert] = useState(true);
   const balance = 1000;
 
-  // Memoized combined signal with current target digit
-  const combinedSignal = useMemo(() => {
-    const signal = combineSignals(ticks, symbol, balance, targetDigit);
-    if (signal.details) {
-      signal.details = signal.details.replace(/target \d+/, `target ${targetDigit}`);
-    }
-    return signal;
-  }, [ticks, symbol, balance, targetDigit]);
-
-  // Get last digits from recent ticks
-  const lastDigits = useMemo(() => {
-    return ticks
-      .map((tick) => {
-        const priceStr = tick.price.toString();
-        return parseInt(priceStr[priceStr.length - 1]);
-      })
-      .reverse();
-  }, [ticks]);
-
-  // Get last digit from latest tick
-  const lastDigit = useMemo(() => {
-    if (lastDigits.length === 0) return null;
-    return lastDigits[0];
-  }, [lastDigits]);
-
-  // WebSocket subscription
   useEffect(() => {
-    let unsubscribe;
+    let unsubscribers = [];
     let isMounted = true;
 
-    const subscribeToTicks = async () => {
+    const subscribeToAllSymbols = async () => {
       setLoading(true);
       setError(null);
       try {
         await publicWebSocket.connect();
         if (!isMounted) return;
 
-        unsubscribe = publicWebSocket.subscribe((event, data) => {
-          if (event === 'message' && data.tick) {
-            setTicks((prev) => {
-              const newTicks = [...prev, { price: data.tick.quote, timestamp: data.tick.epoch }];
-              return newTicks.slice(-30);
-            });
+        setTickData((prev) => {
+          const updated = { ...prev };
+          volatilityOptions.forEach((option) => {
+            if (!updated[option.value]) updated[option.value] = [];
+          });
+          return updated;
+        });
+
+        const handleTick = (event, data) => {
+          if (!isMounted) return;
+          if (event === 'message' && data.msg_type === 'tick') {
+            const { symbol: tickSymbol, quote, epoch } = data.tick;
+            setTickData((prev) => ({
+              ...prev,
+              [tickSymbol]: [...(prev[tickSymbol] || []), { price: quote, timestamp: epoch }].slice(-60),
+            }));
+          } else if (event === 'message' && data.msg_type === 'history') {
+            const { ticks_history: symbol, prices, times } = data.echo_req;
+            if (prices && times) {
+              const historicalTicks = prices.map((price, index) => ({
+                price,
+                timestamp: times[index],
+              }));
+              setTickData((prev) => ({
+                ...prev,
+                [symbol]: historicalTicks.slice(-60),
+              }));
+            }
             setLoading(false);
           } else if (event === 'error') {
             setError('WebSocket error occurred');
             setLoading(false);
           }
+        };
+
+        volatilityOptions.forEach((option) => {
+          const unsubscribe = publicWebSocket.subscribe(handleTick);
+          unsubscribers.push(unsubscribe);
+          publicWebSocket.subscribeToTicks(option.value);
         });
 
-        publicWebSocket.send({ ticks: symbol, subscribe: 1 });
+        const fetchHistorical = async () => {
+          const batchSize = 5;
+          for (let i = 0; i < volatilityOptions.length; i += batchSize) {
+            if (!isMounted) return;
+            const batch = volatilityOptions.slice(i, i + batchSize);
+            await Promise.all(
+              batch.map((option) => publicWebSocket.fetchHistoricalTicks(option.value, 60))
+            );
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+          }
+        };
+
+        await fetchHistorical();
       } catch (err) {
-        console.error('Websocket Error:', err);
+        console.error('WebSocket Error:', err);
         if (isMounted) {
-          setError('Failed to connect to WebSocket');
+          setError('Failed to connect to WebSocket. Please check your network or app ID.');
           setLoading(false);
         }
       }
     };
 
-    subscribeToTicks();
+    subscribeToAllSymbols();
 
     return () => {
       isMounted = false;
-      if (unsubscribe) unsubscribe();
-      if (publicWebSocket.ws && publicWebSocket.ws.readyState === WebSocket.OPEN) {
-        publicWebSocket.send({ forget: symbol });
-      }
+      unsubscribers.forEach((unsub) => unsub());
+      volatilityOptions.forEach((option) => publicWebSocket.unsubscribe(option.value));
+      publicWebSocket.close();
     };
-  }, [symbol]);
+  }, []);
 
-  // Analysis functions with target digit
+  const lastDigits = useMemo(() => {
+    const ticks = tickData[symbol] || [];
+    return ticks.map((tick) => {
+      const priceStr = tick.price.toString();
+      return parseInt(priceStr[priceStr.length - 1]);
+    }).reverse();
+  }, [tickData, symbol]);
+
+  const lastDigit = useMemo(() => {
+    if (lastDigits.length === 0) return null;
+    return lastDigits[0];
+  }, [lastDigits]);
+
+  const combinedSignal = useMemo(() => {
+    const signal = combineSignals(tickData[symbol] || [], symbol, balance, targetDigit);
+    if (signal.details) {
+      signal.details = signal.details.replace(/target \d+/, `target ${targetDigit}`);
+    }
+    return signal;
+  }, [tickData, symbol, balance, targetDigit]);
+
   const analyses = [
     {
       key: 'sma',
       name: 'SMA',
-      func: () => analyzeSMACrossover(ticks, symbol, 5, 10, targetDigit),
+      func: () => analyzeSMACrossover(tickData[symbol] || [], symbol, 5, 10, targetDigit),
       explanation: 'Moving average of last digits. Predicts if digits will match the target digit.',
     },
     {
       key: 'stochastic',
       name: 'Stochastic',
-      func: () => analyzeStochastic(ticks, symbol, targetDigit),
+      func: () => analyzeStochastic(tickData[symbol] || [], symbol, targetDigit),
       explanation: 'Shows most frequent digits. Helps identify digit clustering patterns.',
     },
     {
       key: 'streak',
       name: 'Streak',
-      func: () => analyzeTickStreak(ticks, symbol, targetDigit),
+      func: () => analyzeTickStreak(tickData[symbol] || [], symbol, targetDigit),
       explanation: 'Identifies consecutive Match/Differ sequences. Long streaks often reverse.',
     },
     {
       key: 'volatility',
       name: 'Volatility',
-      func: () => analyzeVolatilitySpike(ticks),
+      func: () => analyzeVolatilitySpike(tickData[symbol] || []),
       explanation: 'Measures digit fluctuation speed. High volatility means unpredictable digits.',
     },
     {
@@ -336,7 +377,6 @@ const MatchesDiffersMarketAnalysis = () => {
     },
   ];
 
-  // Render analysis result
   const renderAnalysis = (analysis) => {
     if (!analysis) {
       return <Text>No data available for analysis.</Text>;
@@ -357,19 +397,28 @@ const MatchesDiffersMarketAnalysis = () => {
                 <SignalIndicator
                   signal={signal}
                   strength={confidence}
+                  targetDigit={targetDigit}
                   showAlert={showAlert && confidence > 0.7}
                 />
               </Space>
             }
             description={details}
             type={
-              signal?.startsWith('matches') ? 'success' :
-              signal?.startsWith('differs') ? 'error' :
+              signal === 'matches' ? 'success' :
+              signal === 'differs' ? 'error' :
               signal === 'warning' ? 'warning' : 'info'
             }
             showIcon
           />
           <Row gutter={[16, 16]}>
+            <Col span={24}>
+              <CandlestickChart
+                ticks={tickData[symbol] || []}
+                simpleMode={simpleMode}
+                symbol={symbol}
+                targetDigit={targetDigit}
+              />
+            </Col>
             <Col span={24}>
               <DigitHistoryChart digits={lastDigits} targetDigit={targetDigit} />
             </Col>
@@ -384,14 +433,20 @@ const MatchesDiffersMarketAnalysis = () => {
                       title={
                         <Space>
                           <Text>{key.toUpperCase()}</Text>
-                          <Tooltip title={analyses.find((a) => a.key === key)?.explanation}>
-                            <QuestionCircleOutlined style={{ color: '#1890ff' }} />
-                          </Tooltip>
+                          <AnalysisExplanation
+                            title={analyses.find((a) => a.key === key)?.name}
+                            content={analyses.find((a) => a.key === key)?.explanation}
+                          />
                         </Space>
                       }
                     >
                       <Space direction="vertical">
-                        <SignalIndicator signal={res?.signal} strength={res?.strength} size="small" />
+                        <SignalIndicator
+                          signal={res?.signal}
+                          strength={res?.strength}
+                          targetDigit={targetDigit}
+                          size="small"
+                        />
                         <Text type="secondary">{res?.details || 'No details'}</Text>
                         {(key === 'sma' || key === 'stochastic') && res?.rawData && (
                           <DigitBarIndicator
@@ -415,10 +470,8 @@ const MatchesDiffersMarketAnalysis = () => {
       <Card size="small">
         <Space direction="vertical" style={{ width: '100%' }}>
           <Space>
-            <SignalIndicator signal={signal} strength={strength} size="small" />
-            <Tooltip title={analysis.explanation}>
-              <QuestionCircleOutlined style={{ color: '#1890ff' }} />
-            </Tooltip>
+            <SignalIndicator signal={signal} strength={strength} targetDigit={targetDigit} size="small" />
+            <AnalysisExplanation title={analysis.name} content={analysis.explanation} />
           </Space>
           <Text>{details}</Text>
           {(analysis.key === 'sma' || analysis.key === 'stochastic') && rawData && (
@@ -499,7 +552,7 @@ const MatchesDiffersMarketAnalysis = () => {
                   <Col span={12}>
                     <Statistic
                       title="Current Price"
-                      value={ticks.length > 0 ? ticks[ticks.length - 1].price : '--'}
+                      value={tickData[symbol]?.length > 0 ? tickData[symbol][tickData[symbol].length - 1].price : '--'}
                       precision={2}
                     />
                   </Col>
@@ -508,6 +561,7 @@ const MatchesDiffersMarketAnalysis = () => {
                       title="Last Digit"
                       value={lastDigit !== null ? lastDigit : '--'}
                       prefix={<NumberOutlined />}
+                      valueStyle={{ color: lastDigit !== null ? (lastDigit === targetDigit ? '#52c41a' : '#f5222d') : 'inherit' }}
                     />
                   </Col>
                 </Row>
@@ -539,6 +593,14 @@ const MatchesDiffersMarketAnalysis = () => {
               </Row>
               <Row>
                 <Col span={24}>
+                  <Text>
+                    Recent digits: {lastDigits.slice(0, 10).filter(d => d === targetDigit).length}/10 match target,{' '}
+                    {lastDigits.slice(0, 10).filter(d => d !== targetDigit).length}/10 differ from target
+                  </Text>
+                </Col>
+              </Row>
+              <Row>
+                <Col span={24}>
                   <Space>
                     <Text>Visual Alerts:</Text>
                     <Switch size="small" checked={showAlert} onChange={setShowAlert} />
@@ -558,14 +620,22 @@ const MatchesDiffersMarketAnalysis = () => {
                     <SignalIndicator
                       signal={combinedSignal.signal}
                       strength={combinedSignal.confidence}
+                      targetDigit={targetDigit}
                       showAlert={showAlert && combinedSignal.confidence > 0.7}
                     />
                     {lastDigit !== null && (
                       <DigitBarIndicator digit={lastDigit} targetDigit={targetDigit} />
                     )}
                     <Text>{combinedSignal.details}</Text>
+                    <Text type="secondary"><small>Based on {(tickData[symbol] || []).length} recent ticks</small></Text>
                   </Space>
                 </Card>
+                <CandlestickChart
+                  ticks={tickData[symbol] || []}
+                  simpleMode={simpleMode}
+                  symbol={symbol}
+                  targetDigit={targetDigit}
+                />
                 <DigitHistoryChart digits={lastDigits.slice(0, 10)} targetDigit={targetDigit} />
               </Space>
             ) : (
@@ -585,8 +655,8 @@ const MatchesDiffersMarketAnalysis = () => {
                           <Badge
                             dot
                             color={
-                              combinedSignal.signal?.startsWith('matches') ? '#52c41a' :
-                              combinedSignal.signal?.startsWith('differs') ? '#f5222d' : '#faad14'
+                              combinedSignal.signal === 'matches' ? '#52c41a' :
+                              combinedSignal.signal === 'differs' ? '#f5222d' : '#faad14'
                             }
                           />
                         )}

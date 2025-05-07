@@ -1,6 +1,6 @@
-import { calculateSMA, calculateStochastic, calculateVolatility, calculateRiskStake, getLastDigit } from '../sharedAnalysis';
+import { calculateSMA, calculateVolatility, calculateRiskStake, getLastDigit } from '../sharedAnalysis';
 
-// SMA Crossover
+// SMA Crossover with dynamic target digit
 function analyzeSMACrossover(ticks, symbol, fastPeriod = 5, slowPeriod = 10, targetDigit = 5) {
   if (ticks.length < slowPeriod + 1) {
     return {
@@ -20,15 +20,17 @@ function analyzeSMACrossover(ticks, symbol, fastPeriod = 5, slowPeriod = 10, tar
     };
   }
 
+  const distance = Math.abs(fastSMA - targetDigit);
+  const isMatch = distance < 1; // Consider SMA close to target as a match
   return {
-    signal: Math.round(fastSMA) === targetDigit ? `matches_${targetDigit}` : `differs_${targetDigit}`,
-    strength: Math.abs(fastSMA - targetDigit) < 2 ? 0.6 : 0.3,
+    signal: isMatch ? 'matches' : 'differs',
+    strength: Math.min(0.9, 0.3 + (isMatch ? (1 - distance) * 0.6 : 0.6 / (distance + 1))),
     details: `Digit SMA (${fastSMA.toFixed(1)}) vs target ${targetDigit}`,
     rawData: { fastSMA, slowSMA, targetDigit },
   };
 }
 
-// Stochastic Oscillator
+// Stochastic Oscillator with dynamic target digit
 function analyzeStochastic(ticks, symbol, targetDigit = 5) {
   const kPeriod = symbol.includes('1HZ') ? 8 : 14;
   if (ticks.length < kPeriod) {
@@ -43,16 +45,19 @@ function analyzeStochastic(ticks, symbol, targetDigit = 5) {
   ticks.slice(-kPeriod).forEach((tick) => {
     digitCounts[getLastDigit(tick.price)]++;
   });
+  const maxDigit = digitCounts.indexOf(Math.max(...digitCounts));
+  const targetCount = digitCounts[targetDigit];
+  const expectedCount = kPeriod / 10; // Expected frequency if random
 
   return {
-    signal: digitCounts[targetDigit] > kPeriod / 10 ? `differs_${targetDigit}` : `matches_${targetDigit}`,
-    strength: Math.abs(digitCounts[targetDigit] - kPeriod / 10) / (kPeriod / 10),
-    details: `Digit ${targetDigit} appeared ${digitCounts[targetDigit]}/${kPeriod} times`,
-    rawData: { maxDigit: digitCounts.indexOf(Math.max(...digitCounts)), digitCounts, targetDigit },
+    signal: targetCount > expectedCount ? 'matches' : 'differs',
+    strength: Math.min(0.9, Math.abs(targetCount - expectedCount) / expectedCount),
+    details: `Digit ${targetDigit} appeared ${targetCount}/${kPeriod} times (expected: ${expectedCount.toFixed(1)})`,
+    rawData: { maxDigit, digitCounts, targetDigit },
   };
 }
 
-// Tick Streak
+// Tick Streak with dynamic target digit
 function analyzeTickStreak(ticks, symbol, targetDigit = 5) {
   if (!ticks || ticks.length < 2) {
     return {
@@ -101,7 +106,7 @@ function analyzeTickStreak(ticks, symbol, targetDigit = 5) {
 
   if (streak >= streakThreshold) {
     return {
-      signal: direction === 'matches' ? `differs_${targetDigit}` : `matches_${targetDigit}`,
+      signal: direction === 'matches' ? 'differs' : 'matches',
       strength: Math.min(0.9, (streak / streakThreshold) * 0.9),
       details: `${streak}-tick ${direction} streak (Target: ${targetDigit}, Threshold: ${streakThreshold})`,
       rawData: results,
@@ -152,9 +157,9 @@ function analyzeVolatilitySpike(ticks) {
   };
 }
 
-// Risk Analysis (unchanged)
+// Risk Analysis (updated payout for Matches/Differs)
 function analyzeRisk(balance, indexSymbol, volatilityScore = 50) {
-  const payout = 10; // Mock; fetch via Deriv API
+  const payout = 10; // Mock; fetch via Deriv API for Matches/Differs
   const risk = calculateRiskStake(balance, 1, payout, volatilityScore);
 
   return {
@@ -164,7 +169,7 @@ function analyzeRisk(balance, indexSymbol, volatilityScore = 50) {
   };
 }
 
-// Combine Signals
+// Combine Signals with dynamic target digit
 function combineSignals(ticks, symbol, balance, targetDigit = 5) {
   const sma = analyzeSMACrossover(ticks, symbol, 5, 10, targetDigit);
   const stochastic = analyzeStochastic(ticks, symbol, targetDigit);
@@ -187,8 +192,7 @@ function combineSignals(ticks, symbol, balance, targetDigit = 5) {
   let totalStrength = 0;
 
   signals.forEach((s) => {
-    const baseSignal = s.signal.split('_')[0];
-    signalCounts[baseSignal] = (signalCounts[baseSignal] || 0) + s.strength;
+    signalCounts[s.signal] = (signalCounts[s.signal] || 0) + s.strength;
     totalStrength += s.strength;
   });
 
@@ -201,7 +205,7 @@ function combineSignals(ticks, symbol, balance, targetDigit = 5) {
     ''
   );
   if (signalCounts[strongestSignal] >= 1.5) {
-    signal = `${strongestSignal}_${targetDigit}`;
+    signal = strongestSignal;
     confidence = Math.min(1, signalCounts[strongestSignal] / 3);
     details = `Strong ${strongestSignal.toUpperCase()} signal (Target: ${targetDigit}, Confidence: ${(confidence * 100).toFixed(0)}%)`;
   } else {
@@ -210,6 +214,7 @@ function combineSignals(ticks, symbol, balance, targetDigit = 5) {
 
   if (volatility.signal === 'warning') {
     signal = 'hold';
+    confidence = 0;
     details = `High volatility - avoid trading (Target: ${targetDigit})`;
   }
 
