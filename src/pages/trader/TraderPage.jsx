@@ -18,6 +18,11 @@ import EvenOddTrader from './even_odd/EvenOddContract';
 import RiseFallTrader from './rise_fall/RiseFallContract';
 import VolatilityComparisonChart from '../../components/TickDataGraph';
 import MatchesDiffersTrader from './matches_differs/MatchesDifferContract';
+import RiseFallMarketAnalysis from '../analysis/riseFall/RiseFallMarketAnalysis';
+import OverUnderMarketAnalysis from '../analysis/overUnder/OverUnderMarketAnalysis';
+import MatchesDiffersMarketAnalysis from '../analysis/matchesDiffers/MatchesDiffersMarketAnalysis';
+import EvenOddMarketAnalysis from '../analysis/eveOdd/EvenOddMarketAnalysis';
+import RecentTrades from '../../components/RecentTrades';
 
 const { Title, Text } = Typography;
 
@@ -28,22 +33,26 @@ const TraderPage = () => {
         {
           icon: <RiseOutlined />,
           title: 'Rise/Fall',
-          component: <RiseFallTrader />
+          contractComponent: <RiseFallTrader />,
+          analysisComponent: <RiseFallMarketAnalysis />
         },
         {
           icon: <NumberOutlined />,
           title: 'Even/Odd',
-          component: <EvenOddTrader />
+          contractComponent: <EvenOddTrader />,
+          analysisComponent: <EvenOddMarketAnalysis />
         },
         {
           icon: <ArrowUpOutlined />,
           title: 'Over/Under',
-          component: <OverUnderTrader />
+          contractComponent: <OverUnderTrader />,
+          analysisComponent: <OverUnderMarketAnalysis />
         },
         {
           icon: <LineChartOutlined />,
           title: 'Matches/Differs',
-          component: <MatchesDiffersTrader />
+          contractComponent: <MatchesDiffersTrader />,
+          analysisComponent: <MatchesDiffersMarketAnalysis />
         }
     ], []);
 
@@ -93,13 +102,31 @@ const TraderPage = () => {
                 <Divider orientation="center">
                     <Title level={2}>Trading Contract</Title>  
                 </Divider>
-                <div style={{ marginTop: 10 }}>
+                <Row gutter={[16, 16]} style={{ marginTop: 10 }}>
                     {selectedFeature ? (
-                        selectedFeature.component || <Text>No contract available for this option.</Text>
+                        <>
+                            <Col xs={24} md={12}>
+                                <div style={{ resize: 'horizontal', overflow: 'auto', paddingRight: 8 }}>
+                                    {selectedFeature.contractComponent}
+                                </div>
+                            </Col>
+                            <Col xs={24} md={12}>
+                                <div style={{ overflow: 'auto', paddingLeft: 8 }}>
+                                    {selectedFeature.analysisComponent}
+                                </div>
+                            </Col>
+                        </>
                     ) : (
-                        <Text>Select a trading option to view its contract.</Text>
+                        <Col span={24}>
+                            <Text>Select a trading option to view its contract and analysis.</Text>
+                        </Col>
                     )}
-                </div>
+                </Row>
+
+                <Divider orientation="center">
+                    <Title level={2}>Recent Trades</Title>
+                </Divider>
+                <RecentTrades />
             </Layout.Content>
         </Layout>
     );

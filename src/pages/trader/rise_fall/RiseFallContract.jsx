@@ -35,10 +35,8 @@ import {
 } from '@ant-design/icons';
 import { useUser } from '../../../context/AuthContext';
 import { useContracts } from '../../../context/ContractsContext';
-import RecentTrades from '../../../components/RecentTrades';
 import RequestIdGenerator from '../../../services/uniqueIdGenerator'; 
 import Notification from '../../../utils/Notification';
-import RiseFallMarketAnalysis from '../../analysis/riseFall/RiseFallMarketAnalysis';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -193,7 +191,7 @@ const RiseFallTrader = () => {
           content={notification.content}
           trigger={notification.trigger}
         />
-        <Col xs={24} md={16}>
+        <Col xs={24}>
           {loading ? (
             <Spin tip="Loading account details..." size="large" style={{ display: 'block', margin: '50px auto' }} />
           ) : error ? (
@@ -445,19 +443,10 @@ const RiseFallTrader = () => {
                   </Row>
                 </Space>
               </TabPane>
-              <TabPane tab="Analysis" key="analysis">
-                <div style={{ padding: '16px 0' }}>
-                  <RiseFallMarketAnalysis />
-                </div>
-              </TabPane>
             </Tabs>
           </Card>
         </Col>
 
-        {/* Recent Trades */}
-        <Col xs={24} md={8}>
-          <RecentTrades />
-        </Col>
       </Row>
     </ConfigProvider>
   );
