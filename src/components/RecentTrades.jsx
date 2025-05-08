@@ -120,108 +120,120 @@ const RecentTrades = () => {
 
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
-      <Card
-        title={
-          <Space>
-            <HistoryOutlined />
-            <Text strong>Live Contracts</Text>
-          </Space>
-        }
-        style={{
-          borderRadius: 16,
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
-        }}
-        loading={authLoading}
-      >
-        {sortedLiveContracts.length > 0 ? (
-          <div style={{ maxHeight: '360px', overflowY: 'auto' }}>
-            <Space direction="vertical" size={16} style={{ width: '100%' }}>
-              {sortedLiveContracts.map((contract) => (
-                <Card
-                  key={contract.contract_id}
-                  size="small"
-                  style={{ borderLeft: '4px solid #1890ff', borderRadius: 8 }}
-                >
-                  <Row justify="space-between">
-                    <Col>
-                      <Text strong>{contract.display_name || contract.underlying}</Text> <br />
-                      <Text type="secondary">Type: {contract.contract_type}</Text> <br />
-                      <Text type="secondary">Buy Price: {contract.buy_price} {contract.currency}</Text> <br />
-                      <Text type="secondary">Current Price: {contract.current_spot || 'N/A'}</Text> <br />
-                      <Text type="secondary">Profit: {contract.profit || 0} {contract.currency}</Text> <br />
-                      <Text type="secondary">Pay Out: {contract.payout || 0}{contract.currency}</Text> <br />
-                      <Text type="secondary">
-                        Duration: {contract.duration} {contract.duration_unit === 't' ? 'ticks' : 'minutes'}
-                      </Text> <br />
-                      <Progress
-                        percent={calculateProgress(contract)}
+      <Row gutter={16} wrap>
+        <Col xs={24} md={12}>
+          <div style={{ resize: 'horizontal', overflow: 'auto', paddingRight: 8 }}>
+            <Card
+              title={
+                <Space>
+                  <HistoryOutlined />
+                  <Text strong>Live Contracts</Text>
+                </Space>
+              }
+              style={{
+                borderRadius: 16,
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+                minWidth: 300
+              }}
+              loading={authLoading}
+            >
+              {sortedLiveContracts.length > 0 ? (
+                <div style={{ maxHeight: '360px', overflowY: 'auto' }}>
+                  <Space direction="vertical" size={16} style={{ width: '100%' }}>
+                    {sortedLiveContracts.map((contract) => (
+                      <Card
+                        key={contract.contract_id}
                         size="small"
-                        status="active"
-                        style={{ width: 150 }}
-                      />
-                    </Col>
-                    <Col>
-                      <Tag color="blue">{contract.status?.toUpperCase()}</Tag>
-                    </Col>
-                  </Row>
-                </Card>
-              ))}
-            </Space>
+                        style={{ borderLeft: '4px solid #1890ff', borderRadius: 8 }}
+                      >
+                        <Row justify="space-between">
+                          <Col>
+                            <Text strong>{contract.display_name || contract.underlying}</Text> <br />
+                            <Text type="secondary">Type: {contract.contract_type}</Text> <br />
+                            <Text type="secondary">Buy Price: {contract.buy_price} {contract.currency}</Text> <br />
+                            <Text type="secondary">Current Price: {contract.current_spot || 'N/A'}</Text> <br />
+                            <Text type="secondary">Profit: {contract.profit || 0} {contract.currency}</Text> <br />
+                            <Text type="secondary">Pay Out: {contract.payout || 0}{contract.currency}</Text> <br />
+                            <Text type="secondary">
+                              Duration: {contract.duration} {contract.duration_unit === 't' ? 'ticks' : 'minutes'}
+                            </Text> <br />
+                            <Progress
+                              percent={calculateProgress(contract)}
+                              size="small"
+                              status="active"
+                              style={{ width: 150 }}
+                            />
+                          </Col>
+                          <Col>
+                            <Tag color="blue">{contract.status?.toUpperCase()}</Tag>
+                          </Col>
+                        </Row>
+                      </Card>
+                    ))}
+                  </Space>
+                </div>
+              ) : (
+                <Text type="secondary">No live contracts.</Text>
+              )}
+            </Card>
           </div>
-        ) : (
-          <Text type="secondary">No live contracts.</Text>
-        )}
-      </Card>
+        </Col>
 
-      <Card
-        title={
-          <Space>
-            <HistoryOutlined />
-            <Text strong>Recent Trades</Text>
-          </Space>
-        }
-        style={{
-          borderRadius: 16,
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
-        }}
-        loading={authLoading}
-      >
-        <div style={{ maxHeight: '360px', overflowY: 'auto' }}>
-          {sortedRecentTrades.length > 0 ? (
-            <Space direction="vertical" size={16} style={{ width: '100%' }}>
-              {sortedRecentTrades.map((trade) => (
-                <Card
-                  key={trade.contract_id}
-                  size="small"
-                  style={{
-                    borderLeft: `4px solid ${trade.profit > 0 ? '#52c41a' : '#ff4d4f'}`,
-                    borderRadius: 8,
-                    transition: 'all 0.3s ease',
-                  }}
-                >
-                  <Row justify="space-between">
-                    <Col>
-                      <Text strong>{trade.display_name || trade.underlying}</Text> <br />
-                      <Text type="secondary">Type: {trade.contract_type}</Text> <br />
-                      <Text type="secondary">Buy Price: {trade.buy_price} {trade.currency}</Text> <br />
-                      <Text type="secondary">Sell Price: {trade.sell_price || 'N/A'}</Text> <br />
-                      <Text type="secondary">Profit: {trade.profit || 0} {trade.currency}</Text> <br />
-                      <Text type="secondary">Pay Out: {trade.payout || 0} {trade.currency}</Text>
-                    </Col>
-                    <Col>
-                      <Tag color={trade.profit > 0 ? 'green' : 'red'}>
-                        {trade.profit > 0 ? 'WON' : 'LOST'}
-                      </Tag>
-                    </Col>
-                  </Row>
-                </Card>
-              ))}
-            </Space>
-          ) : (
-            <Text type="secondary">No recent trades available.</Text>
-          )}
-        </div>
-      </Card>
+        <Col xs={24} md={12}>
+          <div style={{ overflow: 'auto', paddingLeft: 8 }}>
+            <Card
+              title={
+                <Space>
+                  <HistoryOutlined />
+                  <Text strong>Recent Trades</Text>
+                </Space>
+              }
+              style={{
+                borderRadius: 16,
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+                minWidth: 300
+              }}
+              loading={authLoading}
+            >
+              <div style={{ maxHeight: '360px', overflowY: 'auto' }}>
+                {sortedRecentTrades.length > 0 ? (
+                  <Space direction="vertical" size={16} style={{ width: '100%' }}>
+                    {sortedRecentTrades.map((trade) => (
+                      <Card
+                        key={trade.contract_id}
+                        size="small"
+                        style={{
+                          borderLeft: `4px solid ${trade.profit > 0 ? '#52c41a' : '#ff4d4f'}`,
+                          borderRadius: 8,
+                          transition: 'all 0.3s ease',
+                        }}
+                      >
+                        <Row justify="space-between">
+                          <Col>
+                            <Text strong>{trade.display_name || trade.underlying}</Text> <br />
+                            <Text type="secondary">Type: {trade.contract_type}</Text> <br />
+                            <Text type="secondary">Buy Price: {trade.buy_price} {trade.currency}</Text> <br />
+                            <Text type="secondary">Sell Price: {trade.sell_price || 'N/A'}</Text> <br />
+                            <Text type="secondary">Profit: {trade.profit || 0} {trade.currency}</Text> <br />
+                            <Text type="secondary">Pay Out: {trade.payout || 0} {trade.currency}</Text>
+                          </Col>
+                          <Col>
+                            <Tag color={trade.profit > 0 ? 'green' : 'red'}>
+                              {trade.profit > 0 ? 'WON' : 'LOST'}
+                            </Tag>
+                          </Col>
+                        </Row>
+                      </Card>
+                    ))}
+                  </Space>
+                ) : (
+                  <Text type="secondary">No recent trades available.</Text>
+                )}
+              </div>
+            </Card>
+          </div>
+        </Col>
+      </Row>
     </Space>
   );
 };
