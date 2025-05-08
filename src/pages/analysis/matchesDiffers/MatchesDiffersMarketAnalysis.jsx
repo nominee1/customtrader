@@ -38,7 +38,6 @@ import {
   analyzeRisk,
   combineSignals,
 } from './matchesDiffersAnalysis';
-import CandlestickChart from './MatcheDiffersCandlestickChart'; 
 import '../../../assets/css/pages/analysis/MarketAnalysis.css';
 import { useUser } from '../../../context/AuthContext';
 
@@ -414,14 +413,6 @@ const MatchesDiffersMarketAnalysis = () => {
           />
           <Row gutter={[16, 16]}>
             <Col span={24}>
-              <CandlestickChart
-                ticks={tickData[symbol] || []}
-                simpleMode={simpleMode}
-                symbol={symbol}
-                targetDigit={targetDigit}
-              />
-            </Col>
-            <Col span={24}>
               <DigitHistoryChart digits={lastDigits} targetDigit={targetDigit} />
             </Col>
           </Row>
@@ -631,12 +622,6 @@ const MatchesDiffersMarketAnalysis = () => {
                     <Text type="secondary"><small>Based on {(tickData[symbol] || []).length} recent ticks</small></Text>
                   </Space>
                 </Card>
-                <CandlestickChart
-                  ticks={tickData[symbol] || []}
-                  simpleMode={simpleMode}
-                  symbol={symbol}
-                  targetDigit={targetDigit}
-                />
                 <DigitHistoryChart digits={lastDigits.slice(0, 10)} targetDigit={targetDigit} />
               </Space>
             ) : (

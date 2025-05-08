@@ -38,7 +38,6 @@ import {
   analyzeRisk,
   combineSignals,
 } from './overUnderAnalysis';
-import CandlestickChart from './OverUnderCandlestickChart';
 import '../../../assets/css/pages/analysis/MarketAnalysis.css';
 import { useUser } from '../../../context/AuthContext';
 
@@ -413,9 +412,6 @@ const OverUnderMarketAnalysis = () => {
           
           <Row gutter={[16, 16]}>
             <Col span={24}>
-              <CandlestickChart ticks={tickData[symbol] || []} simpleMode={simpleMode} symbol={symbol} barrier={barrier} />
-            </Col>
-            <Col span={24}>
               <DigitHistoryChart digits={lastDigits} barrier={barrier} />
             </Col>
           </Row>
@@ -623,7 +619,6 @@ const OverUnderMarketAnalysis = () => {
                     <Text type="secondary"><small>Based on {(tickData[symbol] || []).length} recent ticks</small></Text>
                   </Space>
                 </Card>
-                <CandlestickChart ticks={tickData[symbol] || []} simpleMode={simpleMode} symbol={symbol} barrier={barrier} />
                 <DigitHistoryChart digits={lastDigits.slice(0, 10)} barrier={barrier} />
               </Space>
             ) : (

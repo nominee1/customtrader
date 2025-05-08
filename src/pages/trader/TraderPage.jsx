@@ -21,7 +21,7 @@ import MatchesDiffersTrader from './matches_differs/MatchesDifferContract';
 import RiseFallMarketAnalysis from '../analysis/riseFall/RiseFallMarketAnalysis';
 import OverUnderMarketAnalysis from '../analysis/overUnder/OverUnderMarketAnalysis';
 import MatchesDiffersMarketAnalysis from '../analysis/matchesDiffers/MatchesDiffersMarketAnalysis';
-import EvenOddMarketAnalysis from '../analysis/eveOdd/EvenOddMarketAnalysis';
+import EvenOddMarketAnalysis from '../analysis/evenOdd/EvenOddMarketAnalysis';
 import RecentTrades from '../../components/RecentTrades';
 
 const { Title, Text } = Typography;

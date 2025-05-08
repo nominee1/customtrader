@@ -9,7 +9,6 @@ import { publicWebSocket } from '../../../services/public_websocket_client';
 import {
   analyzeSMACrossover, analyzeStochastic, analyzeTickStreak, analyzeVolatilitySpike, analyzeRisk, combineSignals,
 } from './evenOddAnalysis';
-import CandlestickChart from './EvenOddCandlestickChart';
 import '../../../assets/css/pages/analysis/MarketAnalysis.css';
 import { useUser } from '../../../context/AuthContext';
 
@@ -275,9 +274,6 @@ const EvenOddMarketAnalysis = () => {
           />
           <Row gutter={[16, 16]}>
             <Col span={24}>
-              <CandlestickChart ticks={tickData[symbol] || []} simpleMode={simpleMode} symbol={symbol} />
-            </Col>
-            <Col span={24}>
               <DigitHistoryChart digits={lastDigits} />
             </Col>
           </Row>
@@ -426,7 +422,6 @@ const EvenOddMarketAnalysis = () => {
                     <Text type="secondary"><small>Based on {(tickData[symbol] || []).length} recent ticks</small></Text>
                   </Space>
                 </Card>
-                <CandlestickChart ticks={tickData[symbol] || []} simpleMode={simpleMode} symbol={symbol} />
                 <DigitHistoryChart digits={lastDigits.slice(0, 10)} />
               </Space>
             ) : (

@@ -9,7 +9,7 @@ import { publicWebSocket } from '../../../services/public_websocket_client';
 import {
   analyzeSMACrossover, analyzeStochastic, analyzeTickStreak, analyzeVolatilitySpike, analyzeRisk, combineSignals,
 } from './riseFallAnalysis';
-import RiseFallCandlestickChart from './RiseFallCandlestickChart';
+// import RiseFallCandlestickChart from './RiseFallCandlestickChart';
 import PriceMovementChart from './PriceMovementChart';
 import '../../../assets/css/pages/analysis/MarketAnalysis.css';
 import { useUser } from '../../../context/AuthContext';
@@ -242,9 +242,6 @@ const RiseFallMarketAnalysis = () => {
           />
           <Row gutter={[16, 16]}>
             <Col span={24}>
-              <RiseFallCandlestickChart ticks={tickData[symbol] || []} simpleMode={simpleMode} symbol={symbol} />
-            </Col>
-            <Col span={24}>
               <PriceMovementChart movements={priceMovements} />
             </Col>
           </Row>
@@ -404,7 +401,6 @@ const RiseFallMarketAnalysis = () => {
                     <Text type="secondary"><small>Based on {(tickData[symbol] || []).length} recent ticks</small></Text>
                   </Space>
                 </Card>
-                <RiseFallCandlestickChart ticks={tickData[symbol] || []} simpleMode={simpleMode} symbol={symbol} />
                 <PriceMovementChart movements={priceMovements.slice(0, 10)} />
               </Space>
             ) : (
