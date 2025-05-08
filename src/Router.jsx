@@ -1,7 +1,8 @@
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { TickProvider } from './context/TickContext';
 import LandingPage from './pages/landing/LandingPage';
 import LoginPage from './pages/login/LoginPage';
-import Dashboard from './pages/dashboard/DashboardPage'; 
+import Dashboard from './pages/dashboard/DashboardPage';
 import MainSection from './pages/dashboard/DashboardMainContent';
 import TraderPage from './pages/trader/TraderPage';
 import WalletPage from './components/WalletPage';
@@ -27,7 +28,9 @@ function AppRoutes() {
           element={
             <UserProvider>
               <ContractsProvider>
-                <Dashboard />
+                <TickProvider>
+                  <Dashboard />
+                </TickProvider>
               </ContractsProvider>
             </UserProvider>
           }
