@@ -16,14 +16,13 @@ import { useState, useEffect, useMemo } from 'react';
 import OverUnderTrader from './over_under/OverUnderContract';
 import EvenOddTrader from './even_odd/EvenOddContract';
 import RiseFallTrader from './rise_fall/RiseFallContract';
-import VolatilityComparisonChart from '../../components/TickDataGraph';
 import MatchesDiffersTrader from './matches_differs/MatchesDifferContract';
 import RiseFallMarketAnalysis from '../analysis/riseFall/RiseFallMarketAnalysis';
 import OverUnderMarketAnalysis from '../analysis/overUnder/OverUnderMarketAnalysis';
 import MatchesDiffersMarketAnalysis from '../analysis/matchesDiffers/MatchesDiffersMarketAnalysis';
 import EvenOddMarketAnalysis from '../analysis/evenOdd/EvenOddMarketAnalysis';
 import RecentTrades from '../../components/RecentTrades';
-
+import ChartPage from './ChartPage';
 const { Title, Text } = Typography;
 
 const TraderPage = () => {
@@ -65,7 +64,7 @@ const TraderPage = () => {
         <Layout style={{ padding: '16px' }}>
             <Layout.Content>
                 {/* Chart at the top */}
-                <VolatilityComparisonChart />
+                <ChartPage />
 
                 {/* Trading Features */}
                 <Divider orientation="center">

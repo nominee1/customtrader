@@ -26,6 +26,7 @@ import {
 } from '@ant-design/icons';
 import { useUser } from '../../context/AuthContext';
 import VolatilityMonitor from '../../components/VolatilityMonitor';
+import VolatilityComparisonChart from '../../components/TickDataGraph';
 import { ConfigProvider } from 'antd';
 import '../../assets/css/pages/dashboard/DashboardMainContent.css'; 
 import Notification from '../../utils/Notification';
@@ -320,7 +321,7 @@ const DashboardMainContent = () => {
                   <Space>
                     <LineChartOutlined style={{ color: '#6C5CE7' }} />
                     <Text strong style={{ fontSize: 18 }}>
-                      Volatility Index Monitor
+                      Tick Data chart
                     </Text>
                   </Space>
                 }
@@ -334,7 +335,7 @@ const DashboardMainContent = () => {
                   </Space>
                 }
               >
-                <VolatilityMonitor />
+                <VolatilityComparisonChart />
                 <Divider />
                 <Row gutter={[24, 24]}>
                   <Col xs={24} md={12}>
