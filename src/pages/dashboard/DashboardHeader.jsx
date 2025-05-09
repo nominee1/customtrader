@@ -21,7 +21,6 @@ const { Text } = Typography;
 const DashboardHeader = ({ collapsed, setCollapsed, toggleDrawer }) => {
   const { user, balance, activeAccountType, switchAccount, accounts, loading, activeAccount, sendAuthorizedRequest } = useUser();
   const navigate = useNavigate();
-  const accountId = activeAccount?.loginid;
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 576);
 
   useEffect(() => {
@@ -29,6 +28,16 @@ const DashboardHeader = ({ collapsed, setCollapsed, toggleDrawer }) => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  const getAvatarColor = () => {
+    if (!activeAccountType) return '#1890ff'; // Default blue
+    return activeAccountType === 'real' ? '#52c41a' : '#ff4d4f';
+  };
+
+  const getAvatarText = () => {
+    if (!activeAccountType) return 'U'; // User
+    return activeAccountType === 'real' ? 'R' : 'D';
+  };
 
   const handleLogout = async () => {
     try {
@@ -126,24 +135,20 @@ const DashboardHeader = ({ collapsed, setCollapsed, toggleDrawer }) => {
           />
         )}
         {!isMobile && (
-          <>
-            <img
-              src={logo}
-              alt="Company Logo"
-              style={{ height: '80px', width: 'auto' }}
-            />
-          </>
+          <img
+            src={logo}
+            alt="Company Logo"
+            style={{ height: '80px', width: 'auto' }}
+          />
         )}
       </Space>
       <Space size="large" align="center">
-        {!isMobile && (
-          <Space className="balance-display">
-            <WalletOutlined style={{ color: '#1890ff', fontSize: '16px' }} />
-            <Text className="balance-text">
-              {user?.currency} {balance?.toFixed(2) || '0.00'}
-            </Text>
-          </Space>
-        )}
+        <Space className={`balance-display ${isMobile ? 'balance-mobile' : ''}`}>
+          <WalletOutlined style={{ color: '#1890ff', fontSize: '16px' }} />
+          <Text className="balance-text" strong={isMobile}>
+            {user?.currency} {balance?.toFixed(2) || '0.00'}
+          </Text>
+        </Space>
         <Dropdown
           menu={{ items: userMenuItems }}
           placement="bottomRight"
@@ -152,10 +157,14 @@ const DashboardHeader = ({ collapsed, setCollapsed, toggleDrawer }) => {
         >
           <Space className="user-menu">
             <Avatar
-              src={user?.avatar}
-              icon={<UserOutlined />}
-              className="avatar"
-            />
+              style={{
+                backgroundColor: getAvatarColor(),
+                color: '#fff',
+                fontWeight: 'bold'
+              }}
+            >
+              {getAvatarText()}
+            </Avatar>
             {!isMobile && (
               <>
                 <Text strong>{user?.fullname || 'User'}</Text>

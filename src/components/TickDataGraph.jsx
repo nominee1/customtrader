@@ -13,8 +13,8 @@ import {
   Tooltip,
   Legend,
   Filler,
+  AnnotationPlugin,
 } from 'chart.js';
-import annotationPlugin from 'chartjs-plugin-annotation';
 import throttle from 'lodash/throttle';
 
 ChartJS.register(
@@ -26,7 +26,7 @@ ChartJS.register(
   Tooltip,
   Legend,
   Filler,
-  annotationPlugin
+  AnnotationPlugin
 );
 
 const { Option } = Select;
@@ -36,7 +36,7 @@ const VolatilityComparisonChart = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [symbol, setSymbol] = useState('1HZ10V');
+  const [symbols, setSymbols] = useState(['1HZ10V']);
   const [showAviator, setShowAviator] = useState(false);
   const [timeRange, setTimeRange] = useState(60);
   const [autoRefresh, setAutoRefresh] = useState(true);
@@ -124,14 +124,14 @@ const VolatilityComparisonChart = () => {
     };
 
     return () => {
-      Object.keys(subscriptions.current).forEach((sym) => {
-        publicWebSocket.send({ forget: subscriptions.current[sym] });
-        delete subscriptions.current[sym];
+      Object.keys(subscriptions.current).forEach((symbol) => {
+        publicWebSocket.send({ forget: subscriptions.current[symbol] });
+        delete subscriptions.current[symbol];
       });
       unsubscribe();
       publicWebSocket.close();
     };
-  }, [symbol]);
+  }, [symbols]);
 
   useEffect(() => {
     let interval;
@@ -139,37 +139,42 @@ const VolatilityComparisonChart = () => {
       interval = setInterval(subscribeToTicks, 30000);
     }
     return () => clearInterval(interval);
-  }, [autoRefresh, showAviator, symbol]);
+  }, [autoRefresh, showAviator, symbols]);
 
   const subscribeToTicks = () => {
     setLoading(true);
     setError(null);
     setData([]);
-    Object.keys(subscriptions.current).forEach((sym) => {
-      publicWebSocket.send({ forget: subscriptions.current[sym] });
-      delete subscriptions.current[sym];
+    Object.keys(subscriptions.current).forEach((symbol) => {
+      publicWebSocket.send({ forget: subscriptions.current[symbol] });
+      delete subscriptions.current[symbol];
     });
 
-    lastUpdateTime.current = { [symbol]: 0 };
+    lastUpdateTime.current = symbols.reduce((acc, symbol) => {
+      acc[symbol] = 0;
+      return acc;
+    }, {});
 
-    publicWebSocket.send({
-      ticks: symbol,
-      subscribe: 1,
+    symbols.forEach((symbol) => {
+      publicWebSocket.send({
+        ticks: symbol,
+        subscribe: 1,
+      });
     });
     setLoading(false);
   };
 
   const unsubscribeFromTicks = () => {
-    Object.keys(subscriptions.current).forEach((sym) => {
-      publicWebSocket.send({ forget: subscriptions.current[sym] });
-      delete subscriptions.current[sym];
+    Object.keys(subscriptions.current).forEach((symbol) => {
+      publicWebSocket.send({ forget: subscriptions.current[symbol] });
+      delete subscriptions.current[symbol];
     });
     setData([]);
   };
 
-  const handleSymbolChange = (value) => {
+  const handleSymbolChange = (values) => {
     unsubscribeFromTicks();
-    setSymbol(value);
+    setSymbols(values.length ? values : ['1HZ10V']);
     setData([]);
   };
 
@@ -196,7 +201,7 @@ const VolatilityComparisonChart = () => {
   };
 
   const chartData = useMemo(() => {
-    const displayData = getDisplayData().filter((item) => item.symbol === symbol);
+    const displayData = getDisplayData();
     const colorMap = {
       'Volatility 10': 'rgba(24, 144, 255, 1)',
       'Volatility 10 (1s)': 'rgba(24, 144, 255, 1)',
@@ -211,39 +216,49 @@ const VolatilityComparisonChart = () => {
     };
 
     const datasets = [];
-    const displayName = getSymbolDisplayName(symbol);
-    const ctx = chartRef.current?.canvas?.getContext('2d');
-    let gradient;
+    const groupedData = {};
 
-    if (ctx) {
-      gradient = ctx.createLinearGradient(0, 0, 0, 400);
-      gradient.addColorStop(0, colorMap[displayName].replace('1)', '0.3)'));
-      gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-    }
+    displayData.forEach((item) => {
+      if (!groupedData[item.symbol]) groupedData[item.symbol] = [];
+      groupedData[item.symbol].push(item);
+    });
 
-    datasets.push({
-      label: displayName,
-      data: displayData.map((item) => ({
-        x: item.time,
-        y: item.value,
-        isLatest: item.isLatest,
-      })),
-      borderColor: colorMap[displayName],
-      backgroundColor: gradient || colorMap[displayName],
-      borderWidth: 2,
-      tension: 0.1,
-      pointRadius: displayData.map((item) => (item.isLatest ? 6 : 4)),
-      pointBackgroundColor: displayData.map((item) =>
-        item.isLatest ? 'rgba(255, 77, 79, 1)' : colorMap[displayName]
-      ),
-      pointBorderColor: 'rgba(255, 255, 255, 1)',
-      pointHoverRadius: 7,
-      pointHitRadius: 10,
-      fill: true,
+    Object.keys(groupedData).forEach((symbol) => {
+      const symbolData = groupedData[symbol];
+      const displayName = getSymbolDisplayName(symbol);
+      const ctx = chartRef.current?.canvas?.getContext('2d');
+      let gradient;
+
+      if (ctx) {
+        gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, colorMap[displayName].replace('1)', '0.3)'));
+        gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      }
+
+      datasets.push({
+        label: displayName,
+        data: symbolData.map((item) => ({
+          x: item.time,
+          y: item.value,
+          isLatest: item.isLatest,
+        })),
+        borderColor: colorMap[displayName],
+        backgroundColor: gradient || colorMap[displayName],
+        borderWidth: 2,
+        tension: 0.1,
+        pointRadius: symbolData.map((item) => (item.isLatest ? 6 : 4)),
+        pointBackgroundColor: symbolData.map((item) =>
+          item.isLatest ? 'rgba(255, 77, 79, 1)' : colorMap[displayName]
+        ),
+        pointBorderColor: 'rgba(255, 255, 255, 1)',
+        pointHoverRadius: 7,
+        pointHitRadius: 10,
+        fill: true,
+      });
     });
 
     return { datasets };
-  }, [data, symbol]);
+  }, [data, symbols]);
 
   const chartOptions = {
     responsive: true,
@@ -336,9 +351,9 @@ const VolatilityComparisonChart = () => {
             </Title>
           </Col>
           <Col>
-            {!showAviator && (
+            {symbols.length > 0 && !showAviator && (
               <Tag color="blue" style={{ fontSize: '14px', padding: '4px 8px' }}>
-                {getSymbolDisplayName(symbol)}
+                {symbols.map(getSymbolDisplayName).join(', ')}
               </Tag>
             )}
             {showAviator && (
@@ -346,6 +361,10 @@ const VolatilityComparisonChart = () => {
                 Aviator Predictor
               </Tag>
             )}
+            {/* Example balance display next to avatar, update className as requested */}
+            {/* <span className="hidden md:inline-block">Balance: ${balance}</span> */}
+            {/* Updated to be visible on all screen sizes: */}
+            {/* <span className="inline-block">Balance: ${balance}</span> */}
           </Col>
         </Row>
       }
@@ -388,11 +407,13 @@ const VolatilityComparisonChart = () => {
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} sm={24} md={16}>
           <Select
-            value={symbol}
+            mode="multiple"
+            value={symbols}
             onChange={handleSymbolChange}
             style={{ width: '100%' }}
             disabled={loading || showAviator}
             optionLabelProp="label"
+            maxTagCount={3}
             showSearch
             filterOption={(input, option) =>
               option.label.toLowerCase().includes(input.toLowerCase())
@@ -457,7 +478,7 @@ const VolatilityComparisonChart = () => {
             </div>
           )}
           <iframe
-            src={`https://predicto-mocha.vercel.app/?symbol=${symbol || '1HZ10V'}`}
+            src={`https://predicto-mocha.vercel.app/?symbol=${symbols[0] || '1HZ10V'}`}
             style={{
               width: '100%',
               height: '100%',
