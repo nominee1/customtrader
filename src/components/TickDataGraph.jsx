@@ -13,8 +13,8 @@ import {
   Tooltip,
   Legend,
   Filler,
-  AnnotationPlugin,
 } from 'chart.js';
+import annotationPlugin from 'chartjs-plugin-annotation';
 import throttle from 'lodash/throttle';
 
 ChartJS.register(
@@ -26,7 +26,7 @@ ChartJS.register(
   Tooltip,
   Legend,
   Filler,
-  AnnotationPlugin
+  annotationPlugin
 );
 
 const { Option } = Select;
