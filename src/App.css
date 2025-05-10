@@ -37,6 +37,16 @@
   --accent-green: #52c41a; /* Real account */
   --accent-red: #FF7675;   /* Demo account and logout (standardized from #ff4d4f) */
   --disabled-color: #cccccc; /* Disabled menu items */
+
+  /* Chart colors */
+  --chart-color-v10: rgba(24, 144, 255, 1);  /* Volatility 10 */
+  --chart-color-v25: rgba(255, 77, 79, 1);   /* Volatility 25 */
+  --chart-color-v50: rgba(82, 196, 26, 1);   /* Volatility 50 */
+  --chart-color-v75: rgba(250, 173, 20, 1);  /* Volatility 75 */
+  --chart-color-v100: rgba(114, 46, 209, 1); /* Volatility 100 */
+  --chart-latest-point: rgba(255, 77, 79, 1);
+  --chart-point-border: rgba(255, 255, 255, 1);
+  --chart-annotation-line: rgba(255, 77, 79, 0.5);
 }
 
 * {
@@ -93,15 +103,38 @@ input:focus, textarea:focus, select:focus {
   outline: none;
   border-color: var(--primary-color);
 }
-  
-/* ===== Cards ===== */
-.card {
+/* Ant Design overrides */
+.ant-card {
   background-color: var(--card-bg);
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-  transition: background-color var(--transition-speed);
 }
-.card:hover {
-  background-color: var(--card-bg);
+
+.ant-select-selector {
+  background-color: var(--bg-color) !important;
+  color: var(--text-color);
+  border-color: var(--input-bg) !important;
+}
+
+.ant-select-selection-item,
+.ant-select-selection-placeholder {
+  color: var(--text-color);
+}
+
+.ant-btn-primary {
+  background: var(--secondary-color);
+  border: none;
+}
+
+.ant-btn-primary:hover {
+  background-color: var(--secondary-variant) !important;
+}
+
+.ant-btn-default {
+  background-color: var(--primary-color);
+  color: var(--text-color);
+  border: none;
+}
+
+.ant-btn-default:hover {
+  background-color: var(--hover-accent)!important;
+  color: var(--text-color);
 }
