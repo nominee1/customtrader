@@ -259,9 +259,10 @@ const WalletPage = () => {
         },
       }}
     >
-      <div
+      <div className='wallet-container'
         style={{
-          padding: '16px',
+          paddingTop: '80px',
+          backgroundColor: 'var(--bg-color)',
           maxWidth: 1400,
           margin: '0 auto',
           // Pass token values as CSS custom properties

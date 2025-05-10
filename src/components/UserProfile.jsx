@@ -210,7 +210,7 @@ const UserProfile = () => {
         content={notification.content}
         trigger={notification.trigger}
       />
-      <div style={{ padding: '24px', maxWidth: 1200, margin: '0 auto' }}>
+      <div style={{ paddingTop: '80px', maxWidth: 1200, margin: '0 auto', backgroundColor: 'var(--bg-color)', }}>
         <Row gutter={[24, 24]}>
           <Col xs={24} md={8}>
             <Card
