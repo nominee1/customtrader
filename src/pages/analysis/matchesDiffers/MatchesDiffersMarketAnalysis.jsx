@@ -13,6 +13,7 @@ import {
   Statistic,
   Tooltip,
   Alert,
+  theme,
   Badge,
   Switch,
   Slider,
@@ -43,7 +44,7 @@ import { useUser } from '../../../context/AuthContext';
 
 const { Option } = Select;
 const { TabPane } = Tabs;
-const { Text } = Typography;
+const { Text, Title } = Typography;
 const { Panel } = Collapse;
 
 const volatilityOptions = [
@@ -187,6 +188,7 @@ const SignalIndicator = ({ signal, strength, targetDigit, size = 'default', show
           </div>
         )}
         <Badge
+          showZero
           color={config.color}
           text={
             <span
@@ -226,6 +228,7 @@ const AnalysisExplanation = ({ title, content }) => (
 const MatchesDiffersMarketAnalysis = () => {
   const { balance } = useUser();
   const [symbol, setSymbol] = useState('R_10');
+  const { token } = theme.useToken();
   const [tickData, setTickData] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -496,7 +499,7 @@ const MatchesDiffersMarketAnalysis = () => {
       <Card
         title={
           <Space>
-            <span>Matches/Differs Market Analysis</span>
+            <Title level={4} style={{ margin: 0, color: token.colorPrimary }}>Matches/Differs Market Analysis</Title>
           </Space>
         }
         extra={
@@ -507,7 +510,7 @@ const MatchesDiffersMarketAnalysis = () => {
           </Space>
         }
         className="market-analysis-card"
-        bodyStyle={{ padding: simpleMode ? '16px 8px' : 16 }}
+        Style={{ padding: simpleMode ? '16px 8px' : 16 }}
       >
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>
           <Row gutter={[16, 16]}>
@@ -539,7 +542,7 @@ const MatchesDiffersMarketAnalysis = () => {
               </Select>
             </Col>
             <Col xs={24} md={12}>
-              <Card size="small" bodyStyle={{ padding: '8px 16px' }}>
+              <Card size="small" Style={{ padding: '8px 16px' }}>
                 <Row gutter={16}>
                   <Col span={12}>
                     <Statistic
@@ -585,7 +588,7 @@ const MatchesDiffersMarketAnalysis = () => {
               </Row>
               <Row>
                 <Col span={24}>
-                  <Text>
+                  <Text style={{ color:'var(--text-color)'}}>
                     Recent digits: {lastDigits.slice(0, 10).filter(d => d === targetDigit).length}/10 match target,{' '}
                     {lastDigits.slice(0, 10).filter(d => d !== targetDigit).length}/10 differ from target
                   </Text>
@@ -619,7 +622,7 @@ const MatchesDiffersMarketAnalysis = () => {
                       <DigitBarIndicator digit={lastDigit} targetDigit={targetDigit} />
                     )}
                     <Text>{combinedSignal.details}</Text>
-                    <Text type="secondary"><small>Based on {(tickData[symbol] || []).length} recent ticks</small></Text>
+                    <Text type="secondary" style={{ color: 'var(--text-color)'}}><small>Based on {(tickData[symbol] || []).length} recent ticks</small></Text>
                   </Space>
                 </Card>
                 <DigitHistoryChart digits={lastDigits.slice(0, 10)} targetDigit={targetDigit} />

@@ -65,7 +65,7 @@ body {
   background-color: transparent;
   min-height: 100vh;
 }
-Paragraph,Title {
+Paragraph,Title, text {
   color: var(--text-color);
 }
   
@@ -105,7 +105,7 @@ input:focus, textarea:focus, select:focus {
 }
 /* Ant Design overrides */
 .ant-card {
-  background-color: var(--card-bg);
+  background: linear-gradient(135deg, rgba(108, 92, 231, 0.1) 0%, rgba(0, 206, 255, 0.1) 100%);
 }
 
 .ant-select-selector {
@@ -137,4 +137,272 @@ input:focus, textarea:focus, select:focus {
 .ant-btn-default:hover {
   background-color: var(--hover-accent)!important;
   color: var(--text-color);
+}
+.ant-select-dropdown {
+  background-color: var(--card-bg, rgba(255, 255, 255, 0.05));
+  color: var(--text-color, whitesmoke);
+}
+.ant-select-selector {
+  background-color: var(--input-bg, rgba(255, 255, 255, 0.1)) !important;
+  color: var(--text-color, whitesmoke);
+  border-color: var(--input-bg, rgba(255, 255, 255, 0.1)) !important;
+}
+
+.ant-select-item-option {
+  color: var(--text-color, whitesmoke) !important;
+}
+
+.ant-select-item-option-selected {
+  background-color: var(--primary-variant, #3700B3) !important;
+}
+
+.ant-typography {
+  color: var(--text-color, whitesmoke);
+}
+
+
+
+.ant-btn-primary {
+  background-color: var(--primary-variant, #3700B3);
+  border: none;
+}
+
+.ant-btn-primary:hover {
+  background-color: var(--hover-accent, #03DAC6);
+}
+
+.ant-btn-default {
+  background-color: var(--input-bg, rgba(255, 255, 255, 0.1));
+  color: var(--text-color, whitesmoke);
+  border: none;
+}
+
+.ant-btn-default:hover {
+  background-color: var(--hover-accent, #03DAC6);
+  color: var(--text-color, whitesmoke);
+}
+
+.ant-typography {
+  color: var(--text-color, whitesmoke);
+}
+
+.ant-typography-secondary {
+  opacity: 0.7;
+}
+.ant-txt-primary {
+  color: var(--text-color);
+}
+
+/* Select */
+.ant-select-selector {
+  background-color: var(--input-bg, rgba(255, 255, 255, 0.1)) !important;
+  color: var(--text-color, whitesmoke) !important;
+  border-color: var(--input-bg, rgba(255, 255, 255, 0.1)) !important;
+  border-radius: 8px;
+}
+
+.ant-select-selection-item,
+.ant-select-selection-placeholder {
+  color: var(--text-color, whitesmoke);
+}
+
+.ant-select-dropdown {
+  background-color: var(--card-bg, rgba(255, 255, 255, 0.05));
+  color: var(--text-color, whitesmoke);
+}
+
+.ant-select-item-option {
+  color: var(--text-color, whitesmoke);
+}
+
+.ant-select-item-option-selected {
+  background-color: var(--primary-variant, #3700B3) !important;
+}
+
+
+.ant-radio-button-wrapper:hover {
+  background-color: var(--primary-variant, #3700B3);
+  color: var(--text-color, whitesmoke);
+}
+
+.ant-radio-button-wrapper-disabled {
+  background-color: var(--disabled-color, #cccccc);
+  color: var(--text-color, whitesmoke);
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* InputNumber */
+.ant-input-number {
+  background-color: var(--input-bg, rgba(255, 255, 255, 0.1));
+  color: var(--text-color, whitesmoke);
+  border-color: var(--input-bg, rgba(255, 255, 255, 0.1));
+  border-radius: 8px;
+}
+
+.ant-input-number-input {
+  color: var(--text-color, whitesmoke);
+}
+
+.ant-input-number-addon-after,
+.ant-input-number-prefix {
+  color: var(--text-color, whitesmoke);
+}
+
+.ant-input-number-disabled {
+  background-color: var(--disabled-color, #cccccc);
+  opacity: 0.5;
+}
+
+/* Buttons */
+.ant-btn-primary {
+  background-color: var(--primary-color, #6C5CE7);
+  border-color: var(--primary-color, #6C5CE7);
+  border-radius: 8px;
+  height: 48px;
+  transition: background-color var(--transition-speed, 0.3s);
+}
+
+.ant-btn-primary:hover,
+.ant-btn-primary:focus {
+  background-color: var(--primary-variant, #3700B3);
+  border-color: var(--primary-variant, #3700B3);
+}
+/* Spin */
+.ant-spin {
+  color: var(--primary-color, #6C5CE7);
+}
+
+.ant-spin-dot-item {
+  background-color: var(--primary-color, #6C5CE7);
+}
+
+
+
+.ant-select-selection-item,
+.ant-select-selection-placeholder {
+  color: var(--text-color, whitesmoke);
+}
+
+.ant-select-dropdown {
+  background-color: var(--neutral-light);
+  color: var(--text-color, whitesmoke);
+}
+
+.ant-select-item-option {
+  color: var(--text-color, whitesmoke);
+}
+
+.ant-select-item-option-selected {
+  background-color: var(--primary-variant, #3700B3) !important;
+}
+
+/* Radio Group */
+.ant-radio-group {
+  width: 100%;
+}
+
+.ant-radio-button-wrapper {
+  background-color: var(--input-bg, rgba(255, 255, 255, 0.1));
+  color: var(--text-color, whitesmoke);
+  border-color: var(--input-bg, rgba(255, 255, 255, 0.1));
+  transition: background-color var(--transition-speed, 0.3s);
+}
+
+.ant-radio-button-wrapper-checked {
+  background-color: var(--primary-color, #6C5CE7) !important;
+  color: var(--text-color, whitesmoke) !important;
+  border-color: var(--primary-color, #6C5CE7) !important;
+}
+
+.ant-radio-button-wrapper:hover {
+  background-color: var(--primary-variant, #3700B3);
+  color: var(--text-color, whitesmoke);
+}
+
+.ant-radio-button-wrapper-disabled {
+  background-color: var(--disabled-color, #cccccc);
+  color: var(--text-color, whitesmoke);
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* InputNumber */
+.ant-input-number {
+  background-color: var(--input-bg, rgba(255, 255, 255, 0.1));
+  color: var(--text-color, whitesmoke);
+  border-color: var(--input-bg, rgba(255, 255, 255, 0.1));
+  border-radius: 8px;
+}
+
+.ant-input-number-input {
+  color: var(--text-color, whitesmoke);
+}
+
+.ant-input-number-addon-after,
+.ant-input-number-prefix {
+  color: var(--text-color, whitesmoke);
+}
+
+.ant-input-number-disabled {
+  background-color: var(--disabled-color, #cccccc);
+  opacity: 0.5;
+}
+
+/* Buttons */
+.ant-btn-primary {
+  background-color: var(--primary-color, #6C5CE7);
+  border-color: var(--primary-color, #6C5CE7);
+  border-radius: 8px;
+  height: 48px;
+  transition: background-color var(--transition-speed, 0.3s);
+}
+
+.ant-btn-primary:hover,
+.ant-btn-primary:focus {
+  background-color: var(--primary-variant, #3700B3);
+  border-color: var(--primary-variant, #3700B3);
+}
+
+.ant-btn-primary:disabled {
+  background-color: var(--disabled-color, #cccccc);
+  border-color: var(--disabled-color, #cccccc);
+  color: var(--text-color, whitesmoke);
+  opacity: 0.5;
+}
+
+/* Statistic */
+.ant-statistic-title {
+  color: var(--text-color, whitesmoke);
+  opacity: 0.7;
+}
+
+.ant-statistic-content {
+  color: var(--text-color, whitesmoke);
+}
+
+.ant-statistic-content-value {
+  font-size: 18px;
+}
+
+/* Alert */
+.ant-alert {
+  background-color: var(--input-bg, rgba(255, 255, 255, 0.1));
+  border-color: var(--input-bg, rgba(255, 255, 255, 0.1));
+  color: var(--text-color, whitesmoke);
+  border-radius: 8px;
+}
+
+.ant-alert-message,
+.ant-alert-description {
+  color: var(--text-color, whitesmoke);
+}
+
+/* Spin */
+.ant-spin {
+  color: var(--primary-color, #6C5CE7);
+}
+
+.ant-spin-dot-item {
+  background-color: var(--primary-color, #6C5CE7);
 }

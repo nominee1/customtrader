@@ -109,7 +109,7 @@ const SettingsPage = () => {
         }
       }}
     >
-      <div style={{ padding: '24px', maxWidth: 1200, margin: '0 auto' }}>
+      <div style={{ paddingTop: '80px', maxWidth: 1200, margin: '0 auto', backgroundColor: 'var(--bg-color)', height:'100%',paddingLeft:'24px', paddingRight:'24px' }}>
         <Tabs
           activeKey={activeTab}
           onChange={setActiveTab}

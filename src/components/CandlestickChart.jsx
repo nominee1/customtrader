@@ -1,9 +1,12 @@
+// src/components/CandlestickChart.jsx
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
-import { Card, Typography, Alert, Button, Select, Spin, Radio, Space, Tooltip, Divider } from 'antd';
+import { Card, Typography, Button, Select, Skeleton, Radio, Space, Tooltip, Divider } from 'antd';
 import Chart from 'react-apexcharts';
 import debounce from 'lodash/debounce';
 import PropTypes from 'prop-types';
 import { LoadingOutlined, ReloadOutlined } from '@ant-design/icons';
+import Notification from '../utils/Notification'; // Adjust path as needed
+import '../assets/css/components/CandlestickChart.css';
 
 const { Text, Title } = Typography;
 const { Option } = Select;
@@ -66,26 +69,27 @@ const CandlestickChart = ({
   const [series, setSeries] = useState([{ data: [] }]);
   const [intervalSeconds, setIntervalSeconds] = useState(initialInterval);
   const [chartError, setChartError] = useState(null);
+  const [errorTrigger, setErrorTrigger] = useState(false);
+  const [notification, setNotification] = useState({ type: 'success', content: '', trigger: false });
   const [isChartRendered, setIsChartRendered] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [theme] = useState('light');
+  const [theme] = useState('dark');
   const [selectedTimeRange, setSelectedTimeRange] = useState('5m');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [crosshairData, setCrosshairData] = useState(null);
   const chartRef = useRef(null);
   const containerRef = useRef(null);
 
-  // Performance optimization: Memoize expensive calculations
+  // Memoize candlestick calculations
   const candles = useMemo(() => {
     if (!ticks || ticks.length === 0) return [];
 
-    const intervalMs = intervalSeconds * 5000;
+    const intervalMs = intervalSeconds * 1000; // Changed to 1000ms for consistency with RiseFallMarketAnalysis
     const candlesMap = new Map();
 
-    // Performance optimization: Use for loop instead of forEach
     for (let i = 0; i < ticks.length; i++) {
       const tick = ticks[i];
-      const timestamp = Math.floor(tick.timestamp * 1000);
+      const timestamp = Math.floor(tick.timestamp * 1000); // Convert epoch to milliseconds
       const price = parseFloat(tick.price);
       const timeBucket = Math.floor(timestamp / intervalMs) * intervalMs;
 
@@ -114,14 +118,19 @@ const CandlestickChart = ({
     return result;
   }, [ticks, intervalSeconds]);
 
-  // Debounced chart update with performance optimization
+  // Debounced chart update
   const debouncedUpdateChart = useRef(
     debounce((candlesData, currentMode, currentSymbol, currentInterval) => {
       try {
         setIsLoading(true);
-        
+
         if (candlesData.length === 0) {
           setSeries([{ data: [] }]);
+          setNotification({
+            type: 'info',
+            content: 'No data available. Please refresh to load data.',
+            trigger: !notification.trigger,
+          });
           setIsLoading(false);
           return;
         }
@@ -138,7 +147,7 @@ const CandlestickChart = ({
           const recentTicks = ticks.slice(-10);
           const recentPrices = recentTicks.map((t) => parseFloat(t.price));
           const priceRange = symbolPriceRanges[currentSymbol];
-          
+
           let minPrice, maxPrice;
           if (recentPrices.length >= 5 && (!priceRange || currentInterval === 1)) {
             minPrice = Math.min(...recentPrices);
@@ -173,6 +182,7 @@ const CandlestickChart = ({
       } catch (error) {
         console.error('Chart update error:', error);
         setChartError(`Error updating chart: ${error.message}`);
+        setErrorTrigger((prev) => !prev);
         setIsLoading(false);
       }
     }, intervalSeconds === 5 ? 250 : 500)
@@ -194,7 +204,6 @@ const CandlestickChart = ({
     }
   }, [series]);
 
-
   // Handle fullscreen change
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -208,7 +217,7 @@ const CandlestickChart = ({
   // Update chart when dependencies change
   useEffect(() => {
     debouncedUpdateChart(candles, mode, symbol, intervalSeconds);
-  }, [candles, mode, symbol, intervalSeconds, selectedTimeRange, debouncedUpdateChart]);
+  }, [candles, mode, symbol, intervalSeconds, debouncedUpdateChart]);
 
   // Cleanup
   useEffect(() => {
@@ -220,10 +229,10 @@ const CandlestickChart = ({
   const getColorForMode = (digit, currentMode) => {
     switch (currentMode) {
       case MODES.EVEN_ODD:
-        return digit % 2 === 0 ? '#52c41a' : '#f5222d';
+        return digit % 2 === 0 ? 'var(--accent-green, #52c41a)' : 'var(--accent-red, #f5222d)';
       case MODES.RISE_FALL:
       default:
-        return '#1890ff';
+        return 'var(--primary-color, #1890ff)';
     }
   };
 
@@ -237,7 +246,7 @@ const CandlestickChart = ({
         speed: 300,
         animateGradually: {
           enabled: true,
-          delay: 150
+          delay: 150,
         },
       },
       zoom: {
@@ -262,11 +271,12 @@ const CandlestickChart = ({
           zoomout: true,
           pan: true,
           reset: true,
-        }
+        },
       },
+      background: 'var(--bg-color)',
     },
     theme: {
-      mode: theme,
+      mode: 'dark',
     },
     title: {
       text: `${symbol} - ${intervalSeconds}s Candles`,
@@ -274,7 +284,7 @@ const CandlestickChart = ({
       style: {
         fontSize: '16px',
         fontWeight: 'bold',
-        color: theme === 'dark' ? '#FFF' : '#333',
+        color: 'var(--neutral-color, whitesmoke)',
       },
     },
     xaxis: {
@@ -283,19 +293,40 @@ const CandlestickChart = ({
         format: intervalSeconds <= 5 ? 'HH:mm:ss' : 'HH:mm',
         datetimeUTC: false,
         style: {
-          colors: theme === 'dark' ? '#FFF' : '#333',
+          colors: 'var(--text-color, whitesmoke)',
         },
       },
       range: TIME_RANGES[selectedTimeRange].seconds * 1000,
+      axisBorder: {
+        show: true,
+        color: 'var(--input-bg, rgba(255, 255, 255, 0.1))',
+      },
+      axisTicks: {
+        show: true,
+        color: 'var(--input-bg, rgba(255, 255, 255, 0.1))',
+      },
     },
     yaxis: {
+      opposite: true, 
       tooltip: { enabled: true },
       labels: {
-        formatter: (val) => typeof val === 'number' ? val.toFixed(symbolPipSizes[symbol] || 2) : val,
+        formatter: (val) => (typeof val === 'number' ? val.toFixed(symbolPipSizes[symbol] || 2) : val),
         style: {
-          colors: theme === 'dark' ? '#FFF' : '#333',
+          colors: 'var(--text-color, whitesmoke)',
         },
       },
+      axisBorder: {
+        show: true,
+        color: 'var(--input-bg, rgba(255, 255, 255, 0.1))',
+      },
+      axisTicks: {
+        show: true,
+        color: 'var(--input-bg, rgba(255, 255, 255, 0.1))',
+      },
+    },
+    grid: {
+      borderColor: 'var(--input-bg, rgba(255, 255, 255, 0.1))',
+      strokeDashArray: 4,
     },
     crosshair: {
       show: true,
@@ -303,13 +334,13 @@ const CandlestickChart = ({
       position: 'back',
       opacity: 0.9,
       stroke: {
-        color: theme === 'dark' ? '#FFF' : '#666',
+        color: 'var(--text-color, whitesmoke)',
         width: 1,
         dashArray: 0,
       },
       fill: {
         type: 'solid',
-        color: theme === 'dark' ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)',
+        color: 'var(--card-bg, rgba(255, 255, 255, 0.05))',
       },
     },
     tooltip: {
@@ -331,9 +362,11 @@ const CandlestickChart = ({
             infoText = `${lastDigit} (${lastDigit % 2 === 0 ? 'Even' : 'Odd'})`;
             break;
           case MODES.RISE_FALL:
-            { const direction = data.y[3] > data.y[0] ? 'Rise' : data.y[3] < data.y[0] ? 'Fall' : 'Neutral';
-            infoText = `${direction}`;
-            break; }
+            {
+              const direction = data.y[3] > data.y[0] ? 'Rise' : data.y[3] < data.y[0] ? 'Fall' : 'Neutral';
+              infoText = `${direction}`;
+              break;
+            }
           default:
             infoText = `${lastDigit}`;
         }
@@ -341,11 +374,11 @@ const CandlestickChart = ({
         return `
           <div style="
             padding: 8px;
-            background: ${theme === 'dark' ? '#1f1f1f' : 'white'};
-            border: 1px solid ${theme === 'dark' ? '#333' : '#ddd'};
+            background: var(--card-bg, rgba(255, 255, 255, 0.05));
+            border: 1px solid var(--input-bg, rgba(255, 255, 255, 0.1));
             border-radius: 4px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            color: ${theme === 'dark' ? '#EEE' : '#333'};
+            color: var(--text-color, whitesmoke);
           ">
             <div style="font-weight: 500; margin-bottom: 4px;">
               ${new Date(data.x).toLocaleTimeString()}
@@ -365,39 +398,61 @@ const CandlestickChart = ({
     },
     plotOptions: {
       candlestick: {
-        colors: { upward: '#52c41a', downward: '#f5222d' },
+        colors: {
+          upward: 'var(--accent-green, #52c41a)',
+          downward: 'var(--accent-red, #f5222d)',
+        },
         wick: { useFillColor: true },
       },
     },
-    responsive: [{
-      breakpoint: 768,
-      options: {
-        chart: {
-          height: 400,
-        },
-        title: {
-          style: {
-            fontSize: '14px',
+    responsive: [
+      {
+        breakpoint: 768,
+        options: {
+          chart: {
+            height: 400,
+          },
+          title: {
+            style: {
+              fontSize: '14px',
+            },
           },
         },
       },
-    }],
+    ],
   }), [isFullscreen, handleCrosshairMove, theme, symbol, intervalSeconds, selectedTimeRange, mode]);
 
   const handleRefresh = useCallback(() => {
     setIsLoading(true);
+    setNotification({
+      type: 'success',
+      content: 'Refreshing chart data...',
+      trigger: !notification.trigger,
+    });
     onRefresh?.();
-  }, [onRefresh]);
+  }, [onRefresh, notification.trigger]);
 
   return (
-    <div ref={containerRef} style={{ position: 'relative' }}>
+    <div ref={containerRef} className="candlestick-chart-container">
+      <Notification
+        type="error"
+        content={chartError || 'An error occurred'}
+        trigger={errorTrigger}
+      />
+      <Notification
+        type={notification.type}
+        content={notification.content}
+        trigger={notification.trigger}
+      />
       <Card
+        className="candlestick-chart-card"
         title={
           <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-            <Text strong>
+            <Text strong className="candlestick-chart-title">
               {symbol} - {intervalSeconds}s Candles
             </Text>
             <Radio.Group
+              className="candlestick-chart-radio-group"
               value={mode}
               onChange={(e) => setMode(e.target.value)}
               buttonStyle="solid"
@@ -409,8 +464,9 @@ const CandlestickChart = ({
           </Space>
         }
         extra={
-          <Space>
+          <Space className="candlestick-chart-controls">
             <Select
+              className="candlestick-chart-select"
               value={selectedTimeRange}
               onChange={setSelectedTimeRange}
               size="small"
@@ -421,6 +477,7 @@ const CandlestickChart = ({
               ))}
             </Select>
             <Select
+              className="candlestick-chart-select"
               value={intervalSeconds}
               onChange={setIntervalSeconds}
               size="small"
@@ -432,11 +489,12 @@ const CandlestickChart = ({
               <Option value={60}>1 minute</Option>
             </Select>
             <Tooltip title="Refresh Data">
-              <Button 
-                icon={<ReloadOutlined spin={isLoading} />} 
-                size="small" 
+              <Button
+                icon={<ReloadOutlined spin={isLoading} />}
+                size="small"
                 onClick={handleRefresh}
                 disabled={isLoading}
+                type="primary"
               />
             </Tooltip>
           </Space>
@@ -444,54 +502,32 @@ const CandlestickChart = ({
         bodyStyle={{ padding: isFullscreen ? '24px' : '16px' }}
       >
         {chartError ? (
-          <Alert
-            message="Chart Error"
-            description={
-              <>
-                {chartError}
-                <Divider />
-                <Button 
-                  type="primary" 
-                  onClick={() => {
-                    setChartError(null);
-                    handleRefresh();
-                  }}
-                  icon={<ReloadOutlined />}
-                >
-                  Retry
-                </Button>
-              </>
-            }
-            type="error"
-            showIcon
-            closable
-            onClose={() => setChartError(null)}
-          />
+          <div className="candlestick-chart-no-data">
+            <Skeleton active paragraph={{ rows: 4 }} />
+            <Button
+              type="primary"
+              onClick={() => {
+                setChartError(null);
+                setErrorTrigger((prev) => !prev);
+                handleRefresh();
+              }}
+              icon={<ReloadOutlined />}
+            >
+              Retry
+            </Button>
+          </div>
         ) : candles.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px 0' }}>
-            <Spin 
-              indicator={<LoadingOutlined style={{ fontSize: 48 }} spin />} 
-              tip="Loading chart data..."
-            />
-            <div style={{ marginTop: 16 }}>
-              <Button type="primary" onClick={handleRefresh} loading={isLoading}>
-                {isLoading ? 'Loading' : 'Load Data'}
-              </Button>
-            </div>
+          <div className="candlestick-chart-no-data">
+            <Skeleton active paragraph={{ rows: 4 }} />
+            <Text className="candlestick-chart-no-data-text">No data available</Text>
+            <Button type="primary" onClick={handleRefresh} loading={isLoading}>
+              {isLoading ? 'Loading' : 'Load Data'}
+            </Button>
           </div>
         ) : (
           <>
             {crosshairData && (
-              <div style={{
-                position: 'absolute',
-                top: 20,
-                right: 20,
-                zIndex: 10,
-                background: theme === 'dark' ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)',
-                padding: '8px 16px',
-                borderRadius: 4,
-                border: `1px solid ${theme === 'dark' ? '#333' : '#ddd'}`,
-              }}>
+              <div className="candlestick-chart-crosshair">
                 <Text strong>{crosshairData.time}</Text>
                 <br />
                 <Text>Price: {crosshairData.price.toFixed(symbolPipSizes[symbol] || 2)}</Text>
@@ -503,16 +539,11 @@ const CandlestickChart = ({
               type="candlestick"
               height={isFullscreen ? 'calc(80vh - 100px)' : 500}
             />
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              marginTop: 8,
-              flexWrap: 'wrap',
-            }}>
-              <Text type="secondary">
+            <div className="candlestick-chart-footer">
+              <Text type="secondary" style={{ color: 'var(--text-color)'}}>
                 Showing {candles.length} candles (updated at {new Date().toLocaleTimeString()})
               </Text>
-              <Text type="secondary">
+              <Text type="secondary" style={{ color:'var(--text-color)'}}>
                 Crosshair: {crosshairData ? 'Active' : 'Hover over chart'}
               </Text>
             </div>
@@ -532,18 +563,14 @@ CandlestickChart.propTypes = {
     })
   ).isRequired,
   initialMode: PropTypes.oneOf(Object.values(MODES)),
-  targetDigit: PropTypes.number,
-  barrier: PropTypes.number,
   initialInterval: PropTypes.number,
   onRefresh: PropTypes.func,
 };
 
 CandlestickChart.defaultProps = {
   initialMode: MODES.RISE_FALL,
-  targetDigit: 5,
-  barrier: 4,
   initialInterval: 5,
-  onRefresh: () => {},
+  onRefresh: null,
 };
 
 export default CandlestickChart;

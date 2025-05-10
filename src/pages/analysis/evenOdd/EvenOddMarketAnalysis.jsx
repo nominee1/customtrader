@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Card, Select, Tabs, Spin, Progress, Typography, Collapse, Space, Row, Col, Statistic, Tooltip, Alert, Badge, Switch,
+  Card, Select, Tabs, Spin, Progress, Typography, Collapse, theme, Space, Row, Col, Statistic, Tooltip, Alert, Badge, Switch,
 } from 'antd';
 import {
   LineChartOutlined, QuestionCircleOutlined, NumberOutlined, PauseOutlined, WarningOutlined, InfoCircleOutlined, BellOutlined,
 } from '@ant-design/icons';
+import Notification from '../../../utils/Notification';
 import { publicWebSocket } from '../../../services/public_websocket_client';
 import {
   analyzeSMACrossover, analyzeStochastic, analyzeTickStreak, analyzeVolatilitySpike, analyzeRisk, combineSignals,
@@ -14,7 +15,7 @@ import { useUser } from '../../../context/AuthContext';
 
 const { Option } = Select;
 const { TabPane } = Tabs;
-const { Text } = Typography;
+const { Text, Title } = Typography;
 const { Panel } = Collapse;
 
 const volatilityOptions = [
@@ -99,6 +100,7 @@ const SignalIndicator = ({ signal, strength, size = 'default', showAlert = false
           </div>
         )}
         <Badge
+          showZero
           color={config.color}
           text={
             <span style={{ color: isSmall ? config.color : 'inherit', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -126,11 +128,12 @@ const AnalysisExplanation = ({ title, content }) => (
 const EvenOddMarketAnalysis = () => {
   const { balance } = useUser();
   const [symbol, setSymbol] = useState('R_10');
+  const { token } = theme.useToken();
   const [tickData, setTickData] = useState({}); // Initialize as empty object
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [simpleMode, setSimpleMode] = useState(false);
   const [showAlert, setShowAlert] = useState(true);
+  const [notification, setNotification] = useState({ type: '', content: '', trigger: false });
   const userBalance = balance;
 
   // Memoized combined signal
@@ -158,7 +161,6 @@ const EvenOddMarketAnalysis = () => {
 
     const subscribeToAllSymbols = async () => {
       setLoading(true);
-      setError(null);
       try {
         await publicWebSocket.connect();
         if (!isMounted) return;
@@ -195,7 +197,7 @@ const EvenOddMarketAnalysis = () => {
             }
             setLoading(false);
           } else if (event === 'error') {
-            setError('WebSocket error occurred');
+            setNotification({ type: 'error', content: 'WebSocket error occurred', trigger: true });
             setLoading(false);
           }
         };
@@ -224,7 +226,7 @@ const EvenOddMarketAnalysis = () => {
       } catch (err) {
         console.error('WebSocket Error:', err);
         if (isMounted) {
-          setError('Failed to connect to WebSocket. Please check your network or app ID.');
+          setNotification({ type: 'error', content: 'Failed to connect to WebSocket. Please check your network or app ID.', trigger: true });
           setLoading(false);
         }
       }
@@ -340,7 +342,7 @@ const EvenOddMarketAnalysis = () => {
       <Card
         title={
           <Space>
-            <span>Even/Odd Market Analysis</span>
+            <Title level={4} style={{ margin: 0, color: token.colorPrimary }}>Even/Odd Market Analysis</Title>
           </Space>
         }
         extra={
@@ -351,7 +353,7 @@ const EvenOddMarketAnalysis = () => {
           </Space>
         }
         className="market-analysis-card"
-        bodyStyle={{ padding: simpleMode ? '16px 8px' : 16 }}
+        Style={{ padding: simpleMode ? '16px 8px' : 16 }}
       >
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>
           <Row gutter={[16, 16]}>
@@ -383,7 +385,7 @@ const EvenOddMarketAnalysis = () => {
               </Select>
             </Col>
             <Col xs={24} md={12}>
-              <Card size="small" bodyStyle={{ padding: '8px 16px' }}>
+              <Card size="small" Style={{ padding: '8px 16px' }}>
                 <Row gutter={16}>
                   <Col span={12}>
                     <Statistic
@@ -410,7 +412,7 @@ const EvenOddMarketAnalysis = () => {
               <Switch size="small" checked={showAlert} onChange={setShowAlert} />
             </Space>
           </Card>
-          {error && <Alert message={error} type="error" showIcon />}
+          {notification.trigger && <Notification type={notification.type} content={notification.content} trigger={notification.trigger} />}
           <Spin spinning={loading} tip="Loading market data...">
             {simpleMode ? (
               <Space direction="vertical" size="middle" style={{ width: '100%' }}>
@@ -419,7 +421,7 @@ const EvenOddMarketAnalysis = () => {
                     <SignalIndicator signal={combinedSignal.signal} strength={combinedSignal.confidence} showAlert={showAlert && combinedSignal.confidence > 0.7} />
                     {lastDigit !== null && <EvenOddIndicator digit={lastDigit} />}
                     <Text>{combinedSignal.details}</Text>
-                    <Text type="secondary"><small>Based on {(tickData[symbol] || []).length} recent ticks</small></Text>
+                    <Text type="secondary" style={{ color: 'var(--text-color)'}}><small>Based on {(tickData[symbol] || []).length} recent ticks</small></Text>
                   </Space>
                 </Card>
                 <DigitHistoryChart digits={lastDigits.slice(0, 10)} />

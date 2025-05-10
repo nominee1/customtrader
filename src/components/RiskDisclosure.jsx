@@ -26,7 +26,7 @@ const RiskDisclosure = () => {
       <Card
         title={
           <Space>
-            <WarningOutlined style={{ color: '#1890ff', fontSize: '20px' }} />
+            <WarningOutlined style={{ color: '#1890ff', fontSize: '20px'}} />
             <span>Risk Disclosure</span>
           </Space>
         }

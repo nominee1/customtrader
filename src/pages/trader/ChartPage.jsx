@@ -1,95 +1,183 @@
+// src/components/ChartPage.jsx
 import React, { useState, useEffect } from 'react';
-import { Select, Alert, Spin, Card, Space, Typography } from 'antd';
+import { Select, Card, Space, Typography, Skeleton } from 'antd';
 import CandlestickChart from '../../components/CandlestickChart';
+import Notification from '../../utils/Notification';
 import { publicWebSocket } from '../../services/public_websocket_client';
+import '../../assets/css/pages/trader/ChartPage.css';
 
 const { Option } = Select;
 const { Text } = Typography;
 
 const volatilityOptions = [
-    { value: 'R_10', label: 'Volatility 10 Index' },
-    { value: '1HZ10V', label: 'Volatility 10 (1s) Index' },
-    { value: 'R_25', label: 'Volatility 25 Index' },
-    { value: '1HZ25V', label: 'Volatility 25 (1s) Index' },
-    { value: 'R_50', label: 'Volatility 50 Index' },
-    { value: '1HZ50V', label: 'Volatility 50 (1s) Index' },
-    { value: 'R_75', label: 'Volatility 75 Index' },
-    { value: '1HZ75V', label: 'Volatility 75 (1s) Index' },
-    { value: 'R_100', label: 'Volatility 100 Index' },
-    { value: '1HZ100V', label: 'Volatility 100 (1s) Index' },
+  { value: 'R_10', label: 'Volatility 10 Index' },
+  { value: '1HZ10V', label: 'Volatility 10 (1s) Index' },
+  { value: 'R_25', label: 'Volatility 25 Index' },
+  { value: '1HZ25V', label: 'Volatility 25 (1s) Index' },
+  { value: 'R_50', label: 'Volatility 50 Index' },
+  { value: '1HZ50V', label: 'Volatility 50 (1s) Index' },
+  { value: 'R_75', label: 'Volatility 75 Index' },
+  { value: '1HZ75V', label: 'Volatility 75 (1s) Index' },
+  { value: 'R_100', label: 'Volatility 100 Index' },
+  { value: '1HZ100V', label: 'Volatility 100 (1s) Index' },
 ];
+
+// Utility function for retrying with delay
+const retry = async (fn, maxAttempts = 3, delayMs = 3000) => {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn(attempt, maxAttempts);
+    } catch (err) {
+      if (attempt === maxAttempts) {
+        throw err; // Rethrow error after final attempt
+      }
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+};
 
 const ChartPage = () => {
   const [selectedSymbol, setSelectedSymbol] = useState('1HZ10V');
-  const [ticks, setTicks] = useState([]);
+  const [tickData, setTickData] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [errorTrigger, setErrorTrigger] = useState(false);
+  const [notificationTrigger, setNotificationTrigger] = useState(false);
+  const [retryNotificationTrigger, setRetryNotificationTrigger] = useState(false);
 
   useEffect(() => {
-    let unsubscribe;
+    let unsubscribers = [];
     let isMounted = true;
 
-    const handleTick = (event, data) => {
-      if (!isMounted) return;
-      
-      if (event === 'message' && data.msg_type === 'tick' && data.tick) {
-        const tick = data.tick;
-        if (tick.symbol === selectedSymbol) {
-          const newTick = {
-            price: (parseFloat(tick.ask) + parseFloat(tick.bid)) / 2, // Midpoint
-            timestamp: tick.epoch,
-            quote: (parseFloat(tick.ask) + parseFloat(tick.bid)) / 2,
-          };
-          setTicks(prev => [...prev.slice(-199), newTick]); // Keep last 200 ticks
-        }
-      }
-      else if (event === 'error') {
-        console.log('WebSocket error occurred');
-        setLoading(false);
-      }
-    };
-
-    const subscribeToSymbol = async () => {
+    const subscribeToAllSymbols = async (attempt, maxAttempts) => {
       setLoading(true);
       setError(null);
-      setTicks([]);
-      
+      if (attempt > 1) {
+        setRetryNotificationTrigger((prev) => !prev); // Trigger retry notification
+      } else {
+        setNotificationTrigger((prev) => !prev); // Trigger initial loading notification
+      }
+
       try {
         await publicWebSocket.connect();
-        unsubscribe = publicWebSocket.subscribe(handleTick);
-        publicWebSocket.subscribeToTicks(selectedSymbol);
-        
-        // Fetch historical data (last 60 ticks ~ 1 minute)
-        await publicWebSocket.fetchHistoricalTicks(selectedSymbol, 60);
-        setLoading(false);
+        if (!isMounted) return;
+
+        // Initialize tickData for all symbols
+        setTickData((prev) => {
+          const updated = { ...prev };
+          volatilityOptions.forEach((option) => {
+            if (!updated[option.value]) updated[option.value] = [];
+          });
+          return updated;
+        });
+
+        // Handle WebSocket messages
+        const handleTick = (event, data) => {
+          if (!isMounted) return;
+          if (event === 'message' && data.msg_type === 'tick') {
+            const { symbol: tickSymbol, quote, epoch } = data.tick;
+            setTickData((prev) => ({
+              ...prev,
+              [tickSymbol]: [...(prev[tickSymbol] || []), { price: quote, timestamp: epoch }].slice(-200),
+            }));
+          } else if (event === 'message' && data.msg_type === 'history') {
+            const { ticks_history: symbol, prices, times } = data.echo_req;
+            if (prices && times) {
+              const historicalTicks = prices.map((price, index) => ({
+                price,
+                timestamp: times[index],
+              }));
+              setTickData((prev) => ({
+                ...prev,
+                [symbol]: historicalTicks.slice(-60),
+              }));
+            }
+            setLoading(false);
+          } else if (event === 'error') {
+            throw new Error('WebSocket error occurred'); // Trigger retry
+          }
+        };
+
+        // Subscribe to all symbols
+        unsubscribers = [];
+        volatilityOptions.forEach((option) => {
+          const unsubscribe = publicWebSocket.subscribe(handleTick);
+          unsubscribers.push(unsubscribe);
+          publicWebSocket.subscribeToTicks(option.value);
+        });
+
+        // Fetch historical ticks with batching
+        const fetchHistorical = async () => {
+          const batchSize = 5;
+          for (let i = 0; i < volatilityOptions.length; i += batchSize) {
+            if (!isMounted) return;
+            const batch = volatilityOptions.slice(i, i + batchSize);
+            await Promise.all(
+              batch.map((option) => publicWebSocket.fetchHistoricalTicks(option.value, 60))
+            );
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+          }
+        };
+
+        await fetchHistorical();
       } catch (err) {
-        console.error('WebSocket Error:', err);
+        console.error(`WebSocket Error (Attempt ${attempt}/${maxAttempts}):`, err);
         if (isMounted) {
-          setError('Failed to connect to WebSocket');
-          setLoading(false);
+          throw err; // Rethrow to trigger retry
         }
       }
     };
 
-    subscribeToSymbol();
+    // Wrap subscription with retry logic
+    retry(
+      async (attempt, maxAttempts) => await subscribeToAllSymbols(attempt, maxAttempts),
+      3, // Max attempts
+      3000 // Delay in ms
+    ).catch((err) => {
+      if (isMounted) {
+        console.error('Connection erro:', err);
+        setError('Failed to connect to WebSocket after 3 attempts. Please check your network or app ID.');
+        setErrorTrigger((prev) => !prev);
+        setLoading(false);
+      }
+    });
 
     return () => {
       isMounted = false;
-      if (unsubscribe) unsubscribe();
-      publicWebSocket.unsubscribe(selectedSymbol);
+      unsubscribers.forEach((unsub) => unsub());
+      volatilityOptions.forEach((option) => publicWebSocket.unsubscribe(option.value));
+      publicWebSocket.close();
     };
-  }, [selectedSymbol]);
+  }, []);
 
   return (
-    <div style={{ padding: '20px' }}>
+    <div className="chart-page-container">
+      <Notification
+        type="error"
+        content={error || 'An error occurred'}
+        trigger={errorTrigger}
+      />
+      <Notification
+        type="info"
+        content="Connecting to market data..."
+        trigger={notificationTrigger && loading}
+      />
+      <Notification
+        type="info"
+        content={`Retrying WebSocket connection... Attempt ${retryNotificationTrigger ? 2 : 1}/3`}
+        trigger={retryNotificationTrigger && loading}
+      />
       <Card
+        className="chart-page-card"
         title={
-          <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-            <Text strong>Candlestick Chart</Text>
+          <Space style={{ width: '100%', justifyContent: 'space-between'}}>
+            <Text strong className="chart-page-title">
+              Candlestick Chart
+            </Text>
             <Select
+              className="chart-page-select"
               value={selectedSymbol}
               onChange={setSelectedSymbol}
-              style={{ width: 200 }}
               loading={loading}
             >
               {volatilityOptions.map((option) => (
@@ -101,16 +189,23 @@ const ChartPage = () => {
           </Space>
         }
       >
-        {error && (
-          <Alert message="Error" description={error} type="error" showIcon />
-        )}
-
-        {loading ? (
-          <Spin tip="Connecting to market data..." />
+        {loading || error ? (
+          <div className="chart-page-loading">
+            <Skeleton
+              className="chart-page-skeleton"
+              active
+              paragraph={{ rows: 4 }}
+            />
+            {error && (
+              <Text className="chart-page-text">
+                Failed to load data. Please try another symbol.
+              </Text>
+            )}
+          </div>
         ) : (
-          <CandlestickChart 
+          <CandlestickChart
             symbol={selectedSymbol}
-            ticks={ticks}
+            ticks={tickData[selectedSymbol] || []}
           />
         )}
       </Card>

@@ -15,6 +15,7 @@ import {
   Alert,
   Badge,
   Switch,
+  theme,
   Slider,
   InputNumber,
 } from 'antd';
@@ -43,7 +44,7 @@ import { useUser } from '../../../context/AuthContext';
 
 const { Option } = Select;
 const { TabPane } = Tabs;
-const { Text } = Typography;
+const { Text, Title } = Typography;
 const { Panel } = Collapse;
 
 const volatilityOptions = [
@@ -224,6 +225,7 @@ const AnalysisExplanation = ({ title, content }) => (
 const OverUnderMarketAnalysis = () => {
   const { balance } = useUser();
   const [symbol, setSymbol] = useState('R_10');
+  const { token } = theme.useToken();
   const [tickData, setTickData] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -483,7 +485,7 @@ const OverUnderMarketAnalysis = () => {
       <Card
         title={
           <Space>
-            <span>Over/Under Market Analysis</span>
+            <Title level={4} style={{ margin: 0, color: token.colorPrimary }}>Over/Under Market Analysis</Title>
           </Space>
         }
         extra={
@@ -498,7 +500,7 @@ const OverUnderMarketAnalysis = () => {
           </Space>
         }
         className="market-analysis-card"
-        bodyStyle={{ padding: simpleMode ? '16px 8px' : 16 }}
+        Style={{ padding: simpleMode ? '16px 8px' : 16 }}
       >
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>
           <Row gutter={[16, 16]}>
@@ -530,7 +532,7 @@ const OverUnderMarketAnalysis = () => {
               </Select>
             </Col>
             <Col xs={24} md={12}>
-              <Card size="small" bodyStyle={{ padding: '8px 16px' }}>
+              <Card size="small" Style={{ padding: '8px 16px' }}>
                 <Row gutter={16}>
                   <Col span={12}>
                     <Statistic
@@ -616,7 +618,7 @@ const OverUnderMarketAnalysis = () => {
                       <DigitBarIndicator digit={lastDigit} barrier={barrier} />
                     )}
                     <Text>{combinedSignal.details}</Text>
-                    <Text type="secondary"><small>Based on {(tickData[symbol] || []).length} recent ticks</small></Text>
+                    <Text type="secondary" style={{ color:'var(--text-color)'}}><small>Based on {(tickData[symbol] || []).length} recent ticks</small></Text>
                   </Space>
                 </Card>
                 <DigitHistoryChart digits={lastDigits.slice(0, 10)} barrier={barrier} />

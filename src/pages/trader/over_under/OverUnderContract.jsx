@@ -17,7 +17,6 @@ import {
   Alert,
   ConfigProvider,
   theme,
-  Tabs,
   Spin,
 } from 'antd';
 import { 
@@ -37,7 +36,6 @@ import Notification from '../../../utils/Notification';
 
 const { Option } = Select;
 const { Title, Text } = Typography;
-const { TabPane } = Tabs;
 
 // Payout multipliers for Over and Under contracts
 const PAYOUT_MULTIPLIERS = {
@@ -79,7 +77,6 @@ const OverUnderTrader = () => {
   const [contractType, setContractType] = useState('over');
   const [payout, setPayout] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activeTab, setActiveTab] = useState('trade');
   const [notification, setNotification] = useState({
     type: '',
     content: '',
@@ -268,214 +265,213 @@ const OverUnderTrader = () => {
               </Tooltip>
             }
           >
-            <Tabs activeKey={activeTab} onChange={setActiveTab}>
-              <TabPane tab="Trade" key="trade">
-                <Space direction="vertical" size={24} style={{ width: '100%', marginTop: 16 }}>
-                  {/* Symbol Selector */}
-                  <div>
-                    <Text strong style={{ display: 'block', marginBottom: 8 }}>Volatility Index</Text>
-                    <Select
-                      value={symbol}
-                      onChange={setSymbol}
-                      style={{ width: '100%' }}
-                      placeholder="Select a volatility index"
-                      optionLabelProp="label"
-                      disabled={!user || !isAuthorized}
-                    >
-                      {volatilityOptions.map(option => (
-                        <Option 
-                          key={option.value} 
-                          value={option.value}
-                          label={<span>{option.label}</span>}
-                        >
-                          <span>{option.label}</span>
-                        </Option>
-                      ))}
-                    </Select>
-                  </div>
+            <>
+              <Space direction="vertical" size={24} style={{ width: '100%', marginTop: 16 }}>
+                {/* Symbol Selector */}
+                <div>
+                  <Text strong style={{ display: 'block', marginBottom: 8 }}>Volatility Index</Text>
+                  <Select
+                    value={symbol}
+                    onChange={setSymbol}
+                    style={{ width: '100%' }}
+                    placeholder="Select a volatility index"
+                    optionLabelProp="label"
+                    disabled={!user || !isAuthorized}
+                  >
+                    {volatilityOptions.map(option => (
+                      <Option 
+                        key={option.value} 
+                        value={option.value}
+                        label={<span>{option.label}</span>}
+                      >
+                        <span>{option.label}</span>
+                      </Option>
+                    ))}
+                  </Select>
+                </div>
 
-                  {/* Tick Duration Selector */}
-                  <div>
-                    <Text strong style={{ display: 'block', marginBottom: 8 }}>Duration (Ticks)</Text>
-                    <Row justify="space-between" style={{ padding: '0 10px' }}>
-                      {[...Array(10)].map((_, i) => {
-                        const tick = i + 1;
-                        const isActive = tick === duration;
-                        const IconComponent = isActive ? CheckCircleOutlined : CloseCircleOutlined;
+                {/* Tick Duration Selector */}
+                <div>
+                  <Text strong style={{ display: 'block', marginBottom: 8 }}>Duration (Ticks)</Text>
+                  <Row justify="space-between" style={{ padding: '0 10px' }}>
+                    {[...Array(10)].map((_, i) => {
+                      const tick = i + 1;
+                      const isActive = tick === duration;
+                      const IconComponent = isActive ? CheckCircleOutlined : CloseCircleOutlined;
 
-                        return (
-                          <Col key={tick}>
-                            <Tooltip title={`${tick} tick${tick > 1 ? 's' : ''}`}>
-                              <IconComponent
-                                style={{
-                                  fontSize: 24,
-                                  color: isActive ? token.colorPrimary : token.colorBorder,
-                                  cursor: user && isAuthorized ? 'pointer' : 'not-allowed',
-                                }}
-                                onClick={() => user && isAuthorized && setDuration(tick)}
-                              />
-                            </Tooltip>
-                          </Col>
-                        );
-                      })}
-                    </Row>
-                    <Text type="secondary" style={{ display: 'block', textAlign: 'center', marginTop: 8 }}>
-                      Selected: {duration} tick{duration > 1 ? 's' : ''}
-                    </Text>
-                  </div>
-
-                  {/* Digit Selection */}
-                  <div>
-                    <Text strong style={{ display: 'block', marginBottom: 8 }}>Select Digit (0-9)</Text>
-                    <Row justify="space-between" style={{ padding: '0 5px' }}>
-                      {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(digit => (
-                        <Col key={digit}>
-                          <Badge
-                            count={digit}
-                            style={{
-                              backgroundColor: selectedDigit === digit ? token.colorPrimary : token.colorFillAlter,
-                              color: selectedDigit === digit ? '#fff' : token.colorText,
-                              fontSize: 16,
-                              width: 32,
-                              height: 32,
-                              lineHeight: '32px',
-                              borderRadius: '50%',
-                              cursor: user && isAuthorized ? 'pointer' : 'not-allowed',
-                              boxShadow: selectedDigit === digit ? `0 0 0 2px ${token.colorPrimary}` : 'none',
-                              transition: 'all 0.3s'
-                            }}
-                            onClick={() => user && isAuthorized && setSelectedDigit(digit)}
-                          />
+                      return (
+                        <Col key={tick}>
+                          <Tooltip title={`${tick} tick${tick > 1 ? 's' : ''}`}>
+                            <IconComponent
+                              style={{
+                                fontSize: 24,
+                                color: isActive ? token.colorPrimary : token.colorBorder,
+                                cursor: user && isAuthorized ? 'pointer' : 'not-allowed',
+                              }}
+                              onClick={() => user && isAuthorized && setDuration(tick)}
+                            />
+                          </Tooltip>
                         </Col>
-                      ))}
-                    </Row>
-                    <Text type="secondary" style={{ display: 'block', textAlign: 'center', marginTop: 8 }}>
-                      Selected: {selectedDigit}
-                    </Text>
-                  </div>
+                      );
+                    })}
+                  </Row>
+                  <Text type="secondary" style={{ display: 'block', textAlign: 'center', marginTop: 8 }}>
+                    Selected: {duration} tick{duration > 1 ? 's' : ''}
+                  </Text>
+                </div>
 
-                  {/* Basis Selection */}
-                  <div>
-                    <Text strong style={{ display: 'block', marginBottom: 8 }}>Basis</Text>
-                    <Radio.Group 
-                      value={basis} 
-                      onChange={(e) => setBasis(e.target.value)} 
-                      buttonStyle="solid"
-                      style={{ width: '100%' }}
-                      disabled={!user || !isAuthorized}
-                    >
-                      <Radio.Button value="stake" style={{ width: '50%', textAlign: 'center' }}>
-                        <DollarOutlined style={{ marginRight: 8 }} />
-                        Stake
-                      </Radio.Button>
-                      <Radio.Button value="payout" style={{ width: '50%', textAlign: 'center' }}>
-                        <LineChartOutlined style={{ marginRight: 8 }} />
-                        Payout
-                      </Radio.Button>
-                    </Radio.Group>
-                  </div>
-
-                  {/* Amount Input */}
-                  <div>
-                    <Text strong style={{ display: 'block', marginBottom: 8 }}>
-                      Amount ({user?.currency || 'USD'})
-                    </Text>
-                    <InputNumber
-                      min={1}
-                      max={user?.balance || 1000}
-                      value={amount}
-                      onChange={setAmount}
-                      style={{ width: '100%' }}
-                      precision={2}
-                      prefix={<DollarOutlined />}
-                      step={5}
-                      disabled={!user || !isAuthorized}
-                    />
-                    <Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
-                      Available balance: {(balance || 0).toFixed(2)} {user?.currency || 'USD'}
-                    </Text>
-                  </div>
-
-                  {/* Payout Information */}
-                  <div>
-                    <Row gutter={16}>
-                      <Col span={12}>
-                        <Statistic
-                          title={
-                            <Space>
-                              Potential Payout (Over)
-                              <Tooltip title={`Over ${selectedDigit} yields a ${(PAYOUT_MULTIPLIERS.over[selectedDigit] * 100).toFixed(1)}% return for valid digits (0-8)`}>
-                                <InfoCircleOutlined />
-                              </Tooltip>
-                            </Space>
-                          }
-                          value={contractType === 'over' ? payout : (PAYOUT_MULTIPLIERS.over[selectedDigit] !== null ? amount * (1 + PAYOUT_MULTIPLIERS.over[selectedDigit]) : 0)}
-                          precision={2}
-                          prefix={<ArrowUpOutlined style={{ color: token.colorSuccess }} />}
-                          valueStyle={{ color: token.colorSuccess }}
+                {/* Digit Selection */}
+                <div>
+                  <Text strong style={{ display: 'block', marginBottom: 8 }}>Select Digit (0-9)</Text>
+                  <Row justify="space-between" style={{ padding: '0 5px', color:'var(--text-color)'}}>
+                    {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(digit => (
+                      <Col key={digit}>
+                        <Badge
+                          showZero
+                          count={digit}
+                          style={{
+                            backgroundColor: selectedDigit === digit ? token.colorPrimary : token.colorFillAlter,
+                            color: selectedDigit === digit ? 'var(--text-color)' : token.colorText,
+                            fontSize: 16,
+                            width: 32,
+                            height: 32,
+                            lineHeight: '32px',
+                            borderRadius: '50%',
+                            cursor: user && isAuthorized ? 'pointer' : 'not-allowed',
+                            boxShadow: selectedDigit === digit ? `0 0 0 2px ${token.colorPrimary}` : 'none',
+                            transition: 'all 0.3s'
+                          }}
+                          onClick={() => user && isAuthorized && setSelectedDigit(digit)}
                         />
                       </Col>
-                      <Col span={12}>
-                        <Statistic
-                          title={
-                            <Space>
-                              Potential Payout (Under)
-                              <Tooltip title={`Under ${selectedDigit} yields a ${(PAYOUT_MULTIPLIERS.under[selectedDigit] * 100).toFixed(1)}% return for valid digits (1-9)`}>
-                                <InfoCircleOutlined />
-                              </Tooltip>
-                            </Space>
-                          }
-                          value={contractType === 'under' ? payout : (PAYOUT_MULTIPLIERS.under[selectedDigit] !== null ? amount * (1 + PAYOUT_MULTIPLIERS.under[selectedDigit]) : 0)}
-                          precision={2}
-                          prefix={<ArrowUpOutlined style={{ color: token.colorSuccess }} />}
-                          valueStyle={{ color: token.colorSuccess }}
-                        />
-                      </Col>
-                    </Row>
-                  </div>
+                    ))}
+                  </Row>
+                  <Text type="secondary" style={{ display: 'block', textAlign: 'center', marginTop: 8 }}>
+                    Selected: {selectedDigit}
+                  </Text>
+                </div>
 
-                  {/* Action Buttons */}
+                {/* Basis Selection */}
+                <div>
+                  <Text strong style={{ display: 'block', marginBottom: 8 }}>Basis</Text>
+                  <Radio.Group 
+                    value={basis} 
+                    onChange={(e) => setBasis(e.target.value)} 
+                    buttonStyle="solid"
+                    style={{ width: '100%' }}
+                    disabled={!user || !isAuthorized}
+                  >
+                    <Radio.Button value="stake" style={{ width: '50%', textAlign: 'center' }}>
+                      <DollarOutlined style={{ marginRight: 8 }} />
+                      Stake
+                    </Radio.Button>
+                    <Radio.Button value="payout" style={{ width: '50%', textAlign: 'center' }}>
+                      <LineChartOutlined style={{ marginRight: 8 }} />
+                      Payout
+                    </Radio.Button>
+                  </Radio.Group>
+                </div>
+
+                {/* Amount Input */}
+                <div>
+                  <Text strong style={{ display: 'block', marginBottom: 8 }}>
+                    Amount ({user?.currency || 'USD'})
+                  </Text>
+                  <InputNumber
+                    min={1}
+                    max={user?.balance || 1000}
+                    value={amount}
+                    onChange={setAmount}
+                    style={{ width: '100%' }}
+                    precision={2}
+                    prefix={<DollarOutlined />}
+                    step={5}
+                    disabled={!user || !isAuthorized}
+                  />
+                  <Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
+                    Available balance: {(balance || 0).toFixed(2)} {user?.currency || 'USD'}
+                  </Text>
+                </div>
+
+                {/* Payout Information */}
+                <div>
                   <Row gutter={16}>
                     <Col span={12}>
-                      <Button
-                        type="primary"
-                        size="large"
-                        block
-                        style={{ 
-                          background: '#722ed1',
-                          borderColor: '#722ed1',
-                          height: 48
-                        }}
-                        onClick={() => {
-                          setContractType('over');
-                          handleSubmit('over');
-                        }}
-                        loading={isSubmitting && contractType === 'over'}
-                        disabled={isSubmitting || !user || !isAuthorized || !isValidContract('over', selectedDigit)}
-                      >
-                        Over {selectedDigit}
-                      </Button>
+                      <Statistic
+                        title={
+                          <Space>
+                            Potential Payout (Over)
+                            <Tooltip title={`Over ${selectedDigit} yields a ${(PAYOUT_MULTIPLIERS.over[selectedDigit] * 100).toFixed(1)}% return for valid digits (0-8)`}>
+                              <InfoCircleOutlined />
+                            </Tooltip>
+                          </Space>
+                        }
+                        value={contractType === 'over' ? payout : (PAYOUT_MULTIPLIERS.over[selectedDigit] !== null ? amount * (1 + PAYOUT_MULTIPLIERS.over[selectedDigit]) : 0)}
+                        precision={2}
+                        prefix={<ArrowUpOutlined style={{ color: token.colorSuccess }} />}
+                        valueStyle={{ color: token.colorSuccess }}
+                      />
                     </Col>
                     <Col span={12}>
-                      <Button
-                        type="primary"
-                        size="large"
-                        block
-                        style={{ height: 48 }}
-                        onClick={() => {
-                          setContractType('under');
-                          handleSubmit('under');
-                        }}
-                        loading={isSubmitting && contractType === 'under'}
-                        disabled={isSubmitting || !user || !isAuthorized || !isValidContract('under', selectedDigit)}
-                      >
-                        Under {selectedDigit}
-                      </Button>
+                      <Statistic
+                        title={
+                          <Space>
+                            Potential Payout (Under)
+                            <Tooltip title={`Under ${selectedDigit} yields a ${(PAYOUT_MULTIPLIERS.under[selectedDigit] * 100).toFixed(1)}% return for valid digits (1-9)`}>
+                              <InfoCircleOutlined />
+                            </Tooltip>
+                          </Space>
+                        }
+                        value={contractType === 'under' ? payout : (PAYOUT_MULTIPLIERS.under[selectedDigit] !== null ? amount * (1 + PAYOUT_MULTIPLIERS.under[selectedDigit]) : 0)}
+                        precision={2}
+                        prefix={<ArrowUpOutlined style={{ color: token.colorSuccess }} />}
+                        valueStyle={{ color: token.colorSuccess }}
+                      />
                     </Col>
                   </Row>
-                </Space>
-              </TabPane>
-            </Tabs>
+                </div>
+
+                {/* Action Buttons */}
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <Button
+                      type="primary"
+                      size="large"
+                      block
+                      style={{ 
+                        background: '#722ed1',
+                        borderColor: '#722ed1',
+                        height: 48
+                      }}
+                      onClick={() => {
+                        setContractType('over');
+                        handleSubmit('over');
+                      }}
+                      loading={isSubmitting && contractType === 'over'}
+                      disabled={isSubmitting || !user || !isAuthorized || !isValidContract('over', selectedDigit)}
+                    >
+                      Over {selectedDigit}
+                    </Button>
+                  </Col>
+                  <Col span={12}>
+                    <Button
+                      type="primary"
+                      size="large"
+                      block
+                      style={{ height: 48 }}
+                      onClick={() => {
+                        setContractType('under');
+                        handleSubmit('under');
+                      }}
+                      loading={isSubmitting && contractType === 'under'}
+                      disabled={isSubmitting || !user || !isAuthorized || !isValidContract('under', selectedDigit)}
+                    >
+                      Under {selectedDigit}
+                    </Button>
+                  </Col>
+                </Row>
+              </Space>
+            </>
           </Card>
         </Col>
 
