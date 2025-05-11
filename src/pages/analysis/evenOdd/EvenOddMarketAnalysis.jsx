@@ -1,14 +1,41 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Card, Select, Tabs, Spin, Progress, Typography, Collapse, theme, Space, Row, Col, Statistic, Tooltip, Alert, Badge, Switch, Grid
+  Card,
+  Select,
+  Tabs,
+  Spin,
+  Progress,
+  Typography,
+  Collapse,
+  theme,
+  Space,
+  Row,
+  Col,
+  Statistic,
+  Tooltip,
+  Alert,
+  Badge,
+  Switch,
+  Grid,
 } from 'antd';
 import {
-  LineChartOutlined, QuestionCircleOutlined, NumberOutlined, PauseOutlined, WarningOutlined, InfoCircleOutlined, BellOutlined,
+  LineChartOutlined,
+  QuestionCircleOutlined,
+  NumberOutlined,
+  PauseOutlined,
+  WarningOutlined,
+  InfoCircleOutlined,
+  BellOutlined,
 } from '@ant-design/icons';
 import Notification from '../../../utils/Notification';
 import { publicWebSocket } from '../../../services/public_websocket_client';
 import {
-  analyzeSMACrossover, analyzeStochastic, analyzeTickStreak, analyzeVolatilitySpike, analyzeRisk, combineSignals,
+  analyzeSMACrossover,
+  analyzeStochastic,
+  analyzeTickStreak,
+  analyzeVolatilitySpike,
+  analyzeRisk,
+  combineSignals,
 } from './evenOddAnalysis';
 import '../../../assets/css/pages/analysis/MarketAnalysis.css';
 import { useUser } from '../../../context/AuthContext';
@@ -48,8 +75,16 @@ const DigitHistoryChart = ({ digits }) => {
               <div
                 key={`${groupIndex}-${index}`}
                 style={{
-                  width: 32, height: 32, borderRadius: '50%', backgroundColor: digit % 2 === 0 ? '#52c41a' : '#f5222d',
-                  color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: 4, fontWeight: 'bold',
+                  width: 32,
+                  height: 32,
+                  borderRadius: '50%',
+                  backgroundColor: digit % 2 === 0 ? '#52c41a' : '#f5222d',
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: 4,
+                  fontWeight: 'bold',
                 }}
               >
                 {digit}
@@ -69,7 +104,11 @@ const EvenOddIndicator = ({ digit }) => {
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 0' }}>
       <Text strong style={{ width: 24 }}>{digit}</Text>
       <Progress
-        percent={strength} strokeColor={isEven ? '#52c41a' : '#f5222d'} showInfo={false} strokeWidth={10} trailColor="#f0f0f0"
+        percent={strength}
+        strokeColor={isEven ? '#52c41a' : '#f5222d'}
+        showInfo={false}
+        strokeWidth={10}
+        trailColor="#f0f0f0"
       />
       <Text type={isEven ? 'success' : 'danger'}>{isEven ? 'EVEN' : 'ODD'}</Text>
     </div>
@@ -80,9 +119,24 @@ const SignalIndicator = ({ signal, strength, size = 'default', showAlert = false
   const signalConfig = {
     even: { color: '#52c41a', icon: <NumberOutlined />, label: 'EVEN', explanation: 'The last digit is likely to be even' },
     odd: { color: '#f5222d', icon: <NumberOutlined />, label: 'ODD', explanation: 'The last digit is likely to be odd' },
-    neutral: { color: '#faad14', icon: <PauseOutlined />, label: 'NEUTRAL', explanation: 'No clear prediction for even/odd' },
-    warning: { color: '#fa541c', icon: <WarningOutlined />, label: 'WARNING', explanation: 'High volatility detected - trade with caution' },
-    hold: { color: '#1890ff', icon: <InfoCircleOutlined />, label: 'HOLD', explanation: 'Not recommended to trade at this time' },
+    neutral: {
+      color: '#faad14',
+      icon: <PauseOutlined />,
+      label: 'NEUTRAL',
+      explanation: 'No clear prediction for even/odd',
+    },
+    warning: {
+      color: '#fa541c',
+      icon: <WarningOutlined />,
+      label: 'WARNING',
+      explanation: 'High volatility detected - trade with caution',
+    },
+    hold: {
+      color: '#1890ff',
+      icon: <InfoCircleOutlined />,
+      label: 'HOLD',
+      explanation: 'Not recommended to trade at this time',
+    },
   };
   const config = signalConfig[signal] || signalConfig.neutral;
   const isSmall = size === 'small';
@@ -90,13 +144,26 @@ const SignalIndicator = ({ signal, strength, size = 'default', showAlert = false
     <Tooltip title={config.explanation}>
       <div
         style={{
-          display: 'flex', alignItems: 'center', gap: 8, padding: isSmall ? '4px 8px' : '8px 12px',
-          backgroundColor: isSmall ? 'transparent' : '#fafafa', borderRadius: 8, border: isSmall ? 'none' : `1px solid ${config.color}`,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: isSmall ? '4px 8px' : '8px 12px',
+          backgroundColor: isSmall ? 'transparent' : '#fafafa',
+          borderRadius: 8,
+          border: isSmall ? 'none' : `1px solid ${config.color}`,
           position: 'relative',
         }}
       >
         {showAlert && strength > 0.7 && (
-          <div style={{ position: 'absolute', left: -12, top: -4, color: config.color, animation: 'pulse 1.5s infinite' }}>
+          <div
+            style={{
+              position: 'absolute',
+              left: -12,
+              top: -4,
+              color: config.color,
+              animation: 'pulse 1.5s infinite',
+            }}
+          >
             <BellOutlined />
           </div>
         )}
@@ -104,15 +171,27 @@ const SignalIndicator = ({ signal, strength, size = 'default', showAlert = false
           showZero
           color={config.color}
           text={
-            <span style={{ color: isSmall ? config.color : 'inherit', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span
+              style={{
+                color: isSmall ? config.color : 'inherit',
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+              }}
+            >
               {config.icon} {!isSmall && config.label}
             </span>
           }
         />
         {strength > 0 && (
           <Progress
-            percent={Math.round(strength * 100)} strokeColor={config.color} size={isSmall ? 'small' : 'default'}
-            showInfo={!isSmall} format={isSmall ? () => `${Math.round(strength * 100)}%` : null} style={{ width: isSmall ? 60 : 120 }}
+            percent={Math.round(strength * 100)}
+            strokeColor={config.color}
+            size={isSmall ? 'small' : 'default'}
+            showInfo={!isSmall}
+            format={isSmall ? () => `${Math.round(strength * 100)}%` : null}
+            style={{ width: isSmall ? 60 : 120 }}
           />
         )}
       </div>
@@ -121,7 +200,16 @@ const SignalIndicator = ({ signal, strength, size = 'default', showAlert = false
 };
 
 const AnalysisExplanation = ({ title, content }) => (
-  <Tooltip title={<div style={{ padding: 8 }}><Text strong>{title}</Text><div style={{ marginTop: 4 }}>{content}</div></div>} overlayStyle={{ maxWidth: 300 }} placement="right">
+  <Tooltip
+    title={
+      <div style={{ padding: 8 }}>
+        <Text strong>{title}</Text>
+        <div style={{ marginTop: 4 }}>{content}</div>
+      </div>
+    }
+    Style={{ maxWidth: 300 }}
+    placement="right"
+  >
     <QuestionCircleOutlined style={{ color: '#1890ff', marginLeft: 8 }} />
   </Tooltip>
 );
@@ -137,16 +225,47 @@ const EvenOddMarketAnalysis = () => {
   const [notification, setNotification] = useState({ type: '', content: '', trigger: false });
   const userBalance = balance;
 
+  // Utility to format price with exactly two decimal places
+  const formatPrice = (price) => {
+    if (typeof price !== 'number' && typeof price !== 'string') return '--';
+    const priceStr = price.toString().replace(/,/g, '');
+    const [integerPart, decimalPart = ''] = priceStr.split('.');
+    const normalizedDecimal = decimalPart.padEnd(2, '0').slice(0, 2); // Ensure 2 decimal places
+    return `${integerPart}.${normalizedDecimal}`;
+  };
+
   // Memoized combined signal
-  const combinedSignal = useMemo(() => combineSignals(tickData[symbol] || [], symbol, userBalance), [tickData, symbol, userBalance]);
+  const combinedSignal = useMemo(
+    () => combineSignals(tickData[symbol] || [], symbol, userBalance),
+    [tickData, symbol, userBalance]
+  );
 
   // Get last digits
   const lastDigits = useMemo(() => {
     const ticks = tickData[symbol] || [];
-    return ticks.map((tick) => {
-      const priceStr = tick.price.toString();
-      return parseInt(priceStr[priceStr.length - 1]);
-    }).reverse();
+    //console.log('tickData[symbol]:', ticks); // Debug log
+    const digits = ticks
+      .map((tick) => {
+        if (!tick?.price) {
+          //console.warn('Invalid tick price:', tick); // Debug invalid data
+          return null;
+        }
+        const priceStr = tick.price.toString().replace(/,/g, '');
+        const decimalParts = priceStr.split('.');
+        if (decimalParts.length < 2 || !decimalParts[1]) {
+          //console.log(`No decimal part for price ${priceStr}, returning 0`); // Debug
+          return 0;
+        }
+        const decimalStr = decimalParts[1].padEnd(2, '0'); // Ensure at least 2 decimal places
+        const lastChar = decimalStr[decimalStr.length - 1];
+        const digit = parseInt(lastChar, 10);
+        //console.log(`Price: ${priceStr}, Normalized Decimal: ${decimalStr}, Last digit: ${digit}`); // Debug
+        return digit;
+      })
+      .filter((digit) => digit !== null)
+      .reverse();
+
+    return digits;
   }, [tickData, symbol]);
 
   // Get last digit
@@ -180,6 +299,7 @@ const EvenOddMarketAnalysis = () => {
           if (!isMounted) return;
           if (event === 'message' && data.msg_type === 'tick') {
             const { symbol: tickSymbol, quote, epoch } = data.tick;
+            //console.log('WebSocket tick:', { symbol: tickSymbol, price: quote, epoch }); // Debug log
             setTickData((prev) => ({
               ...prev,
               [tickSymbol]: [...(prev[tickSymbol] || []), { price: quote, timestamp: epoch }].slice(-60),
@@ -227,7 +347,11 @@ const EvenOddMarketAnalysis = () => {
       } catch (err) {
         console.error('WebSocket Error:', err);
         if (isMounted) {
-          setNotification({ type: 'error', content: 'Failed to connect to WebSocket. Please check your network or app ID.', trigger: true });
+          setNotification({
+            type: 'error',
+            content: 'Failed to connect to WebSocket. Please check your network or app ID.',
+            trigger: true,
+          });
           setLoading(false);
         }
       }
@@ -245,12 +369,42 @@ const EvenOddMarketAnalysis = () => {
 
   // Analysis functions with explanations
   const analyses = [
-    { key: 'sma', name: 'SMA', func: () => analyzeSMACrossover(tickData[symbol] || [], symbol), explanation: 'Moving averages of last digits predict if the next digit will be even or odd.' },
-    { key: 'stochastic', name: 'Stochastic', func: () => analyzeStochastic(tickData[symbol] || [], symbol), explanation: 'Analyzes digit frequency to identify even/odd clustering patterns.' },
-    { key: 'streak', name: 'Streak', func: () => analyzeTickStreak(tickData[symbol] || [], symbol), explanation: 'Identifies consecutive even/odd sequences. Long streaks often reverse.' },
-    { key: 'volatility', name: 'Volatility', func: () => analyzeVolatilitySpike(tickData[symbol] || []), explanation: 'Measures digit fluctuation speed. High volatility means unpredictable digits.' },
-    { key: 'risk', name: 'Risk', func: () => analyzeRisk(balance, symbol), explanation: 'Calculates optimal stake size based on your balance and market conditions.' },
-    { key: 'combined', name: 'Summary', func: () => combinedSignal, explanation: 'Combines all indicators to provide the overall trading recommendation.' },
+    {
+      key: 'sma',
+      name: 'SMA',
+      func: () => analyzeSMACrossover(tickData[symbol] || [], symbol),
+      explanation: 'Moving averages of last digits predict if the next digit will be even or odd.',
+    },
+    {
+      key: 'stochastic',
+      name: 'Stochastic',
+      func: () => analyzeStochastic(tickData[symbol] || [], symbol),
+      explanation: 'Analyzes digit frequency to identify even/odd clustering patterns.',
+    },
+    {
+      key: 'streak',
+      name: 'Streak',
+      func: () => analyzeTickStreak(tickData[symbol] || [], symbol),
+      explanation: 'Identifies consecutive even/odd sequences. Long streaks often reverse.',
+    },
+    {
+      key: 'volatility',
+      name: 'Volatility',
+      func: () => analyzeVolatilitySpike(tickData[symbol] || []),
+      explanation: 'Measures digit fluctuation speed. High volatility means unpredictable digits.',
+    },
+    {
+      key: 'risk',
+      name: 'Risk',
+      func: () => analyzeRisk(balance, symbol),
+      explanation: 'Calculates optimal stake size based on your balance and market conditions.',
+    },
+    {
+      key: 'combined',
+      name: 'Summary',
+      func: () => combinedSignal,
+      explanation: 'Combines all indicators to provide the overall trading recommendation.',
+    },
   ];
 
   // Render analysis result
@@ -268,11 +422,17 @@ const EvenOddMarketAnalysis = () => {
             message={
               <Space>
                 <Text strong>Recommendation:</Text>
-                <SignalIndicator signal={signal} strength={confidence} showAlert={showAlert && confidence > 0.7} />
+                <SignalIndicator
+                  signal={signal}
+                  strength={confidence}
+                  showAlert={showAlert && confidence > 0.7}
+                />
               </Space>
             }
             description={details}
-            type={signal === 'even' ? 'success' : signal === 'odd' ? 'error' : signal === 'warning' ? 'warning' : 'info'}
+            type={
+              signal === 'even' ? 'success' : signal === 'odd' ? 'error' : signal === 'warning' ? 'warning' : 'info'
+            }
             showIcon
           />
           <Row gutter={[16, 16]}>
@@ -290,15 +450,22 @@ const EvenOddMarketAnalysis = () => {
                       title={
                         <Space>
                           <Text>{key.toUpperCase()}</Text>
-                          <AnalysisExplanation title={analyses.find((a) => a.key === key)?.name} content={analyses.find((a) => a.key === key)?.explanation} />
+                          <AnalysisExplanation
+                            title={analyses.find((a) => a.key === key)?.name}
+                            content={analyses.find((a) => a.key === key)?.explanation}
+                          />
                         </Space>
                       }
                     >
                       <Space direction="vertical">
                         <SignalIndicator signal={res?.signal} strength={res?.strength} size="small" />
-                        <Text type="secondary" style={{ color: 'var(--text-color)' }}>{res?.details || 'No details'}</Text>
+                        <Text type="secondary" style={{ color: 'var(--text-color)' }}>
+                          {res?.details || 'No details'}
+                        </Text>
                         {(key === 'sma' || key === 'stochastic') && res?.rawData && (
-                          <EvenOddIndicator digit={key === 'stochastic' ? res.rawData.maxDigit : Math.round(res.rawData.fastSMA)} />
+                          <EvenOddIndicator
+                            digit={key === 'stochastic' ? res.rawData.maxDigit : Math.round(res.rawData.fastSMA)}
+                          />
                         )}
                       </Space>
                     </Card>
@@ -321,7 +488,9 @@ const EvenOddMarketAnalysis = () => {
           </Space>
           <Text>{details}</Text>
           {(analysis.key === 'sma' || analysis.key === 'stochastic') && rawData && (
-            <EvenOddIndicator digit={analysis.key === 'stochastic' ? rawData.maxDigit : Math.round(rawData.fastSMA)} />
+            <EvenOddIndicator
+              digit={analysis.key === 'stochastic' ? rawData.maxDigit : Math.round(rawData.fastSMA)}
+            />
           )}
           {analysis.key === 'streak' && rawData && (
             <DigitHistoryChart digits={rawData.slice(0, 10).map((item) => item.digit)} />
@@ -343,7 +512,9 @@ const EvenOddMarketAnalysis = () => {
       <Card
         title={
           <Space>
-            <Title level={4} style={{ margin: 0, color: token.colorPrimary }}>Even/Odd Market Analysis</Title>
+            <Title level={4} style={{ margin: 0, color: token.colorPrimary }}>
+              Even/Odd Market Analysis
+            </Title>
           </Space>
         }
         extra={
@@ -354,7 +525,7 @@ const EvenOddMarketAnalysis = () => {
           </Space>
         }
         className="market-analysis-card"
-        Style={{ padding: simpleMode ? '16px 8px' : 16 }}
+        style={{ padding: simpleMode ? '16px 8px' : 16 }}
       >
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>
           <Row gutter={[16, 16]}>
@@ -386,13 +557,16 @@ const EvenOddMarketAnalysis = () => {
               </Select>
             </Col>
             <Col xs={24} md={12}>
-              <Card size="small" Style={{ padding: '8px 16px' }}>
+              <Card size="small" style={{ padding: '8px 16px' }}>
                 <Row gutter={16}>
                   <Col span={12}>
                     <Statistic
                       title={<Text style={{ color: 'var(--text-color)' }}>Current Price</Text>}
-                      value={tickData[symbol]?.length > 0 ? tickData[symbol][tickData[symbol].length - 1].price : '--'}
-                      precision={2}
+                      value={
+                        tickData[symbol]?.length > 0
+                          ? formatPrice(tickData[symbol][tickData[symbol].length - 1].price)
+                          : '--'
+                      }
                       valueStyle={{
                         color: lastDigit !== null ? (lastDigit % 2 === 0 ? '#52c41a' : '#f5222d') : 'inherit',
                       }}
@@ -403,7 +577,9 @@ const EvenOddMarketAnalysis = () => {
                       title={<Text style={{ color: 'var(--text-color)' }}>Last Digit</Text>}
                       value={lastDigit !== null ? lastDigit : '--'}
                       prefix={<NumberOutlined />}
-                      valueStyle={{ color: lastDigit !== null ? (lastDigit % 2 === 0 ? '#52c41a' : '#f5222d') : 'inherit' }}
+                      valueStyle={{
+                        color: lastDigit !== null ? (lastDigit % 2 === 0 ? '#52c41a' : '#f5222d') : 'inherit',
+                      }}
                     />
                   </Col>
                 </Row>
@@ -416,16 +592,28 @@ const EvenOddMarketAnalysis = () => {
               <Switch size="small" checked={showAlert} onChange={setShowAlert} />
             </Space>
           </Card>
-          {notification.trigger && <Notification type={notification.type} content={notification.content} trigger={notification.trigger} />}
+          {notification.trigger && (
+            <Notification
+              type={notification.type}
+              content={notification.content}
+              trigger={notification.trigger}
+            />
+          )}
           <Spin spinning={loading} tip="Loading market data...">
             {simpleMode ? (
               <Space direction="vertical" size="middle" style={{ width: '100%' }}>
                 <Card>
                   <Space direction="vertical" size="large" style={{ width: '100%' }}>
-                    <SignalIndicator signal={combinedSignal.signal} strength={combinedSignal.confidence} showAlert={showAlert && combinedSignal.confidence > 0.7} />
+                    <SignalIndicator
+                      signal={combinedSignal.signal}
+                      strength={combinedSignal.confidence}
+                      showAlert={showAlert && combinedSignal.confidence > 0.7}
+                    />
                     {lastDigit !== null && <EvenOddIndicator digit={lastDigit} />}
                     <Text>{combinedSignal.details}</Text>
-                    <Text type="secondary" style={{ color: 'var(--text-color)'}}><small>Based on {(tickData[symbol] || []).length} recent ticks</small></Text>
+                    <Text type="secondary" style={{ color: 'var(--text-color)' }}>
+                      <small>Based on {(tickData[symbol] || []).length} recent ticks</small>
+                    </Text>
                   </Space>
                 </Card>
                 <DigitHistoryChart digits={lastDigits.slice(0, 10)} />
@@ -438,7 +626,16 @@ const EvenOddMarketAnalysis = () => {
                       <Space size={4}>
                         <span>{analysis.name}</span>
                         {analysis.key === 'combined' && (
-                          <Badge dot color={combinedSignal.signal === 'even' ? '#52c41a' : combinedSignal.signal === 'odd' ? '#f5222d' : '#faad14'} />
+                          <Badge
+                            dot
+                            color={
+                              combinedSignal.signal === 'even'
+                                ? '#52c41a'
+                                : combinedSignal.signal === 'odd'
+                                ? '#f5222d'
+                                : '#faad14'
+                            }
+                          />
                         )}
                       </Space>
                     }

@@ -1,27 +1,27 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Card, 
-  Select, 
-  Tabs, 
-  Spin, 
-  Progress, 
-  Typography, 
-  Collapse, 
-  Space, 
-  Row, 
-  Col, 
-  Statistic, 
-  Tooltip, 
+import {
+  Card,
+  Select,
+  Tabs,
+  Spin,
+  Progress,
+  Typography,
+  Collapse,
+  Space,
+  Row,
+  Col,
+  Statistic,
+  Tooltip,
   Alert,
   Badge,
   Switch,
   theme,
   Slider,
   InputNumber,
-  Grid
+  Grid,
 } from 'antd';
-import { 
-  LineChartOutlined, 
+import {
+  LineChartOutlined,
   QuestionCircleOutlined,
   ArrowUpOutlined,
   ArrowDownOutlined,
@@ -75,8 +75,8 @@ const DigitHistoryChart = ({ digits, barrier }) => {
         {digitGroups.map((group, groupIndex) => (
           <div key={groupIndex} style={{ display: 'flex', justifyContent: 'center' }}>
             {group.map((digit, index) => (
-              <div 
-                key={`${groupIndex}-${index}`} 
+              <div
+                key={`${groupIndex}-${index}`}
                 style={{
                   width: 32,
                   height: 32,
@@ -90,7 +90,7 @@ const DigitHistoryChart = ({ digits, barrier }) => {
                   fontWeight: 'bold',
                 }}
               >
-                {digit}
+                {String(digit)} {/* Explicitly convert to string to handle 0 */}
               </div>
             ))}
           </div>
@@ -106,15 +106,17 @@ const DigitBarIndicator = ({ digit, barrier }) => {
   const percentage = Math.min(100, distance * 20);
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      alignItems: 'center',
-      gap: 8,
-      width: '100%',
-      padding: '8px 0',
-    }}>
-      <Text strong style={{ width: 24 }}>{digit}</Text>
-      <Progress 
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        width: '100%',
+        padding: '8px 0',
+      }}
+    >
+      <Text strong style={{ width: 24 }}>{String(digit)}</Text> {/* Explicitly convert to string */}
+      <Progress
         percent={percentage}
         strokeColor={isOver ? '#52c41a' : '#f5222d'}
         showInfo={false}
@@ -122,42 +124,40 @@ const DigitBarIndicator = ({ digit, barrier }) => {
         trailColor="#f0f0f0"
       />
       <Text type="secondary" style={{ width: 24 }}>{barrier}</Text>
-      <Text type={isOver ? 'success' : 'danger'}>
-        {isOver ? 'OVER' : 'UNDER'}
-      </Text>
+      <Text type={isOver ? 'success' : 'danger'}>{isOver ? 'OVER' : 'UNDER'}</Text>
     </div>
   );
 };
 
 const SignalIndicator = ({ signal, strength, barrier, size = 'default', showAlert = false }) => {
   const signalConfig = {
-    over: { 
-      color: '#52c41a', 
-      icon: <ArrowUpOutlined />, 
+    over: {
+      color: '#52c41a',
+      icon: <ArrowUpOutlined />,
       label: `OVER ${barrier}`,
       explanation: `The last digit is likely to be above ${barrier}`,
     },
-    under: { 
-      color: '#f5222d', 
-      icon: <ArrowDownOutlined />, 
+    under: {
+      color: '#f5222d',
+      icon: <ArrowDownOutlined />,
       label: `UNDER ${barrier}`,
       explanation: `The last digit is likely to be below ${barrier}`,
     },
-    neutral: { 
-      color: '#faad14', 
-      icon: <PauseOutlined />, 
+    neutral: {
+      color: '#faad14',
+      icon: <PauseOutlined />,
       label: 'NEUTRAL',
       explanation: 'No clear direction for last digit prediction',
     },
-    warning: { 
-      color: '#fa541c', 
-      icon: <WarningOutlined />, 
+    warning: {
+      color: '#fa541c',
+      icon: <WarningOutlined />,
       label: 'WARNING',
       explanation: 'High volatility detected - trade with caution',
     },
-    hold: { 
-      color: '#1890ff', 
-      icon: <InfoCircleOutlined />, 
+    hold: {
+      color: '#1890ff',
+      icon: <InfoCircleOutlined />,
       label: 'HOLD',
       explanation: 'Not recommended to trade at this time',
     },
@@ -168,44 +168,50 @@ const SignalIndicator = ({ signal, strength, barrier, size = 'default', showAler
 
   return (
     <Tooltip title={config.explanation}>
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: 8,
-        padding: isSmall ? '4px 8px' : '8px 12px',
-        backgroundColor: isSmall ? 'transparent' : '#fafafa',
-        borderRadius: 8,
-        border: isSmall ? 'none' : `1px solid ${config.color}`,
-        position: 'relative',
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: isSmall ? '4px 8px' : '8px 12px',
+          backgroundColor: isSmall ? 'transparent' : '#fafafa',
+          borderRadius: 8,
+          border: isSmall ? 'none' : `1px solid ${config.color}`,
+          position: 'relative',
+        }}
+      >
         {showAlert && strength > 0.7 && (
-          <div style={{
-            position: 'absolute',
-            left: -12,
-            top: -4,
-            color: config.color,
-            animation: 'pulse 1.5s infinite',
-          }}>
+          <div
+            style={{
+              position: 'absolute',
+              left: -12,
+              top: -4,
+              color: config.color,
+              animation: 'pulse 1.5s infinite',
+            }}
+          >
             <BellOutlined />
           </div>
         )}
-        <Badge 
-          color={config.color} 
+        <Badge
+          color={config.color}
           text={
-            <span style={{ 
-              color: isSmall ? config.color : 'inherit',
-              fontWeight: 'bold',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-            }}>
+            <span
+              style={{
+                color: isSmall ? config.color : 'inherit',
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+              }}
+            >
               {config.icon} {!isSmall && config.label}
             </span>
           }
         />
         {strength > 0 && (
-          <Progress 
-            percent={Math.round(strength * 100)} 
+          <Progress
+            percent={Math.round(strength * 100)}
             strokeColor={config.color}
             size={isSmall ? 'small' : 'default'}
             showInfo={!isSmall}
@@ -219,7 +225,16 @@ const SignalIndicator = ({ signal, strength, barrier, size = 'default', showAler
 };
 
 const AnalysisExplanation = ({ title, content }) => (
-  <Tooltip title={<div style={{ padding: 8 }}><Text strong>{title}</Text><div style={{ marginTop: 4 }}>{content}</div></div>} overlayStyle={{ maxWidth: 300 }} placement="right">
+  <Tooltip
+    title={
+      <div style={{ padding: 8 }}>
+        <Text strong>{title}</Text>
+        <div style={{ marginTop: 4 }}>{content}</div>
+      </div>
+    }
+    Style={{ maxWidth: 300 }}
+    placement="right"
+  >
     <QuestionCircleOutlined style={{ color: '#1890ff', marginLeft: 8 }} />
   </Tooltip>
 );
@@ -235,6 +250,15 @@ const OverUnderMarketAnalysis = () => {
   const [barrier, setBarrier] = useState(4);
   const [showAlert, setShowAlert] = useState(true);
   const userBalance = balance;
+
+  // Utility to format price with exactly two decimal places
+  const formatPrice = (price) => {
+    if (typeof price !== 'number' && typeof price !== 'string') return '--';
+    const priceStr = price.toString().replace(/,/g, '');
+    const [integerPart, decimalPart = ''] = priceStr.split('.');
+    const normalizedDecimal = decimalPart.padEnd(2, '0').slice(0, 2); // Ensure 2 decimal places
+    return `${integerPart}.${normalizedDecimal}`;
+  };
 
   useEffect(() => {
     let unsubscribers = [];
@@ -259,6 +283,7 @@ const OverUnderMarketAnalysis = () => {
           if (!isMounted) return;
           if (event === 'message' && data.msg_type === 'tick') {
             const { symbol: tickSymbol, quote, epoch } = data.tick;
+            //console.log('WebSocket tick:', { symbol: tickSymbol, price: quote, epoch }); // Debug log
             setTickData((prev) => ({
               ...prev,
               [tickSymbol]: [...(prev[tickSymbol] || []), { price: quote, timestamp: epoch }].slice(-60),
@@ -322,10 +347,30 @@ const OverUnderMarketAnalysis = () => {
 
   const lastDigits = useMemo(() => {
     const ticks = tickData[symbol] || [];
-    return ticks.map((tick) => {
-      const priceStr = tick.price.toString();
-      return parseInt(priceStr[priceStr.length - 1]);
-    }).reverse();
+    //console.log('tickData[symbol]:', ticks); // Debug log
+    const digits = ticks
+      .map((tick) => {
+        if (!tick?.price) {
+          console.warn('Invalid tick price:', tick); // Debug invalid data
+          return null;
+        }
+        const priceStr = tick.price.toString().replace(/,/g, '');
+        const decimalParts = priceStr.split('.');
+        // If no decimal part, assume last digit is 0
+        if (decimalParts.length < 2 || !decimalParts[1]) {
+          //console.log(`No decimal part for price ${priceStr}, returning 0`); // Debug
+          return 0;
+        }
+        const decimalStr = decimalParts[1].padEnd(2, '0'); // Ensure at least 2 decimal places
+        const lastChar = decimalStr[decimalStr.length - 1];
+        const digit = parseInt(lastChar, 10);
+        //console.log(`Price: ${priceStr}, Normalized Decimal: ${decimalStr}, Last digit: ${digit}`); // Debug
+        return digit;
+      })
+      .filter((digit) => digit !== null)
+      .reverse();
+    //console.log('lastDigits:', digits); // Debug log
+    return digits;
   }, [tickData, symbol]);
 
   const lastDigit = useMemo(() => {
@@ -390,16 +435,16 @@ const OverUnderMarketAnalysis = () => {
 
     if (analysis.key === 'combined') {
       const { signal, confidence, details, individualSignals } = result;
-      
+
       return (
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>
           <Alert
             message={
               <Space>
                 <Text strong>Recommendation:</Text>
-                <SignalIndicator 
-                  signal={signal} 
-                  strength={confidence} 
+                <SignalIndicator
+                  signal={signal}
+                  strength={confidence}
                   barrier={barrier}
                   showAlert={showAlert && confidence > 0.7}
                 />
@@ -407,13 +452,17 @@ const OverUnderMarketAnalysis = () => {
             }
             description={details}
             type={
-              signal === 'over' ? 'success' :
-              signal === 'under' ? 'error' :
-              signal === 'warning' ? 'warning' : 'info'
+              signal === 'over'
+                ? 'success'
+                : signal === 'under'
+                ? 'error'
+                : signal === 'warning'
+                ? 'warning'
+                : 'info'
             }
             showIcon
           />
-          
+
           <Row gutter={[16, 16]}>
             <Col span={24}>
               <DigitHistoryChart digits={lastDigits} barrier={barrier} />
@@ -425,19 +474,27 @@ const OverUnderMarketAnalysis = () => {
               <Row gutter={[16, 16]}>
                 {Object.entries(individualSignals).map(([key, res]) => (
                   <Col xs={24} sm={12} md={8} key={key}>
-                    <Card size="small" title={
-                      <Space>
-                        <Text>{key.toUpperCase()}</Text>
-                        <AnalysisExplanation title={analyses.find(a => a.key === key)?.name} content={analyses.find(a => a.key === key)?.explanation} />
-                      </Space>
-                    }>
+                    <Card
+                      size="small"
+                      title={
+                        <Space>
+                          <Text>{key.toUpperCase()}</Text>
+                          <AnalysisExplanation
+                            title={analyses.find((a) => a.key === key)?.name}
+                            content={analyses.find((a) => a.key === key)?.explanation}
+                          />
+                        </Space>
+                      }
+                    >
                       <Space direction="vertical">
                         <SignalIndicator signal={res?.signal} strength={res?.strength} barrier={barrier} size="small" />
-                        <Text type="secondary" style={{ color: 'var(--text-color)' }}>{res?.details || 'No details'}</Text>
+                        <Text type="secondary" style={{ color: 'var(--text-color)' }}>
+                          {res?.details || 'No details'}
+                        </Text>
                         {(key === 'sma' || key === 'stochastic') && res?.rawData && (
-                          <DigitBarIndicator 
-                            digit={key === 'stochastic' ? res.rawData.maxDigit : Math.round(res.rawData.fastSMA)} 
-                            barrier={barrier} 
+                          <DigitBarIndicator
+                            digit={key === 'stochastic' ? res.rawData.maxDigit : Math.round(res.rawData.fastSMA)}
+                            barrier={barrier}
                           />
                         )}
                       </Space>
@@ -461,13 +518,13 @@ const OverUnderMarketAnalysis = () => {
           </Space>
           <Text>{details}</Text>
           {(analysis.key === 'sma' || analysis.key === 'stochastic') && rawData && (
-            <DigitBarIndicator 
-              digit={analysis.key === 'stochastic' ? rawData.maxDigit : Math.round(rawData.fastSMA)} 
-              barrier={barrier} 
+            <DigitBarIndicator
+              digit={analysis.key === 'stochastic' ? rawData.maxDigit : Math.round(rawData.fastSMA)}
+              barrier={barrier}
             />
           )}
           {analysis.key === 'streak' && rawData && (
-            <DigitHistoryChart digits={rawData.slice(0, 10).map(item => item.digit)} barrier={barrier} />
+            <DigitHistoryChart digits={rawData.slice(0, 10).map((item) => item.digit)} barrier={barrier} />
           )}
         </Space>
       </Card>
@@ -483,26 +540,24 @@ const OverUnderMarketAnalysis = () => {
           100% { transform: scale(1); opacity: 1; }
         }
       `}</style>
-      
+
       <Card
         title={
           <Space>
-            <Title level={4} style={{ margin: 0, color: token.colorPrimary }}>Over/Under Market Analysis</Title>
+            <Title level={4} style={{ margin: 0, color: token.colorPrimary }}>
+              Over/Under Market Analysis
+            </Title>
           </Space>
         }
         extra={
           <Space>
             <Tooltip title="Toggle simple mode">
-              <Switch 
-                size="small" 
-                checked={simpleMode} 
-                onChange={setSimpleMode} 
-              />
+              <Switch size="small" checked={simpleMode} onChange={setSimpleMode} />
             </Tooltip>
           </Space>
         }
         className="market-analysis-card"
-        Style={{ padding: simpleMode ? '16px 8px' : 16 }}
+        style={{ padding: simpleMode ? '16px 8px' : 16 }}
       >
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>
           <Row gutter={[16, 16]}>
@@ -515,8 +570,8 @@ const OverUnderMarketAnalysis = () => {
                 optionLabelProp="label"
               >
                 {volatilityOptions.map((option) => (
-                  <Option 
-                    key={option.value} 
+                  <Option
+                    key={option.value}
                     value={option.value}
                     label={
                       <Space>
@@ -534,16 +589,19 @@ const OverUnderMarketAnalysis = () => {
               </Select>
             </Col>
             <Col xs={24} md={12}>
-              <Card size="small" Style={{ padding: '8px 16px' }}>
+              <Card size="small" style={{ padding: '8px 16px' }}>
                 <Row gutter={16}>
                   <Col span={12}>
                     <Statistic
                       title={<Text style={{ color: 'var(--text-color)' }}>Current Price</Text>}
-                      value={tickData[symbol]?.length > 0 ? tickData[symbol][tickData[symbol].length - 1].price : '--'}
-                      precision={2}
+                      value={
+                        tickData[symbol]?.length > 0
+                          ? formatPrice(tickData[symbol][tickData[symbol].length - 1].price)
+                          : '--'
+                      }
                       valueStyle={{
                         color: tickData[symbol]?.length > 0
-                          ? parseInt(tickData[symbol][tickData[symbol].length - 1].price.toString().slice(-1)) > barrier
+                          ? lastDigit > barrier
                             ? '#52c41a'
                             : '#f5222d'
                           : 'inherit',
@@ -592,8 +650,8 @@ const OverUnderMarketAnalysis = () => {
               <Row>
                 <Col span={24}>
                   <Text>
-                    Recent digits: {lastDigits.slice(0, 10).filter(d => d > barrier).length}/10 over barrier,{' '}
-                    {lastDigits.slice(0, 10).filter(d => d <= barrier).length}/10 under barrier
+                    Recent digits: {lastDigits.slice(0, 10).filter((d) => d > barrier).length}/10 over barrier,{' '}
+                    {lastDigits.slice(0, 10).filter((d) => d <= barrier).length}/10 under barrier
                   </Text>
                 </Col>
               </Row>
@@ -601,65 +659,56 @@ const OverUnderMarketAnalysis = () => {
                 <Col span={24}>
                   <Space>
                     <Text>Visual Alerts:</Text>
-                    <Switch 
-                      size="small" 
-                      checked={showAlert} 
-                      onChange={setShowAlert} 
-                    />
+                    <Switch size="small" checked={showAlert} onChange={setShowAlert} />
                   </Space>
                 </Col>
               </Row>
             </Space>
           </Card>
 
-          {error && (
-            <Alert message={error} type="error" showIcon />
-          )}
+          {error && <Alert message={error} type="error" showIcon />}
 
           <Spin spinning={loading} tip="Loading market data...">
             {simpleMode ? (
               <Space direction="vertical" size="middle" style={{ width: '100%' }}>
                 <Card>
                   <Space direction="vertical" size="large" style={{ width: '100%' }}>
-                    <SignalIndicator 
-                      signal={combinedSignal.signal} 
-                      strength={combinedSignal.confidence} 
+                    <SignalIndicator
+                      signal={combinedSignal.signal}
+                      strength={combinedSignal.confidence}
                       barrier={barrier}
                       showAlert={showAlert && combinedSignal.confidence > 0.7}
                     />
-                    {lastDigit !== null && (
-                      <DigitBarIndicator digit={lastDigit} barrier={barrier} />
-                    )}
+                    {lastDigit !== null && <DigitBarIndicator digit={lastDigit} barrier={barrier} />}
                     <Text>{combinedSignal.details}</Text>
-                    <Text type="secondary" style={{ color:'var(--text-color)'}}><small>Based on {(tickData[symbol] || []).length} recent ticks</small></Text>
+                    <Text type="secondary" style={{ color: 'var(--text-color)' }}>
+                      <small>Based on {(tickData[symbol] || []).length} recent ticks</small>
+                    </Text>
                   </Space>
                 </Card>
                 <DigitHistoryChart digits={lastDigits.slice(0, 10)} barrier={barrier} />
               </Space>
             ) : (
-              <Tabs 
-                defaultActiveKey="combined"
-                size="small"
-                tabPosition="top"
-                type="line"
-                style={{ marginTop: 8 }}
-              >
+              <Tabs defaultActiveKey="combined" size="small" tabPosition="top" type="line" style={{ marginTop: 8 }}>
                 {analyses.map((analysis) => (
-                  <TabPane 
+                  <TabPane
                     tab={
                       <Space size={4}>
                         <span>{analysis.name}</span>
                         {analysis.key === 'combined' && (
-                          <Badge 
-                            dot 
+                          <Badge
+                            dot
                             color={
-                              combinedSignal.signal === 'over' ? '#52c41a' :
-                              combinedSignal.signal === 'under' ? '#f5222d' : '#faad14'
+                              combinedSignal.signal === 'over'
+                                ? '#52c41a'
+                                : combinedSignal.signal === 'under'
+                                ? '#f5222d'
+                                : '#faad14'
                             }
                           />
                         )}
                       </Space>
-                    } 
+                    }
                     key={analysis.key}
                   >
                     {renderAnalysis(analysis)}
