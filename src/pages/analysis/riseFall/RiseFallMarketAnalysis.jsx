@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Card, Select, Tabs, Spin, Progress, Typography, Collapse, Space, Row, Col, Statistic,theme, Tooltip, Badge, Switch,
+  Card, Select, Tabs, Spin, Progress, Typography, Collapse, Space, Row, Col, Statistic,theme, Tooltip, Badge, Switch, Alert,
 } from 'antd';
 import {
   LineChartOutlined, QuestionCircleOutlined, ArrowUpOutlined, ArrowDownOutlined, PauseOutlined, WarningOutlined, InfoCircleOutlined, BellOutlined,
@@ -243,11 +243,13 @@ const RiseFallMarketAnalysis = () => {
           />
           <Row gutter={[16, 16]}>
             <Col span={24}>
-              <PriceMovementChart movements={priceMovements} />
+              <Card size="small" title={<Text style={{ color: 'var(--text-color)' }}>Recent Price Movements</Text>}>
+                <PriceMovementChart movements={priceMovements} />
+              </Card>
             </Col>
           </Row>
           <Collapse ghost>
-            <Panel header="Detailed Indicators" key="details">
+            <Panel header={<Text style={{ color: 'var(--text-color)' }}>Detailed Indicators</Text>} key="details">
               <Row gutter={[16, 16]}>
                 {Object.entries(individualSignals).map(([key, res]) => (
                   <Col xs={24} sm={12} md={8} key={key}>
@@ -265,7 +267,7 @@ const RiseFallMarketAnalysis = () => {
                     >
                       <Space direction="vertical">
                         <SignalIndicator signal={res?.signal} strength={res?.strength} size="small" />
-                        <Text type="secondary">{res?.details || 'No details'}</Text>
+                        <Text style={{ color: 'var(--text-color)' }}>{res?.details || 'No details'}</Text>
                       </Space>
                     </Card>
                   </Col>
@@ -352,15 +354,21 @@ const RiseFallMarketAnalysis = () => {
                 <Row gutter={16}>
                   <Col span={12}>
                     <Statistic
-                      title="Current Price"
+                      title={<Text style={{ color: 'var(--text-color)' }}>Current Price</Text>}
                       value={tickData[symbol]?.length > 0 ? tickData[symbol][tickData[symbol].length - 1].price : '--'}
                       precision={2}
-                      style={{ color: 'var(--text-color)'}}
+                      valueStyle={{
+                        color: tickData[symbol]?.length > 1
+                          ? tickData[symbol][tickData[symbol].length - 1].price > tickData[symbol][tickData[symbol].length - 2].price
+                            ? '#52c41a'
+                            : '#f5222d'
+                          : 'inherit',
+                      }}
                     />
                   </Col>
                   <Col span={12}>
                     <Statistic
-                      title="Last Change"
+                      title={<Text style={{ color: 'var(--text-color)' }}>Last Change</Text>}
                       value={
                         tickData[symbol]?.length > 1
                           ? (tickData[symbol][tickData[symbol].length - 1].price - tickData[symbol][tickData[symbol].length - 2].price).toFixed(2)
@@ -386,7 +394,7 @@ const RiseFallMarketAnalysis = () => {
               </Card>
             </Col>
           </Row>
-          <Card size="small" title="Alert Configuration">
+          <Card size="small" title={<Text style={{ color: 'var(--text-color)' }}>Alert Configuration</Text>}>
             <Space>
               <Text>Visual Alerts:</Text>
               <Switch size="small" checked={showAlert} onChange={setShowAlert} />

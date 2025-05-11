@@ -340,7 +340,14 @@ const EvenOddContract = () => {
                   </Col>
                   <Col span={12}>
                     <Statistic
-                      title="Potential Loss"
+                      title={
+                        <Space style={{ color:'var(--text-color)'}}>
+                          Potential Loss
+                          <Tooltip title="This is the amount you risk losing if your prediction is wrong.">
+                            <InfoCircleOutlined />
+                          </Tooltip>
+                        </Space>
+                      }
                       value={amount}
                       precision={2}
                       prefix={<ArrowDownOutlined style={{ color: token.colorError }} />}

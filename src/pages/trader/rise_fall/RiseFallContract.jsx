@@ -310,7 +310,7 @@ const RiseFallTrader = () => {
                       );
                     })}
                   </Row>
-                  <Text type="secondary" style={{ display: 'block', textAlign: 'center', marginTop: 8 }}>
+                  <Text type="secondary" style={{ display: 'block', textAlign: 'center', marginTop: 8, color:'var(--text-color)' }}>
                     Selected: {duration} tick{duration > 1 ? 's' : ''}
                   </Text>
                 </div>
@@ -393,7 +393,14 @@ const RiseFallTrader = () => {
                   </Col>
                   <Col span={12}>
                     <Statistic
-                      title="Potential Loss"
+                      title={
+                        <Space style={{ color:'var(--text-color)'}}>
+                          Potential Loss
+                          <Tooltip title="This is the amount you risk losing if your prediction is wrong.">
+                            <InfoCircleOutlined />
+                          </Tooltip>
+                        </Space>
+                      }
                       value={amount}
                       precision={2}
                       prefix={<ArrowDownOutlined style={{ color: token.colorError }} />}

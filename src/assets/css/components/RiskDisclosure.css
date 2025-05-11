@@ -10,6 +10,7 @@
   margin: 0 auto; /* Center the card */
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   border-radius: 8px;
+  color: var(--text-color);
 }
 
 .continue-button,
@@ -36,7 +37,8 @@
 .risk-disclosure-card .ant-card-head-title {
   display: flex;
   align-items: center;
-  gap: 8px; /* Space between icon and title text */
+  gap: 8px; 
+  color: var(--text-color);
 }
 
 .risk-disclosure-modal .ant-modal-content {

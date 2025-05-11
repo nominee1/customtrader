@@ -74,38 +74,10 @@ h1, h2, h3, h4 {
   font-family: 'Ubuntu', system-ui, sans-serif;
 }
   
-/* ===== Buttons ===== */
-button {
-  background-color: var(--primary-color);
-  color: var(--text-color);
-  border: none;
-  padding: 10px 15px;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background-color var(--transition-speed), color var(--transition-speed);
-}
-  
-button:hover {
-  background-color: var(--primary-color);
-}
-  
-/* ===== Inputs ===== */
-input, textarea, select {
-  background-color: var(--card-bg);
-  color: var(--text-color);
-  border: 1px solid var(--bg-color);
-  padding: 8px;
-  border-radius: 5px;
-  transition: background-color var(--transition-speed), border-color var(--transition-speed), color var(--transition-speed);
-}
-  
-input:focus, textarea:focus, select:focus {
-  outline: none;
-  border-color: var(--primary-color);
-}
 /* Ant Design overrides */
 .ant-card {
   background: linear-gradient(135deg, rgba(108, 92, 231, 0.1) 0%, rgba(0, 206, 255, 0.1) 100%);
+  border: 1px solid rgba(108, 92, 231, 0.2);
 }
 
 .ant-select-selector {

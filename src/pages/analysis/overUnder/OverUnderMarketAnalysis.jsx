@@ -18,6 +18,7 @@ import {
   theme,
   Slider,
   InputNumber,
+  Grid
 } from 'antd';
 import { 
   LineChartOutlined, 
@@ -61,14 +62,15 @@ const volatilityOptions = [
 ];
 
 const DigitHistoryChart = ({ digits, barrier }) => {
-  const chunkSize = 5;
+  const { md } = Grid.useBreakpoint();
+  const chunkSize = md ? 12 : 5;
   const digitGroups = [];
   for (let i = 0; i < digits.length; i += chunkSize) {
     digitGroups.push(digits.slice(i, i + chunkSize));
   }
 
   return (
-    <Card size="small" title="Recent Digits History">
+    <Card size="small" title={<Text style={{ color: 'var(--text-color)' }}>Recent Digits History</Text>}>
       <Space direction="vertical" style={{ width: '100%' }}>
         {digitGroups.map((group, groupIndex) => (
           <div key={groupIndex} style={{ display: 'flex', justifyContent: 'center' }}>
@@ -419,7 +421,7 @@ const OverUnderMarketAnalysis = () => {
           </Row>
 
           <Collapse ghost>
-            <Panel header="Detailed Indicators" key="details">
+            <Panel header={<Text style={{ color: 'var(--text-color)' }}>Detailed Indicators</Text>} key="details">
               <Row gutter={[16, 16]}>
                 {Object.entries(individualSignals).map(([key, res]) => (
                   <Col xs={24} sm={12} md={8} key={key}>
@@ -431,7 +433,7 @@ const OverUnderMarketAnalysis = () => {
                     }>
                       <Space direction="vertical">
                         <SignalIndicator signal={res?.signal} strength={res?.strength} barrier={barrier} size="small" />
-                        <Text type="secondary">{res?.details || 'No details'}</Text>
+                        <Text type="secondary" style={{ color: 'var(--text-color)' }}>{res?.details || 'No details'}</Text>
                         {(key === 'sma' || key === 'stochastic') && res?.rawData && (
                           <DigitBarIndicator 
                             digit={key === 'stochastic' ? res.rawData.maxDigit : Math.round(res.rawData.fastSMA)} 
@@ -536,14 +538,21 @@ const OverUnderMarketAnalysis = () => {
                 <Row gutter={16}>
                   <Col span={12}>
                     <Statistic
-                      title="Current Price"
+                      title={<Text style={{ color: 'var(--text-color)' }}>Current Price</Text>}
                       value={tickData[symbol]?.length > 0 ? tickData[symbol][tickData[symbol].length - 1].price : '--'}
                       precision={2}
+                      valueStyle={{
+                        color: tickData[symbol]?.length > 0
+                          ? parseInt(tickData[symbol][tickData[symbol].length - 1].price.toString().slice(-1)) > barrier
+                            ? '#52c41a'
+                            : '#f5222d'
+                          : 'inherit',
+                      }}
                     />
                   </Col>
                   <Col span={12}>
                     <Statistic
-                      title="Last Digit"
+                      title={<Text style={{ color: 'var(--text-color)' }}>Last Digit</Text>}
                       value={lastDigit !== null ? lastDigit : '--'}
                       prefix={<NumberOutlined />}
                       valueStyle={{ color: lastDigit !== null ? (lastDigit > barrier ? '#52c41a' : '#f5222d') : 'inherit' }}
@@ -554,7 +563,7 @@ const OverUnderMarketAnalysis = () => {
             </Col>
           </Row>
 
-          <Card size="small" title="Barrier Configuration">
+          <Card size="small" title={<Text style={{ color: 'var(--text-color)' }}>Barrier Configuration</Text>}>
             <Space direction="vertical" style={{ width: '100%' }}>
               <Row gutter={16}>
                 <Col xs={14} sm={16}>
@@ -563,7 +572,11 @@ const OverUnderMarketAnalysis = () => {
                     max={9}
                     value={barrier}
                     onChange={setBarrier}
-                    marks={{ 0: '0', 4: '4', 9: '9' }}
+                    marks={{
+                      0: { style: { color: 'var(--text-color)' }, label: '0' },
+                      4: { style: { color: 'var(--text-color)' }, label: '4' },
+                      9: { style: { color: 'var(--text-color)' }, label: '9' },
+                    }}
                   />
                 </Col>
                 <Col xs={10} sm={8}>

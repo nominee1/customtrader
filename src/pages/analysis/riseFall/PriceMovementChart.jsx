@@ -1,16 +1,19 @@
 import React from 'react';
-import { Card, Space } from 'antd';
+import { Card, Space, Typography} from 'antd';
+import { Grid } from 'antd';
 import PropTypes from 'prop-types';
 
+const { Text,Title } = Typography;
 const PriceMovementChart = ({ movements }) => {
-  const chunkSize = 5; // Number of movements per row
+  const { md } = Grid.useBreakpoint();
+  const chunkSize = md ? 12 : 5; 
   const movementGroups = [];
   for (let i = 0; i < movements.length; i += chunkSize) {
     movementGroups.push(movements.slice(i, i + chunkSize));
   }
 
   return (
-    <Card size="small" title="Recent Price Movements">
+    <Card size="small" title={<Text style={{ color: 'var(--text-color)' }}>Recent Price Movements</Text>}>
       <Space direction="vertical" style={{ width: '100%' }}>
         {movementGroups.map((group, groupIndex) => (
           <div key={groupIndex} style={{ display: 'flex', justifyContent: 'center' }}>

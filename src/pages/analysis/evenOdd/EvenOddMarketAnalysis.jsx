@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Card, Select, Tabs, Spin, Progress, Typography, Collapse, theme, Space, Row, Col, Statistic, Tooltip, Alert, Badge, Switch,
+  Card, Select, Tabs, Spin, Progress, Typography, Collapse, theme, Space, Row, Col, Statistic, Tooltip, Alert, Badge, Switch, Grid
 } from 'antd';
 import {
   LineChartOutlined, QuestionCircleOutlined, NumberOutlined, PauseOutlined, WarningOutlined, InfoCircleOutlined, BellOutlined,
@@ -33,13 +33,14 @@ const volatilityOptions = [
 
 // Unchanged components: DigitHistoryChart, EvenOddIndicator, SignalIndicator, AnalysisExplanation
 const DigitHistoryChart = ({ digits }) => {
-  const chunkSize = 5;
+  const { md } = Grid.useBreakpoint();
+  const chunkSize = md ? 12 : 5;
   const digitGroups = [];
   for (let i = 0; i < digits.length; i += chunkSize) {
     digitGroups.push(digits.slice(i, i + chunkSize));
   }
   return (
-    <Card size="small" title="Recent Digits History">
+    <Card size="small" title={<Text style={{ color: 'var(--text-color)' }}>Recent Digits History</Text>}>
       <Space direction="vertical" style={{ width: '100%' }}>
         {digitGroups.map((group, groupIndex) => (
           <div key={groupIndex} style={{ display: 'flex', justifyContent: 'center' }}>
@@ -280,7 +281,7 @@ const EvenOddMarketAnalysis = () => {
             </Col>
           </Row>
           <Collapse ghost>
-            <Panel header="Detailed Indicators" key="details">
+            <Panel header={<Text style={{ color: 'var(--text-color)' }}>Detailed Indicators</Text>} key="details">
               <Row gutter={[16, 16]}>
                 {Object.entries(individualSignals).map(([key, res]) => (
                   <Col xs={24} sm={12} md={8} key={key}>
@@ -295,7 +296,7 @@ const EvenOddMarketAnalysis = () => {
                     >
                       <Space direction="vertical">
                         <SignalIndicator signal={res?.signal} strength={res?.strength} size="small" />
-                        <Text type="secondary">{res?.details || 'No details'}</Text>
+                        <Text type="secondary" style={{ color: 'var(--text-color)' }}>{res?.details || 'No details'}</Text>
                         {(key === 'sma' || key === 'stochastic') && res?.rawData && (
                           <EvenOddIndicator digit={key === 'stochastic' ? res.rawData.maxDigit : Math.round(res.rawData.fastSMA)} />
                         )}
@@ -389,14 +390,17 @@ const EvenOddMarketAnalysis = () => {
                 <Row gutter={16}>
                   <Col span={12}>
                     <Statistic
-                      title="Current Price"
+                      title={<Text style={{ color: 'var(--text-color)' }}>Current Price</Text>}
                       value={tickData[symbol]?.length > 0 ? tickData[symbol][tickData[symbol].length - 1].price : '--'}
                       precision={2}
+                      valueStyle={{
+                        color: lastDigit !== null ? (lastDigit % 2 === 0 ? '#52c41a' : '#f5222d') : 'inherit',
+                      }}
                     />
                   </Col>
                   <Col span={12}>
                     <Statistic
-                      title="Last Digit"
+                      title={<Text style={{ color: 'var(--text-color)' }}>Last Digit</Text>}
                       value={lastDigit !== null ? lastDigit : '--'}
                       prefix={<NumberOutlined />}
                       valueStyle={{ color: lastDigit !== null ? (lastDigit % 2 === 0 ? '#52c41a' : '#f5222d') : 'inherit' }}
@@ -406,7 +410,7 @@ const EvenOddMarketAnalysis = () => {
               </Card>
             </Col>
           </Row>
-          <Card size="small" title="Alert Configuration">
+          <Card size="small" title={<Text style={{ color: 'var(--text-color)' }}>Alert Configuration</Text>}>
             <Space>
               <Text>Visual Alerts:</Text>
               <Switch size="small" checked={showAlert} onChange={setShowAlert} />

@@ -315,7 +315,7 @@ const OverUnderTrader = () => {
                       );
                     })}
                   </Row>
-                  <Text type="secondary" style={{ display: 'block', textAlign: 'center', marginTop: 8 }}>
+                  <Text type="secondary" style={{ display: 'block', textAlign: 'center', marginTop: 8, color:'var(--text-color)' }}>
                     Selected: {duration} tick{duration > 1 ? 's' : ''}
                   </Text>
                 </div>
@@ -331,7 +331,7 @@ const OverUnderTrader = () => {
                           count={digit}
                           style={{
                             backgroundColor: selectedDigit === digit ? token.colorPrimary : token.colorFillAlter,
-                            color: selectedDigit === digit ? 'var(--text-color)' : token.colorText,
+                            color: selectedDigit === digit ? 'white' : 'var(--text-color)',
                             fontSize: 16,
                             width: 32,
                             height: 32,
@@ -346,7 +346,7 @@ const OverUnderTrader = () => {
                       </Col>
                     ))}
                   </Row>
-                  <Text type="secondary" style={{ display: 'block', textAlign: 'center', marginTop: 8 }}>
+                  <Text type="secondary" style={{ display: 'block', textAlign: 'center', marginTop: 8, color:'var(--text-color)' }}>
                     Selected: {selectedDigit}
                   </Text>
                 </div>
@@ -388,7 +388,7 @@ const OverUnderTrader = () => {
                     step={5}
                     disabled={!user || !isAuthorized}
                   />
-                  <Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
+                  <Text type="secondary" style={{ display: 'block', marginTop: 8, color:'var(--neutral-color)' }}>
                     Available balance: {(balance || 0).toFixed(2)} {user?.currency || 'USD'}
                   </Text>
                 </div>
@@ -399,7 +399,7 @@ const OverUnderTrader = () => {
                     <Col span={12}>
                       <Statistic
                         title={
-                          <Space>
+                          <Space style={{ color:'var(--text-color)'}}>
                             Potential Payout (Over)
                             <Tooltip title={`Over ${selectedDigit} yields a ${(PAYOUT_MULTIPLIERS.over[selectedDigit] * 100).toFixed(1)}% return for valid digits (0-8)`}>
                               <InfoCircleOutlined />
@@ -415,7 +415,7 @@ const OverUnderTrader = () => {
                     <Col span={12}>
                       <Statistic
                         title={
-                          <Space>
+                          <Space style={{ color:'var(--text-color)'}}>
                             Potential Payout (Under)
                             <Tooltip title={`Under ${selectedDigit} yields a ${(PAYOUT_MULTIPLIERS.under[selectedDigit] * 100).toFixed(1)}% return for valid digits (1-9)`}>
                               <InfoCircleOutlined />

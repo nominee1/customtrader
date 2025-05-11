@@ -3,6 +3,7 @@ import { Card, Space, Typography, Row, Col, Tag, Progress } from 'antd';
 import { HistoryOutlined } from '@ant-design/icons';
 import { useUser } from '../context/AuthContext';
 import { useContracts } from '../context/ContractsContext';
+import '../assets/css/components/RecentTrade.css';
 
 const { Text } = Typography;
 
@@ -122,18 +123,18 @@ const RecentTrades = () => {
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
       <Row gutter={16} wrap>
         <Col xs={24} md={12}>
-          <div style={{ resize: 'horizontal', overflow: 'auto', paddingRight: 8 }}>
+          <div style={{ overflow: 'auto', padding: 8 }}>
             <Card
               title={
                 <Space>
-                  <HistoryOutlined />
+                  <HistoryOutlined style={{ color:'var(--text-color)'}}/>
                   <Text strong>Live Contracts</Text>
                 </Space>
               }
               style={{
                 borderRadius: 16,
                 boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
-                minWidth: 300
+                minWidth: 300,
               }}
               loading={authLoading}
             >
@@ -149,12 +150,12 @@ const RecentTrades = () => {
                         <Row justify="space-between">
                           <Col>
                             <Text strong>{contract.display_name || contract.underlying}</Text> <br />
-                            <Text type="secondary">Type: {contract.contract_type}</Text> <br />
-                            <Text type="secondary">Buy Price: {contract.buy_price} {contract.currency}</Text> <br />
-                            <Text type="secondary">Current Price: {contract.current_spot || 'N/A'}</Text> <br />
-                            <Text type="secondary">Profit: {contract.profit || 0} {contract.currency}</Text> <br />
-                            <Text type="secondary">Pay Out: {contract.payout || 0}{contract.currency}</Text> <br />
-                            <Text type="secondary">
+                            <Text type="secondary" style={{ color:'var(--text-color)'}}>Type: {contract.contract_type}</Text> <br />
+                            <Text type="secondary" style={{ color:'var(--text-color)'}}>Buy Price: {contract.buy_price} {contract.currency}</Text> <br />
+                            <Text type="secondary" style={{ color:'var(--text-color)'}}>Current Price: {contract.current_spot || 'N/A'}</Text> <br />
+                            <Text type="secondary" style={{ color:'var(--text-color)'}}>Profit: {contract.profit || 0} {contract.currency}</Text> <br />
+                            <Text type="secondary" style={{ color:'var(--text-color)'}}>Pay Out: {contract.payout || 0}{contract.currency}</Text> <br />
+                            <Text type="secondary" style={{ color:'var(--text-color)'}}>
                               Duration: {contract.duration} {contract.duration_unit === 't' ? 'ticks' : 'minutes'}
                             </Text> <br />
                             <Progress
@@ -173,18 +174,18 @@ const RecentTrades = () => {
                   </Space>
                 </div>
               ) : (
-                <Text type="secondary">No live contracts.</Text>
+                <Text type="secondary" style={{ color:'var(--text-color)'}}>No live contracts.</Text>
               )}
             </Card>
           </div>
         </Col>
 
         <Col xs={24} md={12}>
-          <div style={{ overflow: 'auto', paddingLeft: 8 }}>
+          <div style={{ overflow: 'auto', padding: 8 }}>
             <Card
               title={
                 <Space>
-                  <HistoryOutlined />
+                  <HistoryOutlined style={{ color:'var(--text-color)'}}/>
                   <Text strong>Recent Trades</Text>
                 </Space>
               }
@@ -195,7 +196,7 @@ const RecentTrades = () => {
               }}
               loading={authLoading}
             >
-              <div style={{ maxHeight: '360px', overflowY: 'auto' }}>
+              <div className="custom-scrollbar" style={{ maxHeight: '360px', overflowY: 'auto' }}>
                 {sortedRecentTrades.length > 0 ? (
                   <Space direction="vertical" size={16} style={{ width: '100%' }}>
                     {sortedRecentTrades.map((trade) => (
@@ -211,11 +212,11 @@ const RecentTrades = () => {
                         <Row justify="space-between">
                           <Col>
                             <Text strong>{trade.display_name || trade.underlying}</Text> <br />
-                            <Text type="secondary">Type: {trade.contract_type}</Text> <br />
-                            <Text type="secondary">Buy Price: {trade.buy_price} {trade.currency}</Text> <br />
-                            <Text type="secondary">Sell Price: {trade.sell_price || 'N/A'}</Text> <br />
-                            <Text type="secondary">Profit: {trade.profit || 0} {trade.currency}</Text> <br />
-                            <Text type="secondary">Pay Out: {trade.payout || 0} {trade.currency}</Text>
+                            <Text type="secondary" style={{ color:'var(--text-color)'}}>Type: {trade.contract_type}</Text> <br />
+                            <Text type="secondary" style={{ color:'var(--text-color)'}}>Buy Price: {trade.buy_price} {trade.currency}</Text> <br />
+                            <Text type="secondary" style={{ color:'var(--text-color)'}}>Sell Price: {trade.sell_price || 'N/A'}</Text> <br />
+                            <Text type="secondary" style={{ color:'var(--text-color)'}}>Profit: {trade.profit || 0} {trade.currency}</Text> <br />
+                            <Text type="secondary" style={{ color:'var(--text-color)'}}>Pay Out: {trade.payout || 0} {trade.currency}</Text>
                           </Col>
                           <Col>
                             <Tag color={trade.profit > 0 ? 'green' : 'red'}>
@@ -227,7 +228,7 @@ const RecentTrades = () => {
                     ))}
                   </Space>
                 ) : (
-                  <Text type="secondary">No recent trades available.</Text>
+                  <Text type="secondary" style={{ color:'var(--text-color)'}}>No recent trades available.</Text>
                 )}
               </div>
             </Card>

@@ -13,6 +13,7 @@ import {
   Tag,
   Alert,
   Descriptions,
+  theme
 } from 'antd';
 import {
   DollarOutlined,
@@ -52,6 +53,8 @@ const DashboardMainContent = () => {
   const [loading] = useState(false);
   const accountId = activeAccount?.loginid;
   const isLoading = authLoading || loading;
+  const { token } = theme.useToken();
+  const colorPrimary = token.colorPrimary;
 
   const formatTimestamp = (timestamp) => {
     return new Date(timestamp * 1000).toLocaleString('en-US', {
@@ -207,7 +210,7 @@ const DashboardMainContent = () => {
                   value={balance}
                   precision={2}
                   prefix="$"
-                  valueStyle={{ fontSize: 24, fontWeight: 600 }}
+                  valueStyle={{ fontSize: 24, fontWeight: 600, color: colorPrimary }}
                 />
                 <Progress
                   percent={balance ? (balance / (balance + stats.totalPurchases)) * 100 : 0}
@@ -230,7 +233,7 @@ const DashboardMainContent = () => {
                   value={stats.totalPurchases}
                   precision={2}
                   prefix="$"
-                  valueStyle={{ fontSize: 24, fontWeight: 600 }}
+                  valueStyle={{ fontSize: 24, fontWeight: 600, color: colorPrimary }}
                 />
                 <Progress
                   percent={stats.totalPurchases ? (stats.totalPurchases / (stats.totalPurchases + balance)) * 100 : 0}
@@ -255,7 +258,7 @@ const DashboardMainContent = () => {
                   value={stats.totalProfitLoss}
                   precision={2}
                   prefix="$"
-                  valueStyle={{ fontSize: 24, fontWeight: 600 }}
+                  valueStyle={{ fontSize: 24, fontWeight: 600, color: colorPrimary }}
                   className="statistic-value-3"
                 />
                 <Progress
@@ -281,7 +284,7 @@ const DashboardMainContent = () => {
                   value={stats.totalPayouts}
                   precision={2}
                   prefix="$"
-                  valueStyle={{ fontSize: 24, fontWeight: 600 }}
+                  valueStyle={{ fontSize: 24, fontWeight: 600, color: colorPrimary }}
                   className="statistic-value-4"
                 />
                 <Progress

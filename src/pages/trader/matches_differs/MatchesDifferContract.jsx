@@ -301,7 +301,7 @@ const MatchesDiffersTrader = () => {
                         count={i}
                         style={{
                           backgroundColor: selectedDigit === i ? token.colorPrimary : token.colorFillAlter,
-                          color: selectedDigit === i ? '#fff' : token.colorText,
+                          color: selectedDigit === i ? 'white' : 'var(--text-color)',
                           fontSize: 16,
                           width: 32,
                           height: 32,
