@@ -108,7 +108,7 @@
 
 /* Dropdown menu */
 .ant-dropdown-menu {
-  background: linear-gradient(135deg, rgba(108, 92, 231, 0.1) 0%, rgba(0, 206, 255, 0.1) 100%)!important;
+  background: #1e1e2f !important;
   border-radius: 8px;
   box-shadow: 0 4px 12px var(--shadow-color);
   min-width: 150px !important;

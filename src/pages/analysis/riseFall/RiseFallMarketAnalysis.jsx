@@ -13,7 +13,6 @@ import {
 import PriceMovementChart from './PriceMovementChart';
 import '../../../assets/css/pages/analysis/MarketAnalysis.css';
 import { useUser } from '../../../context/AuthContext';
-import Notification from '../../../utils/Notification';
 
 const { Option } = Select;
 const { TabPane } = Tabs;
@@ -102,7 +101,7 @@ const RiseFallMarketAnalysis = () => {
   const [simpleMode, setSimpleMode] = useState(false);
   const [showAlert, setShowAlert] = useState(true);
   const userBalance = balance;
-  const [notification, setNotification] = useState({ type: '', content: '', trigger: false });
+  const [error, setError] = useState(null);
 
   // Memoized combined signal
   const combinedSignal = useMemo(() => combineSignals(tickData[symbol] || [], symbol, userBalance), [tickData, symbol, userBalance]);
@@ -124,8 +123,30 @@ const RiseFallMarketAnalysis = () => {
 
     const subscribeToAllSymbols = async () => {
       setLoading(true);
+      // Retry logic with exponential backoff
+      let retryCount = 0;
+      const maxRetries = 5;
+      const connectWithRetry = async () => {
+        while (retryCount < maxRetries) {
+          try {
+            await publicWebSocket.connect();
+            return true;
+          } catch (err) {
+            retryCount++;
+            console.error(`WebSocket connection failed (attempt ${retryCount}/${maxRetries})`, err);
+            await new Promise(res => setTimeout(res, 1000 * Math.pow(2, retryCount)));
+          }
+        }
+        return false;
+      };
+
       try {
-        await publicWebSocket.connect();
+        const connected = await connectWithRetry();
+        if (!connected) {
+          setError('Unable to connect after multiple attempts. Please try again later.');
+          setLoading(false);
+          return;
+        }
         if (!isMounted) return;
 
         // Initialize tickData for all symbols
@@ -160,7 +181,8 @@ const RiseFallMarketAnalysis = () => {
             }
             setLoading(false);
           } else if (event === 'error') {
-            setNotification({ type: 'error', content: 'WebSocket error occurred', trigger: true });
+            console.error('WebSocket error:', data);
+            setError('A connection issue occurred while retrieving data.');
             setLoading(false);
           }
         };
@@ -187,9 +209,9 @@ const RiseFallMarketAnalysis = () => {
 
         await fetchHistorical();
       } catch (err) {
-        console.error('WebSocket Error:', err);
+        console.error('WebSocket connection error:', err);
         if (isMounted) {
-          setNotification({ type: 'error', content: 'Failed to connect to WebSocket. Please check your network or app ID.', trigger: true });
+          setError('Unable to connect to market data. Please try again later.');
           setLoading(false);
         }
       }
@@ -400,8 +422,8 @@ const RiseFallMarketAnalysis = () => {
               <Switch size="small" checked={showAlert} onChange={setShowAlert} />
             </Space>
           </Card>
-          {notification.type === 'error' && (
-            <Notification type="error" content={notification.content} trigger={notification.trigger} />
+          {error && (
+            <Alert message={error} type="error" showIcon />
           )}
           <Spin spinning={loading} tip="Loading market data...">
             {simpleMode ? (

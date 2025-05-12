@@ -145,6 +145,7 @@ const DashboardHeader = ({ collapsed, setCollapsed, toggleDrawer }) => {
           placement="bottomRight"
           trigger={['click']}
           className="user-dropdown"
+          style={{}}
         >
           <Space className="user-menu">
             <Avatar className={getAvatarClass()}>

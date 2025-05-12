@@ -27,7 +27,6 @@ import {
   InfoCircleOutlined,
   BellOutlined,
 } from '@ant-design/icons';
-import Notification from '../../../utils/Notification';
 import { publicWebSocket } from '../../../services/public_websocket_client';
 import {
   analyzeSMACrossover,
@@ -222,7 +221,7 @@ const EvenOddMarketAnalysis = () => {
   const [loading, setLoading] = useState(true);
   const [simpleMode, setSimpleMode] = useState(false);
   const [showAlert, setShowAlert] = useState(true);
-  const [notification, setNotification] = useState({ type: '', content: '', trigger: false });
+  const [error, setError] = useState(null);
   const userBalance = balance;
 
   // Utility to format price with exactly two decimal places
@@ -281,8 +280,29 @@ const EvenOddMarketAnalysis = () => {
 
     const subscribeToAllSymbols = async () => {
       setLoading(true);
+      // Retry logic for WebSocket connection
+      let retryCount = 0;
+      const maxRetries = 5;
+      const connectWithRetry = async () => {
+        while (retryCount < maxRetries) {
+          try {
+            await publicWebSocket.connect();
+            return true;
+          } catch (err) {
+            retryCount++;
+            console.error(`WebSocket connection failed (attempt ${retryCount}/${maxRetries})`, err);
+            await new Promise(res => setTimeout(res, 1000 * Math.pow(2, retryCount)));
+          }
+        }
+        return false;
+      };
       try {
-        await publicWebSocket.connect();
+        const connected = await connectWithRetry();
+        if (!connected) {
+          setError('Unable to connect after multiple attempts. Please try again later.');
+          setLoading(false);
+          return;
+        }
         if (!isMounted) return;
 
         // Initialize tickData for all symbols
@@ -299,7 +319,6 @@ const EvenOddMarketAnalysis = () => {
           if (!isMounted) return;
           if (event === 'message' && data.msg_type === 'tick') {
             const { symbol: tickSymbol, quote, epoch } = data.tick;
-            //console.log('WebSocket tick:', { symbol: tickSymbol, price: quote, epoch }); // Debug log
             setTickData((prev) => ({
               ...prev,
               [tickSymbol]: [...(prev[tickSymbol] || []), { price: quote, timestamp: epoch }].slice(-60),
@@ -318,7 +337,8 @@ const EvenOddMarketAnalysis = () => {
             }
             setLoading(false);
           } else if (event === 'error') {
-            setNotification({ type: 'error', content: 'WebSocket error occurred', trigger: true });
+            console.error('WebSocket error:', data);
+            setError('A connection issue occurred while retrieving data.');
             setLoading(false);
           }
         };
@@ -347,11 +367,7 @@ const EvenOddMarketAnalysis = () => {
       } catch (err) {
         console.error('WebSocket Error:', err);
         if (isMounted) {
-          setNotification({
-            type: 'error',
-            content: 'Failed to connect to WebSocket. Please check your network or app ID.',
-            trigger: true,
-          });
+          setError('Failed to connect to WebSocket. Please check your network or app ID.');
           setLoading(false);
         }
       }
@@ -592,12 +608,8 @@ const EvenOddMarketAnalysis = () => {
               <Switch size="small" checked={showAlert} onChange={setShowAlert} />
             </Space>
           </Card>
-          {notification.trigger && (
-            <Notification
-              type={notification.type}
-              content={notification.content}
-              trigger={notification.trigger}
-            />
+          {error && (
+            <Alert message={error} type="error" showIcon />
           )}
           <Spin spinning={loading} tip="Loading market data...">
             {simpleMode ? (
