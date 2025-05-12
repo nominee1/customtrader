@@ -19,9 +19,8 @@ const { Header } = Layout;
 const { Text } = Typography;
 
 const DashboardHeader = ({ collapsed, setCollapsed, toggleDrawer }) => {
-  const { user, balance, activeAccountType, switchAccount, accounts, loading, activeAccount, sendAuthorizedRequest } = useUser();
+  const { user, balance, activeAccountType, switchAccount, accounts, loading, sendAuthorizedRequest } = useUser();
   const navigate = useNavigate();
-  const accountId = activeAccount?.loginid;
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 576);
 
   useEffect(() => {
@@ -29,6 +28,16 @@ const DashboardHeader = ({ collapsed, setCollapsed, toggleDrawer }) => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  const getAvatarClass = () => {
+    if (!activeAccountType) return 'avatar';
+    return activeAccountType === 'real' ? 'avatar avatar-real' : 'avatar avatar-demo';
+  };
+
+  const getAvatarText = () => {
+    if (!activeAccountType) return 'U'; // User
+    return activeAccountType === 'real' ? 'R' : 'D';
+  };
 
   const handleLogout = async () => {
     try {
@@ -50,33 +59,33 @@ const DashboardHeader = ({ collapsed, setCollapsed, toggleDrawer }) => {
   const userMenuItems = [
     {
       key: 'profile',
-      icon: <UserOutlined style={{ color: '#1890ff' }} />,
+      icon: <UserOutlined />,
       label: 'My Profile',
       onClick: () => navigate('/dashboard/account'),
     },
     {
       key: 'wallet',
-      icon: <WalletOutlined style={{ color: '#1890ff' }} />,
+      icon: <WalletOutlined />,
       label: 'Wallet',
       onClick: () => navigate('/dashboard/wallet'),
     },
     {
       key: 'switch-real',
-      icon: <SwapOutlined style={{ color: activeAccountType === 'real' ? '#ccc' : '#1890ff' }} />,
+      icon: <SwapOutlined />,
       label: 'Switch to Real',
       disabled: activeAccountType === 'real' || !accounts.real,
       onClick: () => switchAccount('real'),
     },
     {
       key: 'switch-demo',
-      icon: <SwapOutlined style={{ color: activeAccountType === 'demo' ? '#ccc' : '#1890ff' }} />,
+      icon: <SwapOutlined />,
       label: 'Switch to Demo',
       disabled: activeAccountType === 'demo' || !accounts.demo,
       onClick: () => switchAccount('demo'),
     },
     {
       key: 'settings',
-      icon: <SettingOutlined style={{ color: '#1890ff' }} />,
+      icon: <SettingOutlined />,
       label: 'Settings',
       onClick: () => navigate('/dashboard/settings'),
     },
@@ -85,7 +94,7 @@ const DashboardHeader = ({ collapsed, setCollapsed, toggleDrawer }) => {
     },
     {
       key: 'logout',
-      icon: <LogoutOutlined style={{ color: '#FF7675' }} />,
+      icon: <LogoutOutlined />,
       label: 'Logout',
       danger: true,
       onClick: handleLogout,
@@ -101,10 +110,7 @@ const DashboardHeader = ({ collapsed, setCollapsed, toggleDrawer }) => {
   }
 
   return (
-    <Header
-      className={`header ${isMobile ? 'header-mobile' : 'header-desktop'}`}
-      style={{ position: 'fixed', width: '100%', zIndex: 1000, top: 0 }}
-    >
+    <Header className={`header ${isMobile ? 'header-mobile' : 'header-desktop'}`}>
       <Space size="middle">
         {isMobile ? (
           <Button
@@ -112,7 +118,6 @@ const DashboardHeader = ({ collapsed, setCollapsed, toggleDrawer }) => {
             icon={<MenuOutlined />}
             onClick={toggleDrawer}
             className="menu-toggle"
-            style={{ fontSize: '20px', color: '#1890ff' }}
             aria-label="Toggle navigation drawer"
           />
         ) : (
@@ -121,45 +126,35 @@ const DashboardHeader = ({ collapsed, setCollapsed, toggleDrawer }) => {
             icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
             onClick={() => setCollapsed(!collapsed)}
             className="menu-toggle"
-            style={{ fontSize: '20px', color: '#1890ff' }}
             aria-label="Toggle sidebar"
           />
         )}
         {!isMobile && (
-          <>
-            <img
-              src={logo}
-              alt="Company Logo"
-              style={{ height: '80px', width: 'auto' }}
-            />
-          </>
+          <img src={logo} alt="Company Logo" className="logo-img" />
         )}
       </Space>
       <Space size="large" align="center">
-        {!isMobile && (
-          <Space className="balance-display">
-            <WalletOutlined style={{ color: '#1890ff', fontSize: '16px' }} />
-            <Text className="balance-text">
-              {user?.currency} {balance?.toFixed(2) || '0.00'}
-            </Text>
-          </Space>
-        )}
+        <Space className={`balance-display ${isMobile ? 'balance-mobile' : ''}`}>
+          <WalletOutlined className="balance-icon" />
+          <Text className={`balance-text ${isMobile ? 'balance-text-strong' : ''}`}>
+            {user?.currency} {balance?.toFixed(2) || '0.00'}
+          </Text>
+        </Space>
         <Dropdown
           menu={{ items: userMenuItems }}
           placement="bottomRight"
           trigger={['click']}
-          overlayStyle={{ minWidth: 180 }}
+          className="user-dropdown"
+          style={{}}
         >
           <Space className="user-menu">
-            <Avatar
-              src={user?.avatar}
-              icon={<UserOutlined />}
-              className="avatar"
-            />
+            <Avatar className={getAvatarClass()}>
+              {getAvatarText()}
+            </Avatar>
             {!isMobile && (
               <>
-                <Text strong>{user?.fullname || 'User'}</Text>
-                <Text type="secondary" className="user-account-type">
+                <Text className="user-name">{user?.fullname || 'User'}</Text>
+                <Text className="user-account-type">
                   {activeAccountType ? activeAccountType.charAt(0).toUpperCase() + activeAccountType.slice(1) : 'N/A'}
                 </Text>
               </>

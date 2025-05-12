@@ -17,7 +17,6 @@ import {
   ConfigProvider,
   theme,
   Spin,
-  Tabs,
   Badge 
 } from 'antd';
 import { 
@@ -40,7 +39,6 @@ import MatchesDiffersMarketAnalysis from '../../analysis/matchesDiffers/MatchesD
 
 const { Title, Text } = Typography;
 const { Option } = Select;
-const { TabPane } = Tabs;
 
 // Constants for effective multipliers
 const MATCHES_MULTIPLIER = 6.062; // For Matches: 70.62 for amount = 10, 706.20 for amount = 100
@@ -58,7 +56,6 @@ const MatchesDiffersTrader = () => {
   const [contractType, setContractType] = useState('matches'); // Track Matches or Differs
   const [payout, setPayout] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activeTab, setActiveTab] = useState('trade');
   const [notification, setNotification] = useState({
     type: '',
     content: '',
@@ -77,6 +74,7 @@ const MatchesDiffersTrader = () => {
     if (user && balance) {
       setAmount(Math.min(amount, balance || 1000)); // Ensure amount doesn’t exceed balance
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   // Calculate payout based on contract type
@@ -238,214 +236,211 @@ const MatchesDiffersTrader = () => {
               </Tooltip>
             }
           >
-            <Tabs activeKey={activeTab} onChange={setActiveTab}>
-              <TabPane tab="Trade" key="trade">
-                <Space direction="vertical" size={24} style={{ width: '100%', marginTop: 16 }}>
-                  {/* Symbol Selector */}
-                  <div>
-                    <Text strong style={{ display: 'block', marginBottom: 8 }}>Volatility Index</Text>
-                    <Select
-                      value={symbol}
-                      onChange={setSymbol}
-                      style={{ width: '100%' }}
-                      placeholder="Select a volatility index"
-                      optionLabelProp="label"
-                      disabled={!user || !isAuthorized}
+            <Space direction="vertical" size={24} style={{ width: '100%', marginTop: 16 }}>
+              {/* Symbol Selector */}
+              <div>
+                <Text strong style={{ display: 'block', marginBottom: 8 }}>Volatility Index</Text>
+                <Select
+                  value={symbol}
+                  onChange={setSymbol}
+                  style={{ width: '100%' }}
+                  placeholder="Select a volatility index"
+                  optionLabelProp="label"
+                  disabled={!user || !isAuthorized}
+                >
+                  {volatilityOptions.map(option => (
+                    <Option 
+                      key={option.value} 
+                      value={option.value}
+                      label={<span>{option.label}</span>}
                     >
-                      {volatilityOptions.map(option => (
-                        <Option 
-                          key={option.value} 
-                          value={option.value}
-                          label={<span>{option.label}</span>}
-                        >
-                          <span>{option.label}</span>
-                        </Option>
-                      ))}
-                    </Select>
-                  </div>
+                      <span>{option.label}</span>
+                    </Option>
+                  ))}
+                </Select>
+              </div>
 
-                  {/* Tick Duration Selector */}
-                  <div>
-                    <Text strong style={{ display: 'block', marginBottom: 8 }}>Duration (Ticks)</Text>
-                    <Row justify="space-between" style={{ padding: '0 10px' }}>
-                      {[...Array(10)].map((_, i) => {
-                        const tick = i + 1;
-                        const isActive = tick === duration;
-                        const IconComponent = isActive ? CheckCircleOutlined : CloseCircleOutlined;
+              {/* Tick Duration Selector */}
+              <div>
+                <Text strong style={{ display: 'block', marginBottom: 8 }}>Duration (Ticks)</Text>
+                <Row justify="space-between" style={{ padding: '0 10px' }}>
+                  {[...Array(10)].map((_, i) => {
+                    const tick = i + 1;
+                    const isActive = tick === duration;
+                    const IconComponent = isActive ? CheckCircleOutlined : CloseCircleOutlined;
 
-                        return (
-                          <Col key={tick}>
-                            <Tooltip title={`${tick} tick${tick > 1 ? 's' : ''}`}>
-                              <IconComponent
-                                style={{
-                                  fontSize: 24,
-                                  color: isActive ? token.colorPrimary : token.colorBorder,
-                                  cursor: user && isAuthorized ? 'pointer' : 'not-allowed',
-                                }}
-                                onClick={() => user && isAuthorized && setDuration(tick)}
-                              />
-                            </Tooltip>
-                          </Col>
-                        );
-                      })}
-                    </Row>
-                    <Text type="secondary" style={{ display: 'block', textAlign: 'center', marginTop: 8 }}>
-                      Selected: {duration} tick{duration > 1 ? 's' : ''}
-                    </Text>
-                  </div>
-
-                  {/* Digit Selection */}
-                  <div>
-                    <Text strong style={{ display: 'block', marginBottom: 8 }}>Select Digit (0-9)</Text>
-                    <Row justify="space-between" style={{ padding: '0 5px' }}>
-                      {[...Array(10)].map((_, i) => (
-                        <Col key={i}>
-                          <Badge
-                            count={i}
+                    return (
+                      <Col key={tick}>
+                        <Tooltip title={`${tick} tick${tick > 1 ? 's' : ''}`}>
+                          <IconComponent
                             style={{
-                              backgroundColor: selectedDigit === i ? token.colorPrimary : token.colorFillAlter,
-                              color: selectedDigit === i ? '#fff' : token.colorText,
-                              fontSize: 16,
-                              width: 32,
-                              height: 32,
-                              lineHeight: '32px',
-                              borderRadius: '50%',
+                              fontSize: 24,
+                              color: isActive ? token.colorPrimary : token.colorBorder,
                               cursor: user && isAuthorized ? 'pointer' : 'not-allowed',
-                              boxShadow: selectedDigit === i ? `0 0 0 2px ${token.colorPrimary}` : 'none',
-                              transition: 'all 0.3s'
                             }}
-                            onClick={() => user && isAuthorized && setSelectedDigit(i)}
+                            onClick={() => user && isAuthorized && setDuration(tick)}
                           />
-                        </Col>
-                      ))}
-                    </Row>
-                    <Text type="secondary" style={{ display: 'block', textAlign: 'center', marginTop: 8 }}>
-                      Selected: {selectedDigit}
-                    </Text>
-                  </div>
+                        </Tooltip>
+                      </Col>
+                    );
+                  })}
+                </Row>
+                <Text type="secondary" style={{ display: 'block', textAlign: 'center', marginTop: 8, color:'var(--text-color)'}}>
+                  Selected: {duration} tick{duration > 1 ? 's' : ''}
+                </Text>
+              </div>
 
-                  {/* Basis Selection */}
-                  <div>
-                    <Text strong style={{ display: 'block', marginBottom: 8 }}>Basis</Text>
-                    <Radio.Group 
-                      value={basis} 
-                      onChange={(e) => setBasis(e.target.value)} 
-                      buttonStyle="solid"
-                      style={{ width: '100%' }}
-                      disabled={!user || !isAuthorized}
-                    >
-                      <Radio.Button value="stake" style={{ width: '50%', textAlign: 'center' }}>
-                        <DollarOutlined style={{ marginRight: 8 }} />
-                        Stake
-                      </Radio.Button>
-                      <Radio.Button value="payout" style={{ width: '50%', textAlign: 'center' }}>
-                        <LineChartOutlined style={{ marginRight: 8 }} />
-                        Payout
-                      </Radio.Button>
-                    </Radio.Group>
-                  </div>
+              {/* Digit Selection */}
+              <div>
+                <Text strong style={{ display: 'block', marginBottom: 8 }}>Select Digit (0-9)</Text>
+                <Row justify="space-between" style={{ padding: '0 5px' }}>
+                  {[...Array(10)].map((_, i) => (
+                    <Col key={i}>
+                      <Badge
+                        showZero
+                        count={i}
+                        style={{
+                          backgroundColor: selectedDigit === i ? token.colorPrimary : token.colorFillAlter,
+                          color: selectedDigit === i ? 'white' : 'var(--text-color)',
+                          fontSize: 16,
+                          width: 32,
+                          height: 32,
+                          lineHeight: '32px',
+                          borderRadius: '50%',
+                          cursor: user && isAuthorized ? 'pointer' : 'not-allowed',
+                          boxShadow: selectedDigit === i ? `0 0 0 2px ${token.colorPrimary}` : 'none',
+                          transition: 'all 0.3s'
+                        }}
+                        onClick={() => user && isAuthorized && setSelectedDigit(i)}
+                      />
+                    </Col>
+                  ))}
+                </Row>
+                <Text type="secondary" style={{ display: 'block', textAlign: 'center', marginTop: 8, color:'var(--text-color)' }}>
+                  Selected: {selectedDigit}
+                </Text>
+              </div>
 
-                  {/* Amount Input */}
-                  <div>
-                    <Text strong style={{ display: 'block', marginBottom: 8 }}>
-                      Amount ({user?.currency || 'USD'})
-                    </Text>
-                    <InputNumber
-                      min={1}
-                      max={user?.balance || 1000}
-                      value={amount}
-                      onChange={setAmount}
-                      style={{ width: '100%' }}
+              {/* Basis Selection */}
+              <div>
+                <Text strong style={{ display: 'block', marginBottom: 8 }}>Basis</Text>
+                <Radio.Group 
+                  value={basis} 
+                  onChange={(e) => setBasis(e.target.value)} 
+                  buttonStyle="solid"
+                  style={{ width: '100%' }}
+                  disabled={!user || !isAuthorized}
+                >
+                  <Radio.Button value="stake" style={{ width: '50%', textAlign: 'center' }}>
+                    <DollarOutlined style={{ marginRight: 8 }} />
+                    Stake
+                  </Radio.Button>
+                  <Radio.Button value="payout" style={{ width: '50%', textAlign: 'center' }}>
+                    <LineChartOutlined style={{ marginRight: 8 }} />
+                    Payout
+                  </Radio.Button>
+                </Radio.Group>
+              </div>
+
+              {/* Amount Input */}
+              <div>
+                <Text strong style={{ display: 'block', marginBottom: 8 }}>
+                  Amount ({user?.currency || 'USD'})
+                </Text>
+                <InputNumber
+                  min={1}
+                  max={user?.balance || 1000}
+                  value={amount}
+                  onChange={setAmount}
+                  style={{ width: '100%' }}
+                  precision={2}
+                  prefix={<DollarOutlined />}
+                  step={5}
+                  disabled={!user || !isAuthorized}
+                />
+                <Text type="secondary" style={{ display: 'block', marginTop: 8, color:'var(--neutral-color)' }}>
+                  Available balance: {(balance || 0).toFixed(2)} {user?.currency || 'USD'}
+                </Text>
+              </div>
+
+              {/* Payout Information */}
+              <div>
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <Statistic
+                      title={
+                        <Space style={{ color:'var(--text-color)'}}>
+                          Potential Payout (Matches)
+                          <Tooltip title="Matches contracts yield a 606.2% return on stake, uniform across all symbols">
+                            <InfoCircleOutlined />
+                          </Tooltip>
+                        </Space>
+                      }
+                      value={contractType === 'matches' ? payout : amount * (1 + MATCHES_MULTIPLIER)}
                       precision={2}
-                      prefix={<DollarOutlined />}
-                      step={5}
-                      disabled={!user || !isAuthorized}
+                      prefix={<ArrowUpOutlined style={{ color: token.colorSuccess }} />}
+                      valueStyle={{ color: token.colorSuccess }}
                     />
-                    <Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
-                      Available balance: {(balance || 0).toFixed(2)} {user?.currency || 'USD'}
-                    </Text>
-                  </div>
+                  </Col>
+                  <Col span={12}>
+                    <Statistic
+                      title={
+                        <Space style={{ color:'var(--text-color)'}}>
+                          Potential Payout (Differs)
+                          <Tooltip title="Differs contracts yield a 6.2% return on stake, uniform across all symbols">
+                            <InfoCircleOutlined />
+                          </Tooltip>
+                        </Space>
+                      }
+                      value={contractType === 'differs' ? payout : amount * (1 + DIFFERS_MULTIPLIER)}
+                      precision={2}
+                      prefix={<ArrowUpOutlined style={{ color: token.colorSuccess }} />}
+                      valueStyle={{ color: token.colorSuccess }}
+                    />
+                  </Col>
+                </Row>
+              </div>
 
-                  {/* Payout Information */}
-                  <div>
-                    <Row gutter={16}>
-                      <Col span={12}>
-                        <Statistic
-                          title={
-                            <Space>
-                              Potential Payout (Matches)
-                              <Tooltip title="Matches contracts yield a 606.2% return on stake, uniform across all symbols">
-                                <InfoCircleOutlined />
-                              </Tooltip>
-                            </Space>
-                          }
-                          value={contractType === 'matches' ? payout : amount * (1 + MATCHES_MULTIPLIER)}
-                          precision={2}
-                          prefix={<ArrowUpOutlined style={{ color: token.colorSuccess }} />}
-                          valueStyle={{ color: token.colorSuccess }}
-                        />
-                      </Col>
-                      <Col span={12}>
-                        <Statistic
-                          title={
-                            <Space>
-                              Potential Payout (Differs)
-                              <Tooltip title="Differs contracts yield a 6.2% return on stake, uniform across all symbols">
-                                <InfoCircleOutlined />
-                              </Tooltip>
-                            </Space>
-                          }
-                          value={contractType === 'differs' ? payout : amount * (1 + DIFFERS_MULTIPLIER)}
-                          precision={2}
-                          prefix={<ArrowUpOutlined style={{ color: token.colorSuccess }} />}
-                          valueStyle={{ color: token.colorSuccess }}
-                        />
-                      </Col>
-                    </Row>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <Row gutter={16}>
-                    <Col span={12}>
-                      <Button
-                        type="primary"
-                        size="large"
-                        block
-                        style={{ 
-                          background: '#722ed1',
-                          borderColor: '#722ed1',
-                          height: 48
-                        }}
-                        onClick={() => {
-                          setContractType('matches');
-                          handleSubmit('matches');
-                        }}
-                        loading={isSubmitting && contractType === 'matches'}
-                        disabled={isSubmitting || !user || !isAuthorized}
-                      >
-                        Matches {selectedDigit}
-                      </Button>
-                    </Col>
-                    <Col span={12}>
-                      <Button
-                        type="primary"
-                        size="large"
-                        block
-                        style={{ height: 48 }}
-                        onClick={() => {
-                          setContractType('differs');
-                          handleSubmit('differs');
-                        }}
-                        loading={isSubmitting && contractType === 'differs'}
-                        disabled={isSubmitting || !user || !isAuthorized}
-                      >
-                        Differs {selectedDigit}
-                      </Button>
-                    </Col>
-                  </Row>
-                </Space>
-              </TabPane>
-            </Tabs>
+              {/* Action Buttons */}
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Button
+                    type="primary"
+                    size="large"
+                    block
+                    style={{ 
+                      background: '#722ed1',
+                      borderColor: '#722ed1',
+                      height: 48
+                    }}
+                    onClick={() => {
+                      setContractType('matches');
+                      handleSubmit('matches');
+                    }}
+                    loading={isSubmitting && contractType === 'matches'}
+                    disabled={isSubmitting || !user || !isAuthorized}
+                  >
+                    Matches {selectedDigit}
+                  </Button>
+                </Col>
+                <Col span={12}>
+                  <Button
+                    type="primary"
+                    size="large"
+                    block
+                    style={{ height: 48 }}
+                    onClick={() => {
+                      setContractType('differs');
+                      handleSubmit('differs');
+                    }}
+                    loading={isSubmitting && contractType === 'differs'}
+                    disabled={isSubmitting || !user || !isAuthorized}
+                  >
+                    Differs {selectedDigit}
+                  </Button>
+                </Col>
+              </Row>
+            </Space>
           </Card>
         </Col>
 

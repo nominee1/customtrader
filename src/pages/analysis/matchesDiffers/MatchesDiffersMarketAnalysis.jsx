@@ -13,10 +13,12 @@ import {
   Statistic,
   Tooltip,
   Alert,
+  theme,
   Badge,
   Switch,
   Slider,
   InputNumber,
+  Grid,
 } from 'antd';
 import {
   LineChartOutlined,
@@ -38,13 +40,12 @@ import {
   analyzeRisk,
   combineSignals,
 } from './matchesDiffersAnalysis';
-import CandlestickChart from './MatcheDiffersCandlestickChart'; 
 import '../../../assets/css/pages/analysis/MarketAnalysis.css';
 import { useUser } from '../../../context/AuthContext';
 
 const { Option } = Select;
 const { TabPane } = Tabs;
-const { Text } = Typography;
+const { Text, Title } = Typography;
 const { Panel } = Collapse;
 
 const volatilityOptions = [
@@ -61,18 +62,19 @@ const volatilityOptions = [
 ];
 
 const DigitHistoryChart = ({ digits, targetDigit }) => {
-  const chunkSize = 5;
+  const { md } = Grid.useBreakpoint();
+  const chunkSize = md ? 12 : 5;
   const digitGroups = [];
   for (let i = 0; i < digits.length; i += chunkSize) {
     digitGroups.push(digits.slice(i, i + chunkSize));
   }
 
   return (
-    <Card size="small" title="Recent Digits History">
+    <Card size="small" title={<Text style={{ color: 'var(--text-color)' }}>Recent Digits History</Text>}>
       <Space direction="vertical" style={{ width: '100%' }}>
         <Text>
-          Recent digits: {digits.slice(0, 10).filter(d => d === targetDigit).length}/10 match target,{' '}
-          {digits.slice(0, 10).filter(d => d !== targetDigit).length}/10 differ from target
+          Recent digits: {digits.slice(0, 10).filter((d) => d === targetDigit).length}/10 match target,{' '}
+          {digits.slice(0, 10).filter((d) => d !== targetDigit).length}/10 differ from target
         </Text>
         {digitGroups.map((group, groupIndex) => (
           <div key={groupIndex} style={{ display: 'flex', justifyContent: 'center' }}>
@@ -115,9 +117,11 @@ const DigitBarIndicator = ({ digit, targetDigit }) => {
         strokeColor={isMatch ? '#52c41a' : '#f5222d'}
         showInfo={false}
         strokeWidth={10}
-        trailColor="#f0f0f0"
+        trailColor="#ffffff"
       />
-      <Text type="secondary" style={{ width: 24 }}>{targetDigit}</Text>
+      <Text type="secondary" style={{ width: 24 }}>
+        {targetDigit}
+      </Text>
       <Text type={isMatch ? 'success' : 'danger'}>{isMatch ? 'MATCH' : 'DIFFER'}</Text>
     </div>
   );
@@ -184,10 +188,12 @@ const SignalIndicator = ({ signal, strength, targetDigit, size = 'default', show
               animation: 'pulse 1.5s infinite',
             }}
           >
+ Caller: Matches
             <BellOutlined />
           </div>
         )}
         <Badge
+          showZero
           color={config.color}
           text={
             <span
@@ -219,13 +225,23 @@ const SignalIndicator = ({ signal, strength, targetDigit, size = 'default', show
 };
 
 const AnalysisExplanation = ({ title, content }) => (
-  <Tooltip title={<div style={{ padding: 8 }}><Text strong>{title}</Text><div style={{ marginTop: 4 }}>{content}</div></div>} overlayStyle={{ maxWidth: 300 }} placement="right">
+  <Tooltip
+    title={
+      <div style={{ padding: 8 }}>
+        <Text strong>{title}</Text>
+        <div style={{ marginTop: 4 }}>{content}</div>
+      </div>
+    }
+    style={{ maxWidth: 300 }}
+    placement="right"
+  >
     <QuestionCircleOutlined style={{ color: '#1890ff', marginLeft: 8 }} />
   </Tooltip>
 );
 
 const MatchesDiffersMarketAnalysis = () => {
   const { balance } = useUser();
+  const { token } = theme.useToken();
   const [symbol, setSymbol] = useState('R_10');
   const [tickData, setTickData] = useState({});
   const [loading, setLoading] = useState(true);
@@ -235,6 +251,16 @@ const MatchesDiffersMarketAnalysis = () => {
   const [showAlert, setShowAlert] = useState(true);
   const userBalance = balance;
 
+  // Utility to format price with exactly two decimal places
+  const formatPrice = (price) => {
+    if (typeof price !== 'number' && typeof price !== 'string') return '--';
+    const priceStr = price.toString().replace(/,/g, '');
+    const [integerPart, decimalPart = ''] = priceStr.split('.');
+    const normalizedDecimal = decimalPart.padEnd(2, '0').slice(0, 2);
+    return `${integerPart}.${normalizedDecimal}`;
+  };
+
+  // WebSocket subscription with retry logic
   useEffect(() => {
     let unsubscribers = [];
     let isMounted = true;
@@ -242,10 +268,44 @@ const MatchesDiffersMarketAnalysis = () => {
     const subscribeToAllSymbols = async () => {
       setLoading(true);
       setError(null);
+
+      // Retry logic with exponential backoff
+      let retryCount = 0;
+      const maxRetries = 5;
+      const connectWithRetry = async () => {
+        while (retryCount < maxRetries) {
+          try {
+            await publicWebSocket.connect();
+            console.log('WebSocket connected successfully');
+            return true;
+          } catch (err) {
+            retryCount++;
+            console.error(`WebSocket connection failed (attempt ${retryCount}/${maxRetries})`, {
+              error: err.message,
+              timestamp: new Date().toISOString(),
+            });
+            if (retryCount >= maxRetries) {
+              return false;
+            }
+            await new Promise((res) => setTimeout(res, 1000 * Math.pow(2, retryCount)));
+          }
+        }
+        return false;
+      };
+
       try {
-        await publicWebSocket.connect();
+        const connected = await connectWithRetry();
+        if (!connected) {
+          console.error('WebSocket connection failed after maximum retries');
+          if (isMounted) {
+            setError('Unable to connect to market data. Please try again later.');
+            setLoading(false);
+          }
+          return;
+        }
         if (!isMounted) return;
 
+        // Initialize tickData for all symbols
         setTickData((prev) => {
           const updated = { ...prev };
           volatilityOptions.forEach((option) => {
@@ -254,6 +314,7 @@ const MatchesDiffersMarketAnalysis = () => {
           return updated;
         });
 
+        // Handle WebSocket messages
         const handleTick = (event, data) => {
           if (!isMounted) return;
           if (event === 'message' && data.msg_type === 'tick') {
@@ -276,34 +337,56 @@ const MatchesDiffersMarketAnalysis = () => {
             }
             setLoading(false);
           } else if (event === 'error') {
-            setError('WebSocket error occurred');
-            setLoading(false);
+            console.error('WebSocket error:', {
+              error: data,
+              timestamp: new Date().toISOString(),
+            });
+            if (isMounted) {
+              setError('A connection issue occurred while retrieving data.');
+              setLoading(false);
+            }
           }
         };
 
+        // Subscribe to all symbols
         volatilityOptions.forEach((option) => {
           const unsubscribe = publicWebSocket.subscribe(handleTick);
           unsubscribers.push(unsubscribe);
           publicWebSocket.subscribeToTicks(option.value);
         });
 
+        // Fetch historical ticks with batching
         const fetchHistorical = async () => {
           const batchSize = 5;
           for (let i = 0; i < volatilityOptions.length; i += batchSize) {
             if (!isMounted) return;
             const batch = volatilityOptions.slice(i, i + batchSize);
-            await Promise.all(
-              batch.map((option) => publicWebSocket.fetchHistoricalTicks(option.value, 60))
-            );
+            try {
+              await Promise.all(
+                batch.map((option) => publicWebSocket.fetchHistoricalTicks(option.value, 60))
+              );
+            } catch (err) {
+              console.error('Failed to fetch historical ticks:', {
+                symbols: batch.map((opt) => opt.value),
+                error: err.message,
+                timestamp: new Date().toISOString(),
+              });
+              if (isMounted) {
+                setError('Failed to retrieve historical market data.');
+              }
+            }
             await new Promise((resolve) => setTimeout(resolve, 1000));
           }
         };
 
         await fetchHistorical();
       } catch (err) {
-        console.error('WebSocket Error:', err);
+        console.error('WebSocket connection error:', {
+          error: err.message,
+          timestamp: new Date().toISOString(),
+        });
         if (isMounted) {
-          setError('Failed to connect to WebSocket. Please check your network or app ID.');
+          setError('Unable to connect to market data. Please try again later.');
           setLoading(false);
         }
       }
@@ -316,15 +399,31 @@ const MatchesDiffersMarketAnalysis = () => {
       unsubscribers.forEach((unsub) => unsub());
       volatilityOptions.forEach((option) => publicWebSocket.unsubscribe(option.value));
       publicWebSocket.close();
+      console.log('WebSocket subscriptions cleaned up');
     };
   }, []);
 
   const lastDigits = useMemo(() => {
     const ticks = tickData[symbol] || [];
-    return ticks.map((tick) => {
-      const priceStr = tick.price.toString();
-      return parseInt(priceStr[priceStr.length - 1]);
-    }).reverse();
+    const digits = ticks
+      .map((tick) => {
+        if (!tick?.price) {
+          console.warn('Invalid tick price:', tick);
+          return null;
+        }
+        const priceStr = tick.price.toString().replace(/,/g, '');
+        const decimalParts = priceStr.split('.');
+        if (decimalParts.length < 2 || !decimalParts[1]) {
+          return 0;
+        }
+        const decimalStr = decimalParts[1].padEnd(2, '0');
+        const lastChar = decimalStr[decimalStr.length - 1];
+        const digit = parseInt(lastChar, 10);
+        return digit;
+      })
+      .filter((digit) => digit !== null)
+      .reverse();
+    return digits;
   }, [tickData, symbol]);
 
   const lastDigit = useMemo(() => {
@@ -406,27 +505,23 @@ const MatchesDiffersMarketAnalysis = () => {
             }
             description={details}
             type={
-              signal === 'matches' ? 'success' :
-              signal === 'differs' ? 'error' :
-              signal === 'warning' ? 'warning' : 'info'
+              signal === 'matches'
+                ? 'success'
+                : signal === 'differs'
+                ? 'error'
+                : signal === 'warning'
+                ? 'warning'
+                : 'info'
             }
             showIcon
           />
           <Row gutter={[16, 16]}>
             <Col span={24}>
-              <CandlestickChart
-                ticks={tickData[symbol] || []}
-                simpleMode={simpleMode}
-                symbol={symbol}
-                targetDigit={targetDigit}
-              />
-            </Col>
-            <Col span={24}>
               <DigitHistoryChart digits={lastDigits} targetDigit={targetDigit} />
             </Col>
           </Row>
           <Collapse ghost>
-            <Panel header="Detailed Indicators" key="details">
+            <Panel header={<Text style={{ color: 'var(--text-color)' }}>Detailed Indicators</Text>} key="details">
               <Row gutter={[16, 16]}>
                 {Object.entries(individualSignals).map(([key, res]) => (
                   <Col xs={24} sm={12} md={8} key={key}>
@@ -449,7 +544,9 @@ const MatchesDiffersMarketAnalysis = () => {
                           targetDigit={targetDigit}
                           size="small"
                         />
-                        <Text type="secondary">{res?.details || 'No details'}</Text>
+                        <Text type="secondary" style={{ color: 'var(--text-color)' }}>
+                          {res?.details || 'No details'}
+                        </Text>
                         {(key === 'sma' || key === 'stochastic') && res?.rawData && (
                           <DigitBarIndicator
                             digit={key === 'stochastic' ? res.rawData.maxDigit : Math.round(res.rawData.fastSMA)}
@@ -505,7 +602,9 @@ const MatchesDiffersMarketAnalysis = () => {
       <Card
         title={
           <Space>
-            <span>Matches/Differs Market Analysis</span>
+            <Title level={4} style={{ margin: 0, color: token.colorPrimary }}>
+              Matches/Differs Market Analysis
+            </Title>
           </Space>
         }
         extra={
@@ -516,7 +615,7 @@ const MatchesDiffersMarketAnalysis = () => {
           </Space>
         }
         className="market-analysis-card"
-        bodyStyle={{ padding: simpleMode ? '16px 8px' : 16 }}
+        Style={{ padding: simpleMode ? '16px 8px' : 16 }}
       >
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>
           <Row gutter={[16, 16]}>
@@ -548,29 +647,44 @@ const MatchesDiffersMarketAnalysis = () => {
               </Select>
             </Col>
             <Col xs={24} md={12}>
-              <Card size="small" bodyStyle={{ padding: '8px 16px' }}>
+              <Card size="small" style={{ padding: '8px 16px' }}>
                 <Row gutter={16}>
                   <Col span={12}>
                     <Statistic
-                      title="Current Price"
-                      value={tickData[symbol]?.length > 0 ? tickData[symbol][tickData[symbol].length - 1].price : '--'}
-                      precision={2}
+                      title={<Text style={{ color: 'var(--text-color)' }}>Current Price</Text>}
+                      value={
+                        tickData[symbol]?.length > 0
+                          ? formatPrice(tickData[symbol][tickData[symbol].length - 1].price)
+                          : '--'
+                      }
+                      valueStyle={{
+                        color: lastDigit !== null
+                          ? lastDigit === targetDigit
+                            ? '#52c41a'
+                            : '#f5222d'
+                          : 'inherit',
+                      }}
                     />
                   </Col>
                   <Col span={12}>
                     <Statistic
-                      title="Last Digit"
+                      title={<Text style={{ color: 'var(--text-color)' }}>Last Digit</Text>}
                       value={lastDigit !== null ? lastDigit : '--'}
                       prefix={<NumberOutlined />}
-                      valueStyle={{ color: lastDigit !== null ? (lastDigit === targetDigit ? '#52c41a' : '#f5222d') : 'inherit' }}
+                      valueStyle={{
+                        color: lastDigit !== null
+                          ? lastDigit === targetDigit
+                            ? '#52c41a'
+                            : '#f5222d'
+                          : 'inherit',
+                      }}
                     />
                   </Col>
                 </Row>
               </Card>
             </Col>
           </Row>
-
-          <Card size="small" title="Target Digit Configuration">
+          <Card size="small" title={<Text style={{ color: 'var(--text-color)' }}>Target Digit Configuration</Text>}>
             <Space direction="vertical" style={{ width: '100%' }}>
               <Row gutter={16}>
                 <Col xs={14} sm={16}>
@@ -579,7 +693,11 @@ const MatchesDiffersMarketAnalysis = () => {
                     max={9}
                     value={targetDigit}
                     onChange={setTargetDigit}
-                    marks={{ 0: '0', 5: '5', 9: '9' }}
+                    marks={{
+                      0: { style: { color: 'var(--text-color)' }, label: '0' },
+                      5: { style: { color: 'var(--text-color)' }, label: '5' },
+                      9: { style: { color: 'var(--text-color)' }, label: '9' },
+                    }}
                   />
                 </Col>
                 <Col xs={10} sm={8}>
@@ -594,9 +712,9 @@ const MatchesDiffersMarketAnalysis = () => {
               </Row>
               <Row>
                 <Col span={24}>
-                  <Text>
-                    Recent digits: {lastDigits.slice(0, 10).filter(d => d === targetDigit).length}/10 match target,{' '}
-                    {lastDigits.slice(0, 10).filter(d => d !== targetDigit).length}/10 differ from target
+                  <Text style={{ color: 'var(--text-color)' }}>
+                    Recent digits: {lastDigits.slice(0, 10).filter((d) => d === targetDigit).length}/10 match target,{' '}
+                    {lastDigits.slice(0, 10).filter((d) => d !== targetDigit).length}/10 differ from target
                   </Text>
                 </Col>
               </Row>
@@ -610,9 +728,7 @@ const MatchesDiffersMarketAnalysis = () => {
               </Row>
             </Space>
           </Card>
-
           {error && <Alert message={error} type="error" showIcon />}
-
           <Spin spinning={loading} tip="Loading market data...">
             {simpleMode ? (
               <Space direction="vertical" size="middle" style={{ width: '100%' }}>
@@ -624,29 +740,17 @@ const MatchesDiffersMarketAnalysis = () => {
                       targetDigit={targetDigit}
                       showAlert={showAlert && combinedSignal.confidence > 0.7}
                     />
-                    {lastDigit !== null && (
-                      <DigitBarIndicator digit={lastDigit} targetDigit={targetDigit} />
-                    )}
+                    {lastDigit !== null && <DigitBarIndicator digit={lastDigit} targetDigit={targetDigit} />}
                     <Text>{combinedSignal.details}</Text>
-                    <Text type="secondary"><small>Based on {(tickData[symbol] || []).length} recent ticks</small></Text>
+                    <Text type="secondary" style={{ color: 'var(--text-color)' }}>
+                      <small>Based on {(tickData[symbol] || []).length} recent ticks</small>
+                    </Text>
                   </Space>
                 </Card>
-                <CandlestickChart
-                  ticks={tickData[symbol] || []}
-                  simpleMode={simpleMode}
-                  symbol={symbol}
-                  targetDigit={targetDigit}
-                />
                 <DigitHistoryChart digits={lastDigits.slice(0, 10)} targetDigit={targetDigit} />
               </Space>
             ) : (
-              <Tabs
-                defaultActiveKey="combined"
-                size="small"
-                tabPosition="top"
-                type="line"
-                style={{ marginTop: 8 }}
-              >
+              <Tabs defaultActiveKey="combined" size="small" tabPosition="top" type="line" style={{ marginTop: 8 }}>
                 {analyses.map((analysis) => (
                   <TabPane
                     tab={
@@ -656,8 +760,11 @@ const MatchesDiffersMarketAnalysis = () => {
                           <Badge
                             dot
                             color={
-                              combinedSignal.signal === 'matches' ? '#52c41a' :
-                              combinedSignal.signal === 'differs' ? '#f5222d' : '#faad14'
+                              combinedSignal.signal === 'matches'
+                                ? '#52c41a'
+                                : combinedSignal.signal === 'differs'
+                                ? '#f5222d'
+                                : '#faad14'
                             }
                           />
                         )}

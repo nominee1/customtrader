@@ -26,7 +26,7 @@ const RiskDisclosure = () => {
       <Card
         title={
           <Space>
-            <WarningOutlined style={{ color: '#1890ff', fontSize: '20px' }} />
+            <WarningOutlined style={{ color: '#1890ff', fontSize: '20px'}} />
             <span>Risk Disclosure</span>
           </Space>
         }
@@ -34,14 +34,14 @@ const RiskDisclosure = () => {
       >
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
           <div>
-            <Title level={4}>Important Notice</Title>
+            <Title level={4} style={{ color: 'var(--text-color)' }}>Important Notice</Title>
             <Paragraph>
               Deriv offers complex derivatives, such as options and contracts for difference ("CFDs"). These products may not be suitable for all clients, and trading them puts you at risk. Please make sure that you understand the risks before trading Deriv products.
             </Paragraph>
           </div>
 
           <div>
-            <Title level={4}>Risks Involved in Trading Deriv Products</Title>
+            <Title level={4} style={{ color: 'var(--text-color)' }}>Risks Involved in Trading Deriv Products</Title>
             <Paragraph>
               <ul>
                 <li>You may lose some or all of the money you invest in the trade.</li>
@@ -53,14 +53,14 @@ const RiskDisclosure = () => {
           </div>
 
           <div>
-            <Title level={4}>Source of Trading Funds</Title>
+            <Title level={4} style={{ color: 'var(--text-color)' }}>Source of Trading Funds</Title>
             <Paragraph>
               You should never trade with borrowed money or with money that you cannot afford to lose.
             </Paragraph>
           </div>
 
           <div>
-            <Title level={4}>Additional Considerations</Title>
+            <Title level={4} style={{ color: 'var(--text-color)' }}>Additional Considerations</Title>
             <Paragraph>
               <ul>
                 <li>Deriv products are complex and require a thorough understanding of their mechanics.</li>
@@ -74,6 +74,7 @@ const RiskDisclosure = () => {
             <Checkbox
               onChange={(e) => setIsAcknowledged(e.target.checked)}
               className="acknowledgment-checkbox"
+              style={{ color: 'var(--text-color)' }}
             >
               I understand the risks involved in trading Deriv products and acknowledge that I may lose some or all of my invested capital.
             </Checkbox>
@@ -89,7 +90,7 @@ const RiskDisclosure = () => {
             Continue
           </Button>
 
-          <Paragraph type="secondary" className="disclaimer">
+          <Paragraph type="secondary" className="disclaimer" style={{ color: 'var(--neutral-color)' }}>
             This information is provided for educational purposes only and should not be considered as financial advice.
           </Paragraph>
         </Space>

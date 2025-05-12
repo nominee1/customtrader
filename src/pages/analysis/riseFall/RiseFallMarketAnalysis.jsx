@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Card, Select, Tabs, Spin, Progress, Typography, Collapse, Space, Row, Col, Statistic, Tooltip, Alert, Badge, Switch,
+  Card, Select, Tabs, Spin, Progress, Typography, Collapse, Space, Row, Col, Statistic,theme, Tooltip, Badge, Switch, Alert,
 } from 'antd';
 import {
   LineChartOutlined, QuestionCircleOutlined, ArrowUpOutlined, ArrowDownOutlined, PauseOutlined, WarningOutlined, InfoCircleOutlined, BellOutlined,
@@ -9,14 +9,14 @@ import { publicWebSocket } from '../../../services/public_websocket_client';
 import {
   analyzeSMACrossover, analyzeStochastic, analyzeTickStreak, analyzeVolatilitySpike, analyzeRisk, combineSignals,
 } from './riseFallAnalysis';
-import RiseFallCandlestickChart from './RiseFallCandlestickChart';
+// import RiseFallCandlestickChart from './RiseFallCandlestickChart';
 import PriceMovementChart from './PriceMovementChart';
 import '../../../assets/css/pages/analysis/MarketAnalysis.css';
 import { useUser } from '../../../context/AuthContext';
 
 const { Option } = Select;
 const { TabPane } = Tabs;
-const { Text } = Typography;
+const { Text,Title } = Typography;
 const { Panel } = Collapse;
 
 const volatilityOptions = [
@@ -94,13 +94,14 @@ const AnalysisExplanation = ({ title, content }) => (
 
 const RiseFallMarketAnalysis = () => {
   const { balance } = useUser();
+  const { token } = theme.useToken();
   const [symbol, setSymbol] = useState('R_10');
   const [tickData, setTickData] = useState({});
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [simpleMode, setSimpleMode] = useState(false);
   const [showAlert, setShowAlert] = useState(true);
   const userBalance = balance;
+  const [error, setError] = useState(null);
 
   // Memoized combined signal
   const combinedSignal = useMemo(() => combineSignals(tickData[symbol] || [], symbol, userBalance), [tickData, symbol, userBalance]);
@@ -122,9 +123,30 @@ const RiseFallMarketAnalysis = () => {
 
     const subscribeToAllSymbols = async () => {
       setLoading(true);
-      setError(null);
+      // Retry logic with exponential backoff
+      let retryCount = 0;
+      const maxRetries = 5;
+      const connectWithRetry = async () => {
+        while (retryCount < maxRetries) {
+          try {
+            await publicWebSocket.connect();
+            return true;
+          } catch (err) {
+            retryCount++;
+            console.error(`WebSocket connection failed (attempt ${retryCount}/${maxRetries})`, err);
+            await new Promise(res => setTimeout(res, 1000 * Math.pow(2, retryCount)));
+          }
+        }
+        return false;
+      };
+
       try {
-        await publicWebSocket.connect();
+        const connected = await connectWithRetry();
+        if (!connected) {
+          setError('Unable to connect after multiple attempts. Please try again later.');
+          setLoading(false);
+          return;
+        }
         if (!isMounted) return;
 
         // Initialize tickData for all symbols
@@ -159,7 +181,8 @@ const RiseFallMarketAnalysis = () => {
             }
             setLoading(false);
           } else if (event === 'error') {
-            setError('WebSocket error occurred');
+            console.error('WebSocket error:', data);
+            setError('A connection issue occurred while retrieving data.');
             setLoading(false);
           }
         };
@@ -186,9 +209,9 @@ const RiseFallMarketAnalysis = () => {
 
         await fetchHistorical();
       } catch (err) {
-        console.error('WebSocket Error:', err);
+        console.error('WebSocket connection error:', err);
         if (isMounted) {
-          setError('Failed to connect to WebSocket. Please check your network or app ID.');
+          setError('Unable to connect to market data. Please try again later.');
           setLoading(false);
         }
       }
@@ -242,14 +265,13 @@ const RiseFallMarketAnalysis = () => {
           />
           <Row gutter={[16, 16]}>
             <Col span={24}>
-              <RiseFallCandlestickChart ticks={tickData[symbol] || []} simpleMode={simpleMode} symbol={symbol} />
-            </Col>
-            <Col span={24}>
-              <PriceMovementChart movements={priceMovements} />
+              <Card size="small" title={<Text style={{ color: 'var(--text-color)' }}>Recent Price Movements</Text>}>
+                <PriceMovementChart movements={priceMovements} />
+              </Card>
             </Col>
           </Row>
           <Collapse ghost>
-            <Panel header="Detailed Indicators" key="details">
+            <Panel header={<Text style={{ color: 'var(--text-color)' }}>Detailed Indicators</Text>} key="details">
               <Row gutter={[16, 16]}>
                 {Object.entries(individualSignals).map(([key, res]) => (
                   <Col xs={24} sm={12} md={8} key={key}>
@@ -267,7 +289,7 @@ const RiseFallMarketAnalysis = () => {
                     >
                       <Space direction="vertical">
                         <SignalIndicator signal={res?.signal} strength={res?.strength} size="small" />
-                        <Text type="secondary">{res?.details || 'No details'}</Text>
+                        <Text style={{ color: 'var(--text-color)' }}>{res?.details || 'No details'}</Text>
                       </Space>
                     </Card>
                   </Col>
@@ -307,7 +329,7 @@ const RiseFallMarketAnalysis = () => {
       <Card
         title={
           <Space>
-            <span>Rise/Fall Market Analysis</span>
+            <Title level={4} style={{ margin: 0, color: token.colorPrimary }}>Rise/Fall Market Analysis</Title>
           </Space>
         }
         extra={
@@ -318,7 +340,7 @@ const RiseFallMarketAnalysis = () => {
           </Space>
         }
         className="market-analysis-card"
-        bodyStyle={{ padding: simpleMode ? '16px 8px' : 16 }}
+        Style={{ padding: simpleMode ? '16px 8px' : 16 }}
       >
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>
           <Row gutter={[16, 16]}>
@@ -350,18 +372,25 @@ const RiseFallMarketAnalysis = () => {
               </Select>
             </Col>
             <Col xs={24} md={12}>
-              <Card size="small" bodyStyle={{ padding: '8px 16px' }}>
+              <Card size="small" Style={{ padding: '8px 16px' }}>
                 <Row gutter={16}>
                   <Col span={12}>
                     <Statistic
-                      title="Current Price"
+                      title={<Text style={{ color: 'var(--text-color)' }}>Current Price</Text>}
                       value={tickData[symbol]?.length > 0 ? tickData[symbol][tickData[symbol].length - 1].price : '--'}
                       precision={2}
+                      valueStyle={{
+                        color: tickData[symbol]?.length > 1
+                          ? tickData[symbol][tickData[symbol].length - 1].price > tickData[symbol][tickData[symbol].length - 2].price
+                            ? '#52c41a'
+                            : '#f5222d'
+                          : 'inherit',
+                      }}
                     />
                   </Col>
                   <Col span={12}>
                     <Statistic
-                      title="Last Change"
+                      title={<Text style={{ color: 'var(--text-color)' }}>Last Change</Text>}
                       value={
                         tickData[symbol]?.length > 1
                           ? (tickData[symbol][tickData[symbol].length - 1].price - tickData[symbol][tickData[symbol].length - 2].price).toFixed(2)
@@ -387,13 +416,15 @@ const RiseFallMarketAnalysis = () => {
               </Card>
             </Col>
           </Row>
-          <Card size="small" title="Alert Configuration">
+          <Card size="small" title={<Text style={{ color: 'var(--text-color)' }}>Alert Configuration</Text>}>
             <Space>
               <Text>Visual Alerts:</Text>
               <Switch size="small" checked={showAlert} onChange={setShowAlert} />
             </Space>
           </Card>
-          {error && <Alert message={error} type="error" showIcon />}
+          {error && (
+            <Alert message={error} type="error" showIcon />
+          )}
           <Spin spinning={loading} tip="Loading market data...">
             {simpleMode ? (
               <Space direction="vertical" size="middle" style={{ width: '100%' }}>
@@ -401,10 +432,9 @@ const RiseFallMarketAnalysis = () => {
                   <Space direction="vertical" size="large" style={{ width: '100%' }}>
                     <SignalIndicator signal={combinedSignal.signal} strength={combinedSignal.confidence} showAlert={showAlert && combinedSignal.confidence > 0.7} />
                     <Text>{combinedSignal.details}</Text>
-                    <Text type="secondary"><small>Based on {(tickData[symbol] || []).length} recent ticks</small></Text>
+                    <Text type="secondary" style={{color:'var(--text-color)'}}><small>Based on {(tickData[symbol] || []).length} recent ticks</small></Text>
                   </Space>
                 </Card>
-                <RiseFallCandlestickChart ticks={tickData[symbol] || []} simpleMode={simpleMode} symbol={symbol} />
                 <PriceMovementChart movements={priceMovements.slice(0, 10)} />
               </Space>
             ) : (

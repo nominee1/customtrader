@@ -16,7 +16,6 @@ import {
   Alert,
   ConfigProvider,
   theme,
-  Tabs,
   Badge,
   Tag,
   Spin,
@@ -40,7 +39,6 @@ import Notification from '../../../utils/Notification';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
-const { TabPane } = Tabs;
 
 // Constant for the effective multiplier (to achieve 18.45 payout for amount = 10)
 const EFFECTIVE_MULTIPLIER = 0.845;
@@ -57,7 +55,6 @@ const RiseFallTrader = () => {
   const [amount, setAmount] = useState(10);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [payout, setPayout] = useState(0);
-  const [activeTab, setActiveTab] = useState('trade');
   const [notification, setNotification] = useState({
     type: '',
     content: '',
@@ -238,212 +235,215 @@ const RiseFallTrader = () => {
               </Tooltip>
             }
           >
-            <Tabs activeKey={activeTab} onChange={setActiveTab}>
-              <TabPane tab="Trade" key="trade">
-                <Space direction="vertical" size={24} style={{ width: '100%', marginTop: 16 }}>
-                  {/* Symbol Selection */}
-                  <div>
-                    <Text strong style={{ display: 'block', marginBottom: 8 }}>Volatility Index</Text>
-                    <Select
-                      value={symbol}
-                      onChange={setSymbol}
-                      style={{ width: '100%' }}
-                      placeholder="Select a volatility index"
-                      optionLabelProp="label"
-                      disabled={!user || !isAuthorized}
+            <Space direction="vertical" size={24} style={{ width: '100%', marginTop: 16 }}>
+              {/* Symbol Selection */}
+              <div>
+                <Text strong style={{ display: 'block', marginBottom: 8 }}>Volatility Index</Text>
+                <Select
+                  value={symbol}
+                  onChange={setSymbol}
+                  style={{ width: '100%' }}
+                  placeholder="Select a volatility index"
+                  optionLabelProp="label"
+                  disabled={!user || !isAuthorized}
+                >
+                  {volatilityOptions.map(option => (
+                    <Option 
+                      key={option.value} 
+                      value={option.value}
+                      label={
+                        <Space>
+                          <span>{option.label}</span>
+                        </Space>
+                      }
                     >
-                      {volatilityOptions.map(option => (
-                        <Option 
-                          key={option.value} 
-                          value={option.value}
-                          label={
-                            <Space>
-                              <span>{option.label}</span>
-                            </Space>
-                          }
-                        >
-                          <Space>
-                            <span>{option.label}</span>
-                          </Space>
-                        </Option>
-                      ))}
-                    </Select>
-                  </div>
+                      <Space>
+                        <span>{option.label}</span>
+                      </Space>
+                    </Option>
+                  ))}
+                </Select>
+              </div>
 
-                  {/* Duration Type Selection */}
-                  <div>
-                    <Text strong style={{ display: 'block', marginBottom: 8 }}>Duration Type</Text>
-                    <Radio.Group 
-                      value={durationType} 
-                      onChange={(e) => setDurationType(e.target.value)}
-                      buttonStyle="solid"
-                      style={{ width: '100%' }}
-                      disabled={!user || !isAuthorized}
-                    >
-                      <Radio.Button value="ticks" style={{ width: '50%', textAlign: 'center' }}>
-                        Ticks
-                      </Radio.Button>
-                      <Radio.Button value="minutes" style={{ width: '50%', textAlign: 'center' }}>
-                        Minutes
-                      </Radio.Button>
-                    </Radio.Group>
-                  </div>
+              {/* Duration Type Selection */}
+              <div>
+                <Text strong style={{ display: 'block', marginBottom: 8 }}>Duration Type</Text>
+                <Radio.Group 
+                  value={durationType} 
+                  onChange={(e) => setDurationType(e.target.value)}
+                  buttonStyle="solid"
+                  style={{ width: '100%' }}
+                  disabled={!user || !isAuthorized}
+                >
+                  <Radio.Button value="ticks" style={{ width: '50%', textAlign: 'center' }}>
+                    Ticks
+                  </Radio.Button>
+                  <Radio.Button value="minutes" style={{ width: '50%', textAlign: 'center' }}>
+                    Minutes
+                  </Radio.Button>
+                </Radio.Group>
+              </div>
 
-                  {/* Duration Input - Ticks or Minutes based on selection */}
-                  {durationType === 'ticks' ? (
-                    <div>
-                      <Text strong style={{ display: 'block', marginBottom: 8 }}>Duration (Ticks)</Text>
-                      <Row justify="space-between" style={{ padding: '0 10px' }}>
-                        {[...Array(10)].map((_, i) => {
-                          const tick = i + 1;
-                          const isActive = tick === duration;
-                          const IconComponent = isActive ? CheckCircleOutlined : CloseCircleOutlined;
+              {/* Duration Input - Ticks or Minutes based on selection */}
+              {durationType === 'ticks' ? (
+                <div>
+                  <Text strong style={{ display: 'block', marginBottom: 8 }}>Duration (Ticks)</Text>
+                  <Row justify="space-between" style={{ padding: '0 10px' }}>
+                    {[...Array(10)].map((_, i) => {
+                      const tick = i + 1;
+                      const isActive = tick === duration;
+                      const IconComponent = isActive ? CheckCircleOutlined : CloseCircleOutlined;
 
-                          return (
-                            <Col key={tick}>
-                              <Tooltip title={`${tick} tick${tick > 1 ? 's' : ''}`}>
-                                <IconComponent
-                                  style={{
-                                    fontSize: 24,
-                                    color: isActive ? token.colorPrimary : token.colorBorder,
-                                    cursor: user && isAuthorized ? 'pointer' : 'not-allowed',
-                                  }}
-                                  onClick={() => user && isAuthorized && setDuration(tick)}
-                                />
-                              </Tooltip>
-                            </Col>
-                          );
-                        })}
-                      </Row>
-                      <Text type="secondary" style={{ display: 'block', textAlign: 'center', marginTop: 8 }}>
-                        Selected: {duration} tick{duration > 1 ? 's' : ''}
-                      </Text>
-                    </div>
-                  ) : (
-                    <div>
-                      <Text strong style={{ display: 'block', marginBottom: 8 }}>Duration (Minutes)</Text>
-                      <InputNumber
-                        min={1}
-                        max={60}
-                        value={minutes}
-                        onChange={setMinutes}
-                        style={{ width: '100%' }}
-                        addonAfter="minutes"
-                        prefix={<ClockCircleOutlined />}
-                        disabled={!user || !isAuthorized}
-                      />
-                    </div>
-                  )}
-
-                  {/* Basis Selection */}
-                  <div>
-                    <Text strong style={{ display: 'block', marginBottom: 8 }}>Basis</Text>
-                    <Radio.Group 
-                      value={basis} 
-                      onChange={(e) => setBasis(e.target.value)} 
-                      buttonStyle="solid"
-                      style={{ width: '100%' }}
-                      disabled={!user || !isAuthorized}
-                    >
-                      <Radio.Button value="stake" style={{ width: '50%', textAlign: 'center' }}>
-                        <DollarOutlined style={{ marginRight: 8 }} />
-                        Stake
-                      </Radio.Button>
-                      <Radio.Button value="payout" style={{ width: '50%', textAlign: 'center' }}>
-                        <LineChartOutlined style={{ marginRight: 8 }} />
-                        Payout
-                      </Radio.Button>
-                    </Radio.Group>
-                  </div>
-
-                  {/* Amount Input */}
-                  <div>
-                    <Text strong style={{ display: 'block', marginBottom: 8 }}>
-                      Amount ({user?.currency || 'USD'})
-                    </Text>
-                    <InputNumber
-                      min={1}
-                      max={user?.balance || 1000}
-                      value={amount}
-                      onChange={setAmount}
-                      style={{ width: '100%' }}
-                      precision={2}
-                      prefix={<DollarOutlined />}
-                      step={5}
-                      disabled={!user || !isAuthorized}
-                    />
-                    <Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
-                      Available balance: {(balance || 0).toFixed(2)} {user?.currency || 'USD'}
-                    </Text>
-                  </div>
-
-                  {/* Payout Information */}
-                  <div>
-                    <Row gutter={16}>
-                      <Col span={12}>
-                        <Statistic
-                          title={
-                            <Space>
-                              Potential Payout
-                              <Tooltip title="Payouts include an 84.5% return on stake, uniform across all symbols">
-                                <InfoCircleOutlined />
-                              </Tooltip>
-                            </Space>
-                          }
-                          value={payout}
-                          precision={2}
-                          prefix={<ArrowUpOutlined style={{ color: token.colorSuccess }} />}
-                          valueStyle={{ color: token.colorSuccess }}
-                        />
-                      </Col>
-                      <Col span={12}>
-                        <Statistic
-                          title="Potential Loss"
-                          value={amount}
-                          precision={2}
-                          prefix={<ArrowDownOutlined style={{ color: token.colorError }} />}
-                          valueStyle={{ color: token.colorError }}
-                        />
-                      </Col>
-                    </Row>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <Row gutter={16}>
-                    <Col span={12}>
-                      <Button
-                        type="primary"
-                        size="large"
-                        block
-                        style={{ 
-                          background: '#722ed1',
-                          borderColor: '#722ed1',
-                          height: 48
-                        }}
-                        onClick={() => handleSubmit('rise')}
-                        loading={isSubmitting}
-                        disabled={isSubmitting || !user || !isAuthorized}
-                      >
-                        Rise
-                      </Button>
-                    </Col>
-                    <Col span={12}>
-                      <Button
-                        type="primary"
-                        size="large"
-                        block
-                        style={{ height: 48 }}
-                        onClick={() => handleSubmit('fall')}
-                        loading={isSubmitting}
-                        disabled={isSubmitting || !user || !isAuthorized}
-                      >
-                        Fall
-                      </Button>
-                    </Col>
+                      return (
+                        <Col key={tick}>
+                          <Tooltip title={`${tick} tick${tick > 1 ? 's' : ''}`}>
+                            <IconComponent
+                              style={{
+                                fontSize: 24,
+                                color: isActive ? token.colorPrimary : token.colorBorder,
+                                cursor: user && isAuthorized ? 'pointer' : 'not-allowed',
+                              }}
+                              onClick={() => user && isAuthorized && setDuration(tick)}
+                            />
+                          </Tooltip>
+                        </Col>
+                      );
+                    })}
                   </Row>
-                </Space>
-              </TabPane>
-            </Tabs>
+                  <Text type="secondary" style={{ display: 'block', textAlign: 'center', marginTop: 8, color:'var(--text-color)' }}>
+                    Selected: {duration} tick{duration > 1 ? 's' : ''}
+                  </Text>
+                </div>
+              ) : (
+                <div>
+                  <Text strong style={{ display: 'block', marginBottom: 8 }}>Duration (Minutes)</Text>
+                  <InputNumber
+                    min={1}
+                    max={60}
+                    value={minutes}
+                    onChange={setMinutes}
+                    style={{ width: '100%' }}
+                    addonAfter="minutes"
+                    prefix={<ClockCircleOutlined />}
+                    disabled={!user || !isAuthorized}
+                  />
+                </div>
+              )}
+
+              {/* Basis Selection */}
+              <div>
+                <Text strong style={{ display: 'block', marginBottom: 8 }}>Basis</Text>
+                <Radio.Group 
+                  value={basis} 
+                  onChange={(e) => setBasis(e.target.value)} 
+                  buttonStyle="solid"
+                  style={{ width: '100%' }}
+                  disabled={!user || !isAuthorized}
+                >
+                  <Radio.Button value="stake" style={{ width: '50%', textAlign: 'center' }}>
+                    <DollarOutlined style={{ marginRight: 8 }} />
+                    Stake
+                  </Radio.Button>
+                  <Radio.Button value="payout" style={{ width: '50%', textAlign: 'center' }}>
+                    <LineChartOutlined style={{ marginRight: 8 }} />
+                    Payout
+                  </Radio.Button>
+                </Radio.Group>
+              </div>
+
+              {/* Amount Input */}
+              <div>
+                <Text strong style={{ display: 'block', marginBottom: 8 }}>
+                  Amount ({user?.currency || 'USD'})
+                </Text>
+                <InputNumber
+                  min={1}
+                  max={user?.balance || 1000}
+                  value={amount}
+                  onChange={setAmount}
+                  style={{ width: '100%' }}
+                  precision={2}
+                  prefix={<DollarOutlined />}
+                  step={5}
+                  disabled={!user || !isAuthorized}
+                />
+                <Text type="secondary" style={{ display: 'block', marginTop: 8, color:'var(--neutral-color)' }}>
+                  Available balance: {(balance || 0).toFixed(2)} {user?.currency || 'USD'}
+                </Text>
+              </div>
+
+              {/* Payout Information */}
+              <div>
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <Statistic
+                      title={
+                        <Space style={{ color:'var(--text-color)'}}>
+                          Potential Payout
+                          <Tooltip title="Payouts include an 84.5% return on stake, uniform across all symbols">
+                            <InfoCircleOutlined />
+                          </Tooltip>
+                        </Space>
+                      }
+                      value={payout}
+                      precision={2}
+                      prefix={<ArrowUpOutlined style={{ color: token.colorSuccess }} />}
+                      valueStyle={{ color: token.colorSuccess }}
+                    />
+                  </Col>
+                  <Col span={12}>
+                    <Statistic
+                      title={
+                        <Space style={{ color:'var(--text-color)'}}>
+                          Potential Loss
+                          <Tooltip title="This is the amount you risk losing if your prediction is wrong.">
+                            <InfoCircleOutlined />
+                          </Tooltip>
+                        </Space>
+                      }
+                      value={amount}
+                      precision={2}
+                      prefix={<ArrowDownOutlined style={{ color: token.colorError }} />}
+                      valueStyle={{ color: token.colorError }}
+                    />
+                  </Col>
+                </Row>
+              </div>
+
+              {/* Action Buttons */}
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Button
+                    type="primary"
+                    size="large"
+                    block
+                    style={{ 
+                      background: '#722ed1',
+                      borderColor: '#722ed1',
+                      height: 48
+                    }}
+                    onClick={() => handleSubmit('rise')}
+                    loading={isSubmitting}
+                    disabled={isSubmitting || !user || !isAuthorized}
+                  >
+                    Rise
+                  </Button>
+                </Col>
+                <Col span={12}>
+                  <Button
+                    type="primary"
+                    size="large"
+                    block
+                    style={{ height: 48 }}
+                    onClick={() => handleSubmit('fall')}
+                    loading={isSubmitting}
+                    disabled={isSubmitting || !user || !isAuthorized}
+                  >
+                    Fall
+                  </Button>
+                </Col>
+              </Row>
+            </Space>
           </Card>
         </Col>
 
