@@ -1,11 +1,10 @@
 // src/components/CandlestickChart.jsx
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
-import { Card, Typography, Button, Select, Skeleton, Radio, Space, Tooltip, Divider } from 'antd';
+import { Card, Typography, Button, Select, Skeleton, Radio, Space, Tooltip, Divider, Alert } from 'antd';
 import Chart from 'react-apexcharts';
 import debounce from 'lodash/debounce';
 import PropTypes from 'prop-types';
 import { LoadingOutlined, ReloadOutlined } from '@ant-design/icons';
-import Notification from '../utils/Notification'; // Adjust path as needed
 import '../assets/css/components/CandlestickChart.css';
 
 const { Text, Title } = Typography;
@@ -69,14 +68,10 @@ const CandlestickChart = ({
   const [series, setSeries] = useState([{ data: [] }]);
   const [intervalSeconds, setIntervalSeconds] = useState(initialInterval);
   const [chartError, setChartError] = useState(null);
-  const [errorTrigger, setErrorTrigger] = useState(false);
-  const [notification, setNotification] = useState({ type: 'success', content: '', trigger: false });
   const [isChartRendered, setIsChartRendered] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [theme] = useState('dark');
   const [selectedTimeRange, setSelectedTimeRange] = useState('5m');
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [crosshairData, setCrosshairData] = useState(null);
   const chartRef = useRef(null);
   const containerRef = useRef(null);
 
@@ -126,11 +121,6 @@ const CandlestickChart = ({
 
         if (candlesData.length === 0) {
           setSeries([{ data: [] }]);
-          setNotification({
-            type: 'info',
-            content: 'No data available. Please refresh to load data.',
-            trigger: !notification.trigger,
-          });
           setIsLoading(false);
           return;
         }
@@ -182,37 +172,11 @@ const CandlestickChart = ({
       } catch (error) {
         console.error('Chart update error:', error);
         setChartError(`Error updating chart: ${error.message}`);
-        setErrorTrigger((prev) => !prev);
         setIsLoading(false);
       }
     }, intervalSeconds === 5 ? 250 : 500)
   ).current;
 
-  // Handle crosshair movement
-  const handleCrosshairMove = useCallback((e, chartContext, config) => {
-    if (
-      config.dataPointIndex >= 0 &&
-      series[0]?.data?.[config.dataPointIndex]
-    ) {
-      const point = series[0].data[config.dataPointIndex];
-      if (point?.y && point.y.length === 4) {
-        setCrosshairData({
-          price: point.y[3],
-          time: new Date(point.x).toLocaleTimeString(),
-        });
-      }
-    }
-  }, [series]);
-
-  // Handle fullscreen change
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, []);
 
   // Update chart when dependencies change
   useEffect(() => {
@@ -239,7 +203,7 @@ const CandlestickChart = ({
   const chartOptions = useMemo(() => ({
     chart: {
       type: 'candlestick',
-      height: isFullscreen ? '80vh' : 500,
+      height: 500,
       animations: {
         enabled: true,
         easing: 'easeout',
@@ -259,7 +223,6 @@ const CandlestickChart = ({
           chartRef.current = chart;
           setIsChartRendered(true);
         },
-        mouseMove: handleCrosshairMove,
       },
       toolbar: {
         show: true,
@@ -420,30 +383,15 @@ const CandlestickChart = ({
         },
       },
     ],
-  }), [isFullscreen, handleCrosshairMove, theme, symbol, intervalSeconds, selectedTimeRange, mode]);
+  }), [theme, symbol, intervalSeconds, selectedTimeRange, mode]);
 
   const handleRefresh = useCallback(() => {
     setIsLoading(true);
-    setNotification({
-      type: 'success',
-      content: 'Refreshing chart data...',
-      trigger: !notification.trigger,
-    });
     onRefresh?.();
-  }, [onRefresh, notification.trigger]);
+  }, [onRefresh]);
 
   return (
     <div ref={containerRef} className="candlestick-chart-container">
-      <Notification
-        type="error"
-        content={chartError || 'An error occurred'}
-        trigger={errorTrigger}
-      />
-      <Notification
-        type={notification.type}
-        content={notification.content}
-        trigger={notification.trigger}
-      />
       <Card
         className="candlestick-chart-card"
         title={
@@ -499,8 +447,17 @@ const CandlestickChart = ({
             </Tooltip>
           </Space>
         }
-        bodyStyle={{ padding: isFullscreen ? '24px' : '16px' }}
+        bodyStyle={{ padding: '16px' }}
       >
+        {chartError && (
+          <Alert
+            message="Chart Error"
+            description={chartError}
+            type="error"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+        )}
         {chartError ? (
           <div className="candlestick-chart-no-data">
             <Skeleton active paragraph={{ rows: 4 }} />
@@ -508,7 +465,6 @@ const CandlestickChart = ({
               type="primary"
               onClick={() => {
                 setChartError(null);
-                setErrorTrigger((prev) => !prev);
                 handleRefresh();
               }}
               icon={<ReloadOutlined />}
@@ -526,25 +482,15 @@ const CandlestickChart = ({
           </div>
         ) : (
           <>
-            {crosshairData && (
-              <div className="candlestick-chart-crosshair">
-                <Text strong>{crosshairData.time}</Text>
-                <br />
-                <Text>Price: {crosshairData.price.toFixed(symbolPipSizes[symbol] || 2)}</Text>
-              </div>
-            )}
             <Chart
               options={chartOptions}
               series={series}
               type="candlestick"
-              height={isFullscreen ? 'calc(80vh - 100px)' : 500}
+              height={500}
             />
             <div className="candlestick-chart-footer">
               <Text type="secondary" style={{ color: 'var(--text-color)'}}>
                 Showing {candles.length} candles (updated at {new Date().toLocaleTimeString()})
-              </Text>
-              <Text type="secondary" style={{ color:'var(--text-color)'}}>
-                Crosshair: {crosshairData ? 'Active' : 'Hover over chart'}
               </Text>
             </div>
           </>

@@ -1,8 +1,7 @@
 // src/components/ChartPage.jsx
 import React, { useState, useEffect } from 'react';
-import { Select, Card, Space, Typography, Skeleton } from 'antd';
+import { Select, Card, Space, Typography, Skeleton, Alert } from 'antd';
 import CandlestickChart from '../../components/CandlestickChart';
-import Notification from '../../utils/Notification';
 import { publicWebSocket } from '../../services/public_websocket_client';
 import '../../assets/css/pages/trader/ChartPage.css';
 
@@ -41,9 +40,6 @@ const ChartPage = () => {
   const [tickData, setTickData] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [errorTrigger, setErrorTrigger] = useState(false);
-  const [notificationTrigger, setNotificationTrigger] = useState(false);
-  const [retryNotificationTrigger, setRetryNotificationTrigger] = useState(false);
 
   useEffect(() => {
     let unsubscribers = [];
@@ -52,11 +48,6 @@ const ChartPage = () => {
     const subscribeToAllSymbols = async (attempt, maxAttempts) => {
       setLoading(true);
       setError(null);
-      if (attempt > 1) {
-        setRetryNotificationTrigger((prev) => !prev); // Trigger retry notification
-      } else {
-        setNotificationTrigger((prev) => !prev); // Trigger initial loading notification
-      }
 
       try {
         await publicWebSocket.connect();
@@ -94,6 +85,7 @@ const ChartPage = () => {
             }
             setLoading(false);
           } else if (event === 'error') {
+            console.error('WebSocket error event received');
             throw new Error('WebSocket error occurred'); // Trigger retry
           }
         };
@@ -135,9 +127,8 @@ const ChartPage = () => {
       3000 // Delay in ms
     ).catch((err) => {
       if (isMounted) {
-        console.error('Connection erro:', err);
+        console.error('Connection error:', err);
         setError('Failed to connect to WebSocket after 3 attempts. Please check your network or app ID.');
-        setErrorTrigger((prev) => !prev);
         setLoading(false);
       }
     });
@@ -152,21 +143,6 @@ const ChartPage = () => {
 
   return (
     <div className="chart-page-container">
-      <Notification
-        type="error"
-        content={error || 'An error occurred'}
-        trigger={errorTrigger}
-      />
-      <Notification
-        type="info"
-        content="Connecting to market data..."
-        trigger={notificationTrigger && loading}
-      />
-      <Notification
-        type="info"
-        content={`Retrying WebSocket connection... Attempt ${retryNotificationTrigger ? 2 : 1}/3`}
-        trigger={retryNotificationTrigger && loading}
-      />
       <Card
         className="chart-page-card"
         title={
@@ -189,6 +165,15 @@ const ChartPage = () => {
           </Space>
         }
       >
+        {error && (
+          <Alert
+            message="Connection Error"
+            description={error}
+            type="error"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+        )}
         {loading || error ? (
           <div className="chart-page-loading">
             <Skeleton

@@ -121,3 +121,28 @@
     height: 400px;
   }
 }
+
+
+/* Aviator and Retry button custom styles */
+.aviator-btn {
+  background-color: #0000 !important;
+  color: #fff;
+  border: 1px solid rgba(108, 92, 231, 0.2) !important;
+  padding: 0;
+}
+.aviator-btn:hover,
+.aviator-btn:focus {
+  background-color: #512da8;
+  color: #fff;
+}
+
+.retry-btn {
+  background-color: #009688;
+  color: #fff;
+  border: none;
+}
+.retry-btn:hover,
+.retry-btn:focus {
+  background-color: #00796b;
+  color: #fff;
+}

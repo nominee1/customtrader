@@ -1,7 +1,7 @@
 // src/components/TickDataGraph.jsx
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { publicWebSocket } from '../services/public_websocket_client';
-import { Card, Row, Col, Select, Button, Tag, Typography, Skeleton } from 'antd';
+import { Card, Row, Col, Select, Button, Tag, Typography, Skeleton, Alert} from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
 import { Line } from 'react-chartjs-2';
 import {
@@ -17,7 +17,6 @@ import {
 } from 'chart.js';
 import annotationPlugin from 'chartjs-plugin-annotation';
 import throttle from 'lodash/throttle';
-import Notification from '../utils/Notification';
 import '../assets/css/components/VolatilityComparisonChart.css';
 
 ChartJS.register(
@@ -39,12 +38,9 @@ const VolatilityComparisonChart = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [errorTrigger, setErrorTrigger] = useState(false);
-  const [notification, setNotification] = useState({ type: 'success', content: '', trigger: false });
   const [selectedSymbol, setSelectedSymbol] = useState('1HZ10V');
   const [showAviator, setShowAviator] = useState(false);
   const [timeRange, setTimeRange] = useState(60);
-  const [autoRefresh, setAutoRefresh] = useState(true);
   const [aviatorLoading, setAviatorLoading] = useState(true);
   const subscriptions = useRef({});
   const lastUpdateTime = useRef({});
@@ -89,64 +85,74 @@ const VolatilityComparisonChart = () => {
   };
 
   useEffect(() => {
-    publicWebSocket.connect();
-
-    const unsubscribe = publicWebSocket.subscribe((event, data) => {
-      if (event === 'message' && data) {
-        if (data.error) {
-          setError(data.error.message || 'An error occurred');
-          setErrorTrigger((prev) => !prev);
-          setLoading(false);
-        } else if (data.tick && data.tick.symbol === selectedSymbol) {
-          const tick = {
-            time: formatTime(new Date(data.tick.epoch * 1000)),
-            value: data.tick.quote,
-            symbol: data.tick.symbol,
-            epoch: data.tick.epoch,
-            isLatest: false,
-          };
-          processTickData(tick);
-        } else if (data.subscription && data.echo_req?.ticks) {
-          subscriptions.current[data.echo_req.ticks] = data.subscription.id;
+    let retryCount = 0;
+    const maxRetries = 5;
+    let unsub = null;
+    let isUnmounted = false;
+    const connectWithRetry = async () => {
+      while (retryCount < maxRetries) {
+        try {
+          await publicWebSocket.connect();
+          return true;
+        } catch (err) {
+          retryCount++;
+          console.error(`WebSocket connection failed (attempt ${retryCount}/${maxRetries})`, err);
+          await new Promise(res => setTimeout(res, 1000 * Math.pow(2, retryCount)));
         }
-      } else if (event === 'error') {
-        setError('WebSocket error occurred');
-        setErrorTrigger((prev) => !prev);
-        setLoading(false);
       }
-    });
-
-    publicWebSocket.socket.onopen = () => {
-      subscribeToTicks();
+      return false;
     };
-
-    publicWebSocket.socket.onclose = () => {
-      setError('WebSocket disconnected. Attempting to reconnect...');
-      setErrorTrigger((prev) => !prev);
-      setTimeout(() => {
-        if (!publicWebSocket.isConnected?.()) {
-          publicWebSocket.connect();
+    (async () => {
+      setError(null);
+      const connected = await connectWithRetry();
+      if (!connected) {
+        setError('Unable to connect after multiple attempts. Please try again later.');
+        return;
+      }
+      if (isUnmounted) return;
+      unsub = publicWebSocket.subscribe((event, data) => {
+        if (event === 'message' && data) {
+          if (data.error) {
+            setError(data.error.message || 'An error occurred');
+            setLoading(false);
+          } else if (data.tick && data.tick.symbol === selectedSymbol) {
+            const tick = {
+              time: formatTime(new Date(data.tick.epoch * 1000)),
+              value: data.tick.quote,
+              symbol: data.tick.symbol,
+              epoch: data.tick.epoch,
+              isLatest: false,
+            };
+            processTickData(tick);
+          } else if (data.subscription && data.echo_req?.ticks) {
+            subscriptions.current[data.echo_req.ticks] = data.subscription.id;
+          }
+        } else if (event === 'error') {
+          setError('WebSocket error occurred');
+          setLoading(false);
         }
-      }, 5000);
-    };
-
+      });
+      if (publicWebSocket.socket) {
+        publicWebSocket.socket.onopen = () => {
+          subscribeToTicks();
+        };
+        publicWebSocket.socket.onclose = () => {
+          setError('WebSocket disconnected. Attempting to reconnect...');
+        };
+      }
+      subscribeToTicks();
+    })();
     return () => {
+      isUnmounted = true;
       Object.keys(subscriptions.current).forEach((symbol) => {
         publicWebSocket.send({ forget: subscriptions.current[symbol] });
         delete subscriptions.current[symbol];
       });
-      unsubscribe();
+      if (unsub) unsub();
       publicWebSocket.close();
     };
   }, [selectedSymbol]);
 
-  useEffect(() => {
-    let interval;
-    if (autoRefresh && !showAviator) {
-      interval = setInterval(subscribeToTicks, 30000);
-    }
-    return () => clearInterval(interval);
-  }, [autoRefresh, showAviator, selectedSymbol]);
 
   const subscribeToTicks = () => {
     setLoading(true);
@@ -156,9 +162,7 @@ const VolatilityComparisonChart = () => {
       publicWebSocket.send({ forget: subscriptions.current[symbol] });
       delete subscriptions.current[symbol];
     });
-
     lastUpdateTime.current = { [selectedSymbol]: 0 };
-
     publicWebSocket.send({
       ticks: selectedSymbol,
       subscribe: 1,
@@ -178,11 +182,6 @@ const VolatilityComparisonChart = () => {
     unsubscribeFromTicks();
     setSelectedSymbol(value || '1HZ10V');
     setData([]);
-    setNotification({
-      type: 'success',
-      content: `Switched to ${getSymbolDisplayName(value || '1HZ10V')}`,
-      trigger: !notification.trigger,
-    });
     subscribeToTicks();
   };
 
@@ -233,7 +232,7 @@ const VolatilityComparisonChart = () => {
         const baseColor = colorMap[displayName].match(/rgba?\([^)]+\)/)?.[0] || 'rgba(24, 144, 255, 1)';
         gradient.addColorStop(0, baseColor.replace(/, 1\)$/, ', 0.3)'));
         gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-        console.log('Line color:', colorMap[displayName], 'Gradient start:', baseColor.replace(/, 1\)$/, ', 0.3)'));
+        //console.log('Line color:', colorMap[displayName], 'Gradient start:', baseColor.replace(/, 1\)$/, ', 0.3)'));
       } catch (err) {
         console.error('Failed to create gradient:', err);
         gradient = colorMap[displayName];
@@ -380,6 +379,7 @@ const VolatilityComparisonChart = () => {
         <Row gutter={8}>
           <Col>
             <Button
+              className="aviator-btn"
               onClick={() => setShowAviator(!showAviator)}
               type={showAviator ? 'default' : 'primary'}
             >
@@ -388,37 +388,20 @@ const VolatilityComparisonChart = () => {
           </Col>
           <Col>
             <Button
-              onClick={() => setAutoRefresh(!autoRefresh)}
-              type={autoRefresh ? 'primary' : 'default'}
-              disabled={showAviator}
-            >
-              {autoRefresh ? 'Disable Auto-Refresh' : 'Enable Auto-Refresh'}
-            </Button>
-          </Col>
-          <Col>
-            <Button
+              className="retry-btn"
               icon={<ReloadOutlined />}
               onClick={subscribeToTicks}
               loading={loading}
               type="primary"
               disabled={showAviator}
             >
-              Refresh
+              Retry
             </Button>
           </Col>
         </Row>
       }
     >
-      <Notification
-        type="error"
-        content={error || 'An error occurred'}
-        trigger={errorTrigger}
-      />
-      <Notification
-        type={notification.type}
-        content={notification.content}
-        trigger={notification.trigger}
-      />
+      {error && <Alert message={error} type="error" showIcon style={{ marginBottom: 16 }} />}
       <Row gutter={[16, 16]} className="volatility-chart-controls">
         <Col xs={24} sm={24} md={16}>
           <Select

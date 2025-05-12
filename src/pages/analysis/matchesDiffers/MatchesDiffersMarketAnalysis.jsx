@@ -188,7 +188,7 @@ const SignalIndicator = ({ signal, strength, targetDigit, size = 'default', show
               animation: 'pulse 1.5s infinite',
             }}
           >
- Caller: MatchesDiffersMarketAnalysis.jsx
+ Caller: Matches
             <BellOutlined />
           </div>
         )}

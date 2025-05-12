@@ -19,7 +19,7 @@ const { Header } = Layout;
 const { Text } = Typography;
 
 const DashboardHeader = ({ collapsed, setCollapsed, toggleDrawer }) => {
-  const { user, balance, activeAccountType, switchAccount, accounts, loading, activeAccount, sendAuthorizedRequest } = useUser();
+  const { user, balance, activeAccountType, switchAccount, accounts, loading, sendAuthorizedRequest } = useUser();
   const navigate = useNavigate();
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 576);
 
