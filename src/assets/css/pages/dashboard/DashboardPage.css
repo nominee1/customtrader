@@ -1,11 +1,11 @@
 /* DashboardPage.css */
 .dashboard-page-layout {
-  background-color: var(--card-bg)!important; 
+  background-color: var(--bg-color)!important; 
   min-height: 100vh;
 }
 
 .dashboard-page-sider {
-  background-color: var(--card-bg); /* Dark, semi-transparent background */
+  background-color: var(--bg-color); /* Dark, semi-transparent background */
   color: var(--text-color);
   overflow: auto;
   height: 100vh;
@@ -28,7 +28,7 @@
 }
 
 .dashboard-page-content {
-  background-color: transparent; 
+  background-color: var(--bg-color)!important; 
   margin-left: 250px; 
   margin-top: 0; 
   bottom: 0;

@@ -1,12 +1,8 @@
-// src/components/ChartPage.jsx
 import React, { useState, useEffect } from 'react';
-import { Select, Card, Space, Typography, Skeleton, Alert } from 'antd';
+import { Skeleton, Alert } from 'antd';
 import CandlestickChart from '../../components/CandlestickChart';
 import { publicWebSocket } from '../../services/public_websocket_client';
 import '../../assets/css/pages/trader/ChartPage.css';
-
-const { Option } = Select;
-const { Text } = Typography;
 
 const volatilityOptions = [
   { value: 'R_10', label: 'Volatility 10 Index' },
@@ -21,14 +17,13 @@ const volatilityOptions = [
   { value: '1HZ100V', label: 'Volatility 100 (1s) Index' },
 ];
 
-// Utility function for retrying with delay
 const retry = async (fn, maxAttempts = 3, delayMs = 3000) => {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       return await fn(attempt, maxAttempts);
     } catch (err) {
       if (attempt === maxAttempts) {
-        throw err; // Rethrow error after final attempt
+        throw err;
       }
       await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
@@ -53,7 +48,6 @@ const ChartPage = () => {
         await publicWebSocket.connect();
         if (!isMounted) return;
 
-        // Initialize tickData for all symbols
         setTickData((prev) => {
           const updated = { ...prev };
           volatilityOptions.forEach((option) => {
@@ -62,7 +56,6 @@ const ChartPage = () => {
           return updated;
         });
 
-        // Handle WebSocket messages
         const handleTick = (event, data) => {
           if (!isMounted) return;
           if (event === 'message' && data.msg_type === 'tick') {
@@ -86,11 +79,10 @@ const ChartPage = () => {
             setLoading(false);
           } else if (event === 'error') {
             console.error('WebSocket error event received');
-            throw new Error('WebSocket error occurred'); // Trigger retry
+            throw new Error('WebSocket error occurred');
           }
         };
 
-        // Subscribe to all symbols
         unsubscribers = [];
         volatilityOptions.forEach((option) => {
           const unsubscribe = publicWebSocket.subscribe(handleTick);
@@ -98,7 +90,6 @@ const ChartPage = () => {
           publicWebSocket.subscribeToTicks(option.value);
         });
 
-        // Fetch historical ticks with batching
         const fetchHistorical = async () => {
           const batchSize = 5;
           for (let i = 0; i < volatilityOptions.length; i += batchSize) {
@@ -115,16 +106,15 @@ const ChartPage = () => {
       } catch (err) {
         console.error(`WebSocket Error (Attempt ${attempt}/${maxAttempts}):`, err);
         if (isMounted) {
-          throw err; // Rethrow to trigger retry
+          throw err;
         }
       }
     };
 
-    // Wrap subscription with retry logic
     retry(
       async (attempt, maxAttempts) => await subscribeToAllSymbols(attempt, maxAttempts),
-      3, // Max attempts
-      3000 // Delay in ms
+      3,
+      3000
     ).catch((err) => {
       if (isMounted) {
         console.error('Connection error:', err);
@@ -143,57 +133,37 @@ const ChartPage = () => {
 
   return (
     <div className="chart-page-container">
-      <Card
-        className="chart-page-card"
-        title={
-          <Space style={{ width: '100%', justifyContent: 'space-between'}}>
-            <Text strong className="chart-page-title">
-              Candlestick Chart
+      {error && (
+        <Alert
+          message="Connection Error"
+          description={error}
+          type="error"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+      )}
+      {loading || error ? (
+        <div className="chart-page-loading">
+          <Skeleton
+            className="chart-page-skeleton"
+            active
+            paragraph={{ rows: 4 }}
+          />
+          {error && (
+            <Text className="chart-page-text">
+              Failed to load data. Please try another symbol.
             </Text>
-            <Select
-              className="chart-page-select"
-              value={selectedSymbol}
-              onChange={setSelectedSymbol}
-              loading={loading}
-            >
-              {volatilityOptions.map((option) => (
-                <Option key={option.value} value={option.value}>
-                  {option.label}
-                </Option>
-              ))}
-            </Select>
-          </Space>
-        }
-      >
-        {error && (
-          <Alert
-            message="Connection Error"
-            description={error}
-            type="error"
-            showIcon
-            style={{ marginBottom: 16 }}
-          />
-        )}
-        {loading || error ? (
-          <div className="chart-page-loading">
-            <Skeleton
-              className="chart-page-skeleton"
-              active
-              paragraph={{ rows: 4 }}
-            />
-            {error && (
-              <Text className="chart-page-text">
-                Failed to load data. Please try another symbol.
-              </Text>
-            )}
-          </div>
-        ) : (
-          <CandlestickChart
-            symbol={selectedSymbol}
-            ticks={tickData[selectedSymbol] || []}
-          />
-        )}
-      </Card>
+          )}
+        </div>
+      ) : (
+        <CandlestickChart
+          symbol={selectedSymbol}
+          ticks={tickData[selectedSymbol] || []}
+          volatilityOptions={volatilityOptions}
+          selectedSymbol={selectedSymbol}
+          setSelectedSymbol={setSelectedSymbol}
+        />
+      )}
     </div>
   );
 };

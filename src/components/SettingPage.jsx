@@ -71,7 +71,7 @@ const SettingsPage = () => {
           {/* Time Format Preferences */}
           <Col xs={24} md={12}>
             <Card
-              title={<text>Display Preferences</text>}
+              title={ <text style={{ color:'var(--text-color)'}} >Display Preferences</text>}
               style={{ borderRadius: 16, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)' }}
             >
               <Space direction="vertical" size={16} style={{ width: '100%' }}>
@@ -113,7 +113,7 @@ const SettingsPage = () => {
           {/* Trading Statistics */}
           <Col xs={24} md={12}>
             <Card
-              title={<text>Trading Statistics</text>}
+              title={<text  style={{ color:'var(--text-color)'}}>Trading Statistics</text>}
               style={{ borderRadius: 16, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)' }}
             >
               <Space direction="vertical" size={16} style={{ width: '100%' }}>
@@ -136,7 +136,7 @@ const SettingsPage = () => {
           {/* Support and Education */}
           <Col xs={24}>
             <Card
-              title={<text>Support & Resources</text>}
+              title={<text style={{ color:'var(--text-color)'}} >Support & Resources</text>}
               style={{ borderRadius: 16, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)' }}
             >
               <Space direction="vertical" size={16} style={{ width: '100%' }}>

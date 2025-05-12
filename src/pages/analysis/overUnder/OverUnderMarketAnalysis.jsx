@@ -232,7 +232,7 @@ const AnalysisExplanation = ({ title, content }) => (
         <div style={{ marginTop: 4 }}>{content}</div>
       </div>
     }
-    overlayStyle={{ maxWidth: 300 }}
+    style={{ maxWidth: 300 }}
     placement="right"
   >
     <QuestionCircleOutlined style={{ color: '#1890ff', marginLeft: 8 }} />
@@ -607,7 +607,7 @@ const OverUnderMarketAnalysis = () => {
           </Space>
         }
         className="market-analysis-card"
-        style={{ padding: simpleMode ? '16px 8px' : 16 }}
+        Style={{ padding: simpleMode ? '16px 8px' : 16 }}
       >
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>
           <Row gutter={[16, 16]}>

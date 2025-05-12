@@ -541,7 +541,7 @@ const EvenOddMarketAnalysis = () => {
           </Space>
         }
         className="market-analysis-card"
-        style={{ padding: simpleMode ? '16px 8px' : 16 }}
+        Style={{ padding: simpleMode ? '16px 8px' : 16 }}
       >
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>
           <Row gutter={[16, 16]}>

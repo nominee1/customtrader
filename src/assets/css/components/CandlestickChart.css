@@ -4,6 +4,7 @@
   border-radius: 8px;
   box-shadow: 0 2px 8px var(--shadow-color, rgba(0, 0, 0, 0.3));
   transition: box-shadow var(--transition-speed, 0.3s);
+  margin-top: 32px;
 }
 
 .candlestick-chart-title {
@@ -21,14 +22,10 @@
   width: 100%;
 }
 
-.candlestick-chart-container {
-  height: 500px;
-  position: relative;
-}
 
 .candlestick-chart-loading,
 .candlestick-chart-no-data {
-  height: 500px;
+  height: auto;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -95,27 +92,6 @@
   border-color: var(--primary-color, #6C5CE7);
 }
 
-.ant-btn-primary {
-  background-color: var(--primary-variant, #3700B3);
-  border: none;
-}
-
-.ant-btn-primary:hover {
-  background-color: var(--hover-accent, #03DAC6);
-}
-
-.ant-btn-default {
-  background-color: var(--primary-color, #6C5CE7);
-  color: var(--text-color, whitesmoke);
-  border: none;
-}
-
-.ant-btn-default:hover {
-  background-color: var(--hover-accent, #03DAC6);
-  color: var(--text-color, whitesmoke);
-  border-color: var(--hover-accent, #03DAC6);
-}
-
 /* ApexCharts overrides */
 .apexcharts-canvas {
   background: var(--card-bg, rgba(255, 255, 255, 0.05)) !important;
@@ -164,14 +140,17 @@
     gap: 8px;
   }
 }
-
+/* Responsive header styles */
 @media (max-width: 576px) {
-  .candlestick-chart-controls .ant-space-item {
-    width: 100%;
+  .candlestick-chart-header {
+    gap: 4px !important;
   }
 
-  .candlestick-chart-select,
+  .candlestick-chart-title {
+    font-size: 14px !important;
+  }
+
   .candlestick-chart-radio-group {
-    width: 100%;
+    font-size: 12px !important;
   }
 }

@@ -24,7 +24,7 @@ const DashboardPage = () => {
         toggleDrawer={toggleDrawer}
         drawerVisible={drawerVisible}
       />
-      <Layout>
+      <Layout className="dashboard-page-layout">
         {/* Desktop Sidebar */}
         <Sider
           collapsible

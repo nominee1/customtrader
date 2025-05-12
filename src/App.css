@@ -61,18 +61,6 @@ body {
   color: var(--text-color);
   transition: background-color var(--transition-speed), color var(--transition-speed);
 }
-#root {
-  background-color: transparent;
-  min-height: 100vh;
-}
-Paragraph,Title, text {
-  color: var(--text-color);
-}
-  
-/* ===== Headings ===== */
-h1, h2, h3, h4 {
-  font-family: 'Ubuntu', system-ui, sans-serif;
-}
   
 /* Ant Design overrides */
 .ant-card {

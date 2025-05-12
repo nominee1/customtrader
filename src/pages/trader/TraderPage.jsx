@@ -80,7 +80,6 @@ const TraderPage = () => {
         <Row
           gutter={[16, 16]}
           justify="center"
-          className="trader-page-feature-buttons"
         >
           {features.map((feature, index) => (
             <Col key={index}>

@@ -1,6 +1,5 @@
-// src/components/CandlestickChart.jsx
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
-import { Card, Typography, Button, Select, Skeleton, Radio, Space, Tooltip, Divider, Alert } from 'antd';
+import { Card, Typography, Button, Select, Skeleton, Radio, Space, Tooltip, Alert } from 'antd';
 import Chart from 'react-apexcharts';
 import debounce from 'lodash/debounce';
 import PropTypes from 'prop-types';
@@ -60,6 +59,9 @@ const TIME_RANGES = {
 const CandlestickChart = ({
   symbol,
   ticks,
+  volatilityOptions,
+  selectedSymbol,
+  setSelectedSymbol,
   initialMode = MODES.RISE_FALL,
   initialInterval = 5,
   onRefresh,
@@ -75,16 +77,15 @@ const CandlestickChart = ({
   const chartRef = useRef(null);
   const containerRef = useRef(null);
 
-  // Memoize candlestick calculations
   const candles = useMemo(() => {
     if (!ticks || ticks.length === 0) return [];
 
-    const intervalMs = intervalSeconds * 1000; // Changed to 1000ms for consistency with RiseFallMarketAnalysis
+    const intervalMs = intervalSeconds * 1000;
     const candlesMap = new Map();
 
     for (let i = 0; i < ticks.length; i++) {
       const tick = ticks[i];
-      const timestamp = Math.floor(tick.timestamp * 1000); // Convert epoch to milliseconds
+      const timestamp = Math.floor(tick.timestamp * 1000);
       const price = parseFloat(tick.price);
       const timeBucket = Math.floor(timestamp / intervalMs) * intervalMs;
 
@@ -113,7 +114,6 @@ const CandlestickChart = ({
     return result;
   }, [ticks, intervalSeconds]);
 
-  // Debounced chart update
   const debouncedUpdateChart = useRef(
     debounce((candlesData, currentMode, currentSymbol, currentInterval) => {
       try {
@@ -177,13 +177,10 @@ const CandlestickChart = ({
     }, intervalSeconds === 5 ? 250 : 500)
   ).current;
 
-
-  // Update chart when dependencies change
   useEffect(() => {
     debouncedUpdateChart(candles, mode, symbol, intervalSeconds);
   }, [candles, mode, symbol, intervalSeconds, debouncedUpdateChart]);
 
-  // Cleanup
   useEffect(() => {
     return () => {
       debouncedUpdateChart.cancel();
@@ -270,7 +267,7 @@ const CandlestickChart = ({
       },
     },
     yaxis: {
-      opposite: true, 
+      opposite: true,
       tooltip: { enabled: true },
       labels: {
         formatter: (val) => (typeof val === 'number' ? val.toFixed(symbolPipSizes[symbol] || 2) : val),
@@ -412,7 +409,23 @@ const CandlestickChart = ({
           </Space>
         }
         extra={
-          <Space className="candlestick-chart-controls">
+          <Space 
+            className="candlestick-chart-controls"
+            style={{ width: '100%', justifyContent: 'space-between', flexWrap: 'wrap' }}
+          >
+            <Select
+              className="candlestick-chart-select"
+              value={selectedSymbol}
+              onChange={setSelectedSymbol}
+              size="small"
+              style={{ width: 200 }}
+            >
+              {volatilityOptions.map((option) => (
+                <Option key={option.value} value={option.value}>
+                  {option.label}
+                </Option>
+              ))}
+            </Select>
             <Select
               className="candlestick-chart-select"
               value={selectedTimeRange}
@@ -436,18 +449,9 @@ const CandlestickChart = ({
               <Option value={30}>30 seconds</Option>
               <Option value={60}>1 minute</Option>
             </Select>
-            <Tooltip title="Refresh Data">
-              <Button
-                icon={<ReloadOutlined spin={isLoading} />}
-                size="small"
-                onClick={handleRefresh}
-                disabled={isLoading}
-                type="primary"
-              />
-            </Tooltip>
           </Space>
         }
-        bodyStyle={{ padding: '16px' }}
+        Style={{ padding: '16px' }}
       >
         {chartError && (
           <Alert
@@ -489,7 +493,7 @@ const CandlestickChart = ({
               height={500}
             />
             <div className="candlestick-chart-footer">
-              <Text type="secondary" style={{ color: 'var(--text-color)'}}>
+              <Text type="secondary" style={{ color: 'var(--text-color)' }}>
                 Showing {candles.length} candles (updated at {new Date().toLocaleTimeString()})
               </Text>
             </div>
@@ -508,6 +512,14 @@ CandlestickChart.propTypes = {
       timestamp: PropTypes.number.isRequired,
     })
   ).isRequired,
+  volatilityOptions: PropTypes.arrayOf(
+    PropTypes.shape({
+      value: PropTypes.string.isRequired,
+      label: PropTypes.string.isRequired,
+    })
+  ).isRequired,
+  selectedSymbol: PropTypes.string.isRequired,
+  setSelectedSymbol: PropTypes.func.isRequired,
   initialMode: PropTypes.oneOf(Object.values(MODES)),
   initialInterval: PropTypes.number,
   onRefresh: PropTypes.func,
