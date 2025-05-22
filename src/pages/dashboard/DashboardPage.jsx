@@ -30,7 +30,7 @@ const DashboardPage = () => {
           collapsible
           collapsed={collapsed}
           onCollapse={() => setCollapsed(!collapsed)}
-          width={250}
+          width={150}
           breakpoint="sm" // Triggers at ≤576px
           collapsedWidth={0}
           onBreakpoint={(broken) => {
@@ -47,7 +47,7 @@ const DashboardPage = () => {
           closable={true}
           onClose={toggleDrawer}
           visible={drawerVisible}
-          width={250}
+          width={150}
           zIndex={1000} // Ensure drawer is above content
           title="Menu"
         >

@@ -1,5 +1,4 @@
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import { TickProvider } from './context/TickContext';
 import LandingPage from './pages/landing/LandingPage';
 import LoginPage from './pages/login/LoginPage';
 import Dashboard from './pages/dashboard/DashboardPage';
@@ -28,9 +27,7 @@ function AppRoutes() {
           element={
             <UserProvider>
               <ContractsProvider>
-                <TickProvider>
                   <Dashboard />
-                </TickProvider>
               </ContractsProvider>
             </UserProvider>
           }

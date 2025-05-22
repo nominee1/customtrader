@@ -52,7 +52,15 @@
 /* Responsive styles */
 @media (max-width: 576px) {
   .dashboard-sidebar-menu {
-    padding: 8px 0; /* Adjust padding for Drawer */
+    padding: 0; /* Adjust padding for Drawer */
+  }
+  .ant-menu-title-content {
+    display: none;
+  }
+  .ant-menu-item {
+    justify-content: center;
+    padding: 0;
+    margin: 0;
   }
 
   .ant-menu-item {

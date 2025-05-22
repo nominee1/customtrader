@@ -16,7 +16,6 @@ import {
   theme
 } from 'antd';
 import {
-  DollarOutlined,
   ArrowUpOutlined,
   LineChartOutlined,
   WalletOutlined,
@@ -26,11 +25,9 @@ import {
   NumberOutlined,
 } from '@ant-design/icons';
 import { useUser } from '../../context/AuthContext';
-import VolatilityMonitor from '../../components/VolatilityMonitor';
 import VolatilityComparisonChart from '../../components/TickDataGraph';
 import { ConfigProvider } from 'antd';
 import '../../assets/css/pages/dashboard/DashboardMainContent.css';
-import Notification from '../../utils/Notification';
 
 const { Title, Text } = Typography;
 const { Content } = Layout;
@@ -45,11 +42,6 @@ const DashboardMainContent = () => {
     numTransactions: 0,
   });
   const [error, setError] = useState(null);
-  const [notification, setNotification] = useState({
-    type: '',
-    content: '',
-    trigger: false,
-  });
   const [loading] = useState(false);
   const accountId = activeAccount?.loginid;
   const isLoading = authLoading || loading;
@@ -66,13 +58,6 @@ const DashboardMainContent = () => {
       second: '2-digit',
       hour12: true,
     });
-  };
-
-  const showNotification = (type, content) => {
-    setNotification({ type, content, trigger: true });
-    setTimeout(() => {
-      setNotification((prev) => ({ ...prev, trigger: false }));
-    }, 500);
   };
 
   useEffect(() => {
@@ -110,7 +95,6 @@ const DashboardMainContent = () => {
       try {
         const response = await sendAuthorizedRequest(payload);
         if (response.error) {
-          showNotification('error', response.error.message || 'Failed to fetch profit table');
           throw new Error(response.error.message);
         }
         const profitTableData = response.profit_table?.transactions || [];
@@ -122,10 +106,6 @@ const DashboardMainContent = () => {
           totalPayouts: profitTableData.reduce((sum, tx) => sum + (tx.payout || 0), 0),
           numTransactions: profitTableData.length,
         });
-        showNotification('success', 'Profit table loaded successfully!');
-        if (profitTableData.length === 0) {
-          showNotification('warning', 'No transactions found for the last 30 days.');
-        }
       } catch (err) {
         console.error('Error fetching profit table:', err, err.stack);
       }
@@ -173,11 +153,6 @@ const DashboardMainContent = () => {
     >
       <div className="dashboard-container">
         <Content className="dashboard-content">
-          <Notification
-            type={notification.type}
-            content={notification.content}
-            trigger={notification.trigger}
-          />
           {error && (
             <Alert
               message="Error"
