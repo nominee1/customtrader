@@ -33,6 +33,11 @@ const AppHeader = () => {
               Sign Up
             </Button>
           </Link>
+          <Link to="/dashboard/risk">
+            <Button className="header-button about-button">
+              Risk
+            </Button>
+          </Link>
         </div>
       </div>
     </Header>
