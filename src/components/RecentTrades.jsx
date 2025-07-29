@@ -12,6 +12,7 @@ const RecentTrades = () => {
   const { activeContracts, updateContract, removeContract } = useContracts();
   const [recentTrades, setRecentTrades] = useState([]);
   const [liveContracts, setLiveContracts] = useState([]);
+  const [trackingIds, setTrackingIds] = useState(new Set());
 
   const accountId = activeAccount?.loginid;
 
@@ -42,17 +43,8 @@ const RecentTrades = () => {
             const contractData = response.proposal_open_contract;
             if (!contractData) return;
 
-            if (contractData.status === 'open') {
-              setLiveContracts((prev) => {
-                const exists = prev.some((c) => c.contract_id === contractData.contract_id);
-                const updated = exists
-                  ? prev.map((c) =>
-                      c.contract_id === contractData.contract_id ? contractData : c
-                    )
-                  : [contractData, ...prev].slice(0, 20);
-                return updated;
-              });
-            } else {
+            // ✅ If contract is no longer open, handle transition immediately
+            if (contractData.status !== 'open') {
               setLiveContracts((prev) =>
                 prev.filter((c) => c.contract_id !== contractData.contract_id)
               );
@@ -64,6 +56,34 @@ const RecentTrades = () => {
                 return updatedTrades;
               });
               removeContract(contractData.contract_id);
+              setTrackingIds((prev) => {
+                const updated = new Set(prev);
+                updated.delete(contractData.contract_id);
+                return updated;
+              });
+              return;
+            }
+
+            if (contractData.status === 'open') {
+              setLiveContracts((prev) => {
+                const exists = prev.some((c) => c.contract_id === contractData.contract_id);
+                const updated = exists
+                  ? prev.map((c) =>
+                      c.contract_id === contractData.contract_id ? contractData : c
+                    )
+                  : [contractData, ...prev].slice(0, 20);
+                return updated;
+              });
+            }
+
+            if (contractData.contract_type === 'ACCU' && contractData.status === 'open') {
+              setTrackingIds(prev => new Set(prev).add(contractData.contract_id));
+            } else {
+              setTrackingIds(prev => {
+                const updated = new Set(prev);
+                updated.delete(contractData.contract_id);
+                return updated;
+              });
             }
 
             updateContract(contractData.contract_id, {
@@ -98,6 +118,60 @@ const RecentTrades = () => {
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeContracts, sendAuthorizedRequest, updateContract, removeContract]);
+  
+  // Helper function to determine tick frequency for ACCU contracts
+  const isOneSecondSymbol = (symbol) => symbol && symbol.startsWith('1HZ');
+
+  // Update live ACCU contract growth every second
+  useEffect(() => {
+    if (!liveContracts.length) return;
+    // Only update contracts with contract_type === 'ACCU'
+    const interval = setInterval(() => {
+      setLiveContracts((prevContracts) =>
+        prevContracts.map((contract) => {
+          if (!trackingIds.has(contract.contract_id)) return contract;
+          if (
+            contract.contract_type === 'ACCU' &&
+            contract.date_start &&
+            contract.growth_rate != null &&
+            contract.buy_price != null
+          ) {
+            const secondsPerTick = isOneSecondSymbol(contract.underlying) ? 1 : 2;
+            const ticksElapsed = Math.floor((Date.now() / 1000 - contract.date_start) / secondsPerTick);
+            const growthFactor = Math.pow(1 + contract.growth_rate, ticksElapsed);
+            const estValue = contract.buy_price * growthFactor;
+            const growthPercentage = ((estValue - contract.buy_price) / contract.buy_price) * 100;
+            return {
+              ...contract,
+              _live_growth_percentage: growthPercentage,
+              _live_est_value: estValue,
+            };
+          }
+          return contract;
+        })
+      );
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [liveContracts, trackingIds]);
+
+  const handleSell = async (contract_id) => {
+    try {
+      const payload = {
+        sell: contract_id,
+        price: 0, 
+      };
+      const response = await sendAuthorizedRequest(payload);
+      if (response.error) throw new Error(response.error.message);
+      console.log('Sell response', response);
+      setTrackingIds(prev => {
+        const updated = new Set(prev);
+        updated.delete(contract_id);
+        return updated;
+      });
+    } catch (err) {
+      console.error('Sell failed:', err);
+    }
+  };
 
   const calculateProgress = (contract) => {
     if (contract.duration_unit === 't') {
@@ -154,19 +228,61 @@ const RecentTrades = () => {
                             <Text type="secondary" style={{ color:'var(--text-color)'}}>Buy Price: {contract.buy_price} {contract.currency}</Text> <br />
                             <Text type="secondary" style={{ color:'var(--text-color)'}}>Current Price: {contract.current_spot || 'N/A'}</Text> <br />
                             <Text type="secondary" style={{ color:'var(--text-color)'}}>Profit: {contract.profit || 0} {contract.currency}</Text> <br />
-                            <Text type="secondary" style={{ color:'var(--text-color)'}}>Pay Out: {contract.payout || 0}{contract.currency}</Text> <br />
+                            {contract.contract_type === 'ACCU' ? (
+                              <Text type="secondary" style={{ color:'var(--text-color)'}}>
+                                Growth Rate: {(contract.growth_rate * 100).toFixed(2)}%
+                              </Text>
+                            ) : (
+                              <Text type="secondary" style={{ color:'var(--text-color)'}}>
+                                Pay Out: {contract.payout || 0}{contract.currency}
+                              </Text>
+                            )} <br />
                             <Text type="secondary" style={{ color:'var(--text-color)'}}>
                               Duration: {contract.duration} {contract.duration_unit === 't' ? 'ticks' : 'minutes'}
                             </Text> <br />
-                            <Progress
-                              percent={calculateProgress(contract)}
-                              size="small"
-                              status="active"
-                              style={{ width: 150 }}
-                            />
+                            {contract.contract_type === 'ACCU' ? (
+                              <>
+                                <Text type="success">
+                                  📈 {contract._live_growth_percentage?.toFixed(2)}% (Est. ${contract._live_est_value?.toFixed(2)})
+                                </Text>
+                                {contract.contract_type === 'ACCU' && (
+                                  <button
+                                    style={{
+                                      marginTop: 8,
+                                      padding: '6px 12px',
+                                      fontSize: 14,
+                                      backgroundColor: '#722ed1',
+                                      color: '#fff',
+                                      border: 'none',
+                                      borderRadius: 4,
+                                      cursor: 'pointer',
+                                      width: '100%',
+                                    }}
+                                    onClick={() => handleSell(contract.contract_id)}
+                                  >
+                                    Sell
+                                  </button>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                <Progress
+                                  percent={calculateProgress(contract)}
+                                  size="small"
+                                  status="active"
+                                  style={{ width: 150 }}
+                                />
+                              </>
+                            )}
                           </Col>
                           <Col>
-                            <Tag color="blue">{contract.status?.toUpperCase()}</Tag>
+                            <Tag color={
+                              contract.status === 'sold' ? 'purple' :
+                              contract.status === 'open' ? 'blue' :
+                              'red'
+                            }>
+                              {contract.status === 'sold' ? 'SOLD' : contract.status?.toUpperCase()}
+                            </Tag>
                           </Col>
                         </Row>
                       </Card>
@@ -216,7 +332,15 @@ const RecentTrades = () => {
                             <Text type="secondary" style={{ color:'var(--text-color)'}}>Buy Price: {trade.buy_price} {trade.currency}</Text> <br />
                             <Text type="secondary" style={{ color:'var(--text-color)'}}>Sell Price: {trade.sell_price || 'N/A'}</Text> <br />
                             <Text type="secondary" style={{ color:'var(--text-color)'}}>Profit: {trade.profit || 0} {trade.currency}</Text> <br />
-                            <Text type="secondary" style={{ color:'var(--text-color)'}}>Pay Out: {trade.payout || 0} {trade.currency}</Text>
+                            {trade.contract_type === 'ACCU' ? (
+                              <Text type="secondary" style={{ color: 'var(--text-color)' }}>
+                                Growth Rate: {(trade.growth_rate * 100).toFixed(2)}%
+                              </Text>
+                            ) : (
+                              <Text type="secondary" style={{ color: 'var(--text-color)' }}>
+                                Pay Out: {trade.payout || 0} {trade.currency}
+                              </Text>
+                            )}
                           </Col>
                           <Col>
                             <Tag color={trade.profit > 0 ? 'green' : 'red'}>
